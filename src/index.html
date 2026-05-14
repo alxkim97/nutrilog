@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v2.1.0</title>
+<title>NutriLog v2.1.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -2591,10 +2591,14 @@ async function pullFromSupabase(){
       const merged={...remHistory};
       Object.keys(localHistory).forEach(date=>{ if(date!==today)merged[date]=localHistory[date]; });
       delete merged[today]; // never store today in history.json to prevent stale data on push
+      // Remove intentionally deleted dates — prevents other devices from restoring them
+      _deletedDates.forEach(d=>delete merged[d]);
       await Store._localSet('nutrilog_history',merged);
       Object.assign(histIdx,merged);
-      // Push merged result back so both devices converge to the same state.
+      // Push merged result back (deletions included — overwrites stale cloud data)
       if(Object.keys(merged).length) await sbSetHistory(merged);
+      // Ensure deleted dates are removed from Supabase too (propagates deletion to cloud)
+      if(_deletedDates.size) await Promise.all([..._deletedDates].map(d=>sbDeleteDate(d)));
     }
     if(remCheckins){await Store._localSet('nutrilog_checkins',remCheckins);}
     {
@@ -2771,6 +2775,20 @@ function queueAutoSave(){
 let meals=[];
 let foodLib=[];
 let histIdx={};
+let _deletedDates=new Set(); // dates intentionally deleted — prevents cloud from restoring them
+
+async function addDeletedDate(ds){
+  _deletedDates.add(ds);
+  // Prune entries older than 60 days to keep settings lean
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-60);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+  _deletedDates.forEach(d=>{if(d<cutoffStr)_deletedDates.delete(d);});
+  try{
+    const s=await Store.get('nutrilog_settings')||{};
+    s.deletedDates=[..._deletedDates];
+    await Store.set('nutrilog_settings',s);
+  }catch(e){console.warn('addDeletedDate error',e);}
+}
 let dayNotes={};  // {dateStr: "note text"}
 let calY,calM;
 let selDate=null;
@@ -4349,7 +4367,10 @@ function deleteHistSelected(){
     toDelete.forEach(ds=>delete histIdx[ds]);
     const h={...histIdx};
     await Store.set('nutrilog_history',h).catch(()=>{});
-    toDelete.forEach(ds=>sbDeleteDate(ds)); // remove from Supabase
+    await Promise.all(toDelete.map(async ds=>{
+      await addDeletedDate(ds); // log deletion so other devices honour it
+      await sbDeleteDate(ds);
+    }));
     histMultiSel.clear();
     toggleHistMulti();
     renderWeeklySummary();
@@ -4665,7 +4686,8 @@ function delHistEntry(ds,i){
     h[ds]=histIdx[ds];
     if(!h[ds].length){
       delete h[ds];
-      sbDeleteDate(ds); // remove from Supabase so sync can't restore it
+      await addDeletedDate(ds); // log deletion so other devices honour it
+      await sbDeleteDate(ds);
     }
     await Store.set('nutrilog_history',h).catch(()=>{});
     if(ds===todayStr()){meals=histIdx[ds]||[];render();}
@@ -4897,6 +4919,7 @@ async function loadSettings(){
       TGT={protein:s.protein||156,fat:s.fat||56,carbs:s.carbs||343,fiber:s.fiber||40,kcal:s.kcalTarget||2500};
       TGT_MIN={protein:s.proteinMin??156,fat:s.fatMin??45,carbs:s.carbsMin??290,fiber:s.fiberMin??30,kcal:s.kcalMin??null};
       TGT_MAX={protein:s.proteinMax??null,fat:s.fatMax??65,carbs:s.carbsMax??380,fiber:s.fiberMax??50,kcal:s.kcalMax??null};
+      if(Array.isArray(s.deletedDates))_deletedDates=new Set(s.deletedDates);
       const kcalMinEl=document.getElementById('s-kcal-min');
       const kcalMaxEl=document.getElementById('s-kcal-max');
       const kcalDispEl=document.getElementById('s-kcal-display');
@@ -5104,6 +5127,7 @@ function saveSettings(){
     kcalTarget,
     kcalMin:document.getElementById('s-kcal-min')?.value!==''?+document.getElementById('s-kcal-min').value:null,
     kcalMax:document.getElementById('s-kcal-max')?.value!==''?+document.getElementById('s-kcal-max').value:null,
+    deletedDates:[..._deletedDates],
     savedAt:new Date().toISOString(),
     checkinFreq:+document.getElementById('s-checkin-freq')?.value||7,
     streakMacros:{

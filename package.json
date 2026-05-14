@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.1.0",
-  "description": "NutriLog v2.1.0 — Macro Tracker with Meal Timing Analysis & Copy Day",
+  "version": "2.1.1",
+  "description": "NutriLog v2.1.1 — Macro Tracker with Meal Timing Analysis & Copy Day",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
