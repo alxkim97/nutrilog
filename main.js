@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const heicConvert = require('heic-convert');
 
 // ── Keep a global reference to prevent GC ──
 let mainWindow = null;
@@ -250,22 +251,55 @@ ipcMain.handle('app:get-version', () => app.getVersion());
 ipcMain.handle('app:get-data-dir', () => DATA_DIR);
 
 // ── Easter egg image management ──
+const HEIC_EXTS = /\.(heic|heif)$/i;
+const IMG_EXTS  = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
+const MAX_EGG_PX = 1920; // resize iPhone photos to this width max
+
+async function processEggImage(srcBuf, isHeic) {
+  let buf = srcBuf;
+  // 1. Convert HEIC → JPEG
+  if (isHeic) {
+    buf = Buffer.from(await heicConvert({ buffer: buf, format: 'JPEG', quality: 0.92 }));
+  }
+  // 2. Resize if wider than MAX_EGG_PX (handles large iPhone JPEGs too)
+  try {
+    const img = nativeImage.createFromBuffer(buf);
+    const { width } = img.getSize();
+    if (width > MAX_EGG_PX) {
+      buf = img.resize({ width: MAX_EGG_PX, quality: 'good' }).toJPEG(88);
+    }
+  } catch (_) { /* gif or unsupported — keep original */ }
+  return buf;
+}
+
 ipcMain.handle('egg:list', () => {
   ensureEggsDir();
   try {
-    return fs.readdirSync(EGGS_DIR)
-      .filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f))
-      .sort();
+    return fs.readdirSync(EGGS_DIR).filter(f => IMG_EXTS.test(f)).sort();
   } catch(e) { return []; }
 });
 
-ipcMain.handle('egg:read', (_, name) => {
+ipcMain.handle('egg:read', async (_, name) => {
   try {
-    const buf = fs.readFileSync(path.join(EGGS_DIR, name));
+    const filePath = path.join(EGGS_DIR, name);
+    const isHeic = HEIC_EXTS.test(name);
+
+    // For HEIC files dropped directly into the folder, convert+cache as JPEG
+    if (isHeic) {
+      const cached = filePath.replace(HEIC_EXTS, '.jpg');
+      if (!fs.existsSync(cached)) {
+        const buf = await processEggImage(fs.readFileSync(filePath), true);
+        fs.writeFileSync(cached, buf);
+      }
+      const buf = fs.readFileSync(cached);
+      return `data:image/jpeg;base64,${buf.toString('base64')}`;
+    }
+
+    const buf = fs.readFileSync(filePath);
     const ext = path.extname(name).slice(1).toLowerCase();
     const mime = (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg'
-                : ext === 'png' ? 'image/png'
-                : ext === 'gif' ? 'image/gif' : 'image/webp';
+               : ext === 'png'  ? 'image/png'
+               : ext === 'gif'  ? 'image/gif' : 'image/webp';
     return `data:${mime};base64,${buf.toString('base64')}`;
   } catch(e) { return null; }
 });
@@ -273,21 +307,28 @@ ipcMain.handle('egg:read', (_, name) => {
 ipcMain.handle('egg:add', async () => {
   const { filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: 'Add Photos',
-    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'] }],
     properties: ['openFile', 'multiSelections']
   });
   if (!filePaths || !filePaths.length) return [];
   ensureEggsDir();
   const added = [];
   for (const fp of filePaths) {
-    let destName = path.basename(fp);
+    const isHeic = HEIC_EXTS.test(fp);
+    // HEIC saved as .jpg; all images resized to ≤1920px at import time
+    let destName = isHeic
+      ? path.basename(fp, path.extname(fp)) + '.jpg'
+      : path.basename(fp);
     let destPath = path.join(EGGS_DIR, destName);
     if (fs.existsSync(destPath)) {
       destName = Date.now() + '_' + destName;
       destPath = path.join(EGGS_DIR, destName);
     }
-    fs.copyFileSync(fp, destPath);
-    added.push(destName);
+    try {
+      const processed = await processEggImage(fs.readFileSync(fp), isHeic);
+      fs.writeFileSync(destPath, processed);
+      added.push(destName);
+    } catch(e) { console.error('egg:add failed for', fp, e.message); }
   }
   return added;
 });
