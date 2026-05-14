@@ -58,5 +58,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "NutriLog"
     }
+  },
+  "dependencies": {
+    "heic-convert": "^2.1.0"
   }
 }
