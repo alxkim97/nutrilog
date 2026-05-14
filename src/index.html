@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v1.8.0</title>
+<title>NutriLog v1.8.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -462,6 +462,14 @@ tbody tr:hover .row-acts { opacity:1; }
   transition:filter var(--tr);
 }
 .btn-save:hover { filter:brightness(1.12); }
+.btn-add-another {
+  background:none; border:1px solid var(--accent); color:var(--accent);
+  padding:0 14px; height:36px; border-radius:8px; font-size:13px;
+  font-weight:500; cursor:pointer; font-family:var(--fb);
+  transition:all var(--tr); margin-right:auto;
+}
+.btn-add-another:hover { background:var(--accent-dim,rgba(124,101,246,.15)); }
+.btn-add-another:active { transform:scale(.97); }
 
 /* ── CONFIRM ── */
 .conf-overlay {
@@ -1942,6 +1950,7 @@ tbody tr:hover .row-acts { opacity:1; }
       </div>
       <div class="form-acts">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-add-another" id="addAnotherBtn" onclick="submitAndStay()" title="Save this entry and add another without closing">+ Add Another</button>
         <button class="btn-save" id="mealSaveBtn" onclick="submitMeal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Meal
@@ -3380,12 +3389,13 @@ function onLogDateChange(){
 function closeModal(){
   document.getElementById('mealOverlay').classList.remove('open');
   acHide();editIdx=null;baseServingRef=null;
-  // Re-enable unit field in case it was locked during history edit
   const unitEl=document.getElementById('f-unit');
   if(unitEl)unitEl.disabled=false;
-  // Reset save button to normal in case it was wired to history submit
   document.getElementById('mealSaveBtn').onclick=()=>submitMeal();
   _histEditDs=null; _histEditIdx=null;
+  // Restore Add Another button for normal add mode
+  const aaBtn=document.getElementById('addAnotherBtn');
+  if(aaBtn)aaBtn.style.display='';
 }
 function clearForm(){
   ['f-name','f-serving','f-kcal','f-protein','f-fat','f-carbs','f-fiber','f-notes'].forEach(id=>document.getElementById(id).value='');
@@ -3587,6 +3597,40 @@ function submitForm(){
   }
 }
 
+function submitAndStay(){
+  // Only works for today's new entries — fall through to normal submit for edits/pre-log
+  if(editIdx!==null||_histEditDs){submitMeal();return;}
+  const logDate=document.getElementById('f-logdate').value||todayStr();
+  if(logDate!==todayStr()){submitMeal();return;}
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){toast('Please enter a food item name','err');document.getElementById('f-name').focus();return;}
+  const serving=pnum(document.getElementById('f-serving').value)||1;
+  const entry={
+    cat:selCat, name,
+    time:document.getElementById('f-time').value||nowTime(),
+    serving,
+    unit:document.getElementById('f-unit').value,
+    kcal:pnum(document.getElementById('f-kcal').value),
+    protein:pnum(document.getElementById('f-protein').value),
+    fat:pnum(document.getElementById('f-fat').value),
+    carbs:pnum(document.getElementById('f-carbs').value),
+    fiber:pnum(document.getElementById('f-fiber').value),
+    notes:document.getElementById('f-notes').value.trim(),
+    _base:baseServingRef||null
+  };
+  pushUndo('Add "'+name+'"');
+  meals.push(entry);
+  if(document.getElementById('f-savelib').checked)
+    addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
+  queueAutoSave();
+  render();
+  // Clear form and stay open for next entry
+  clearForm();
+  document.getElementById('f-time').value=nowTime();
+  document.getElementById('f-name').focus();
+  toast(name+' added — enter next item','ok');
+}
+
 function submitPaste(){
   const raw=document.getElementById('pasteArea').value.trim();
   if(!raw){toast('No data pasted','err');return;}
@@ -3681,6 +3725,7 @@ function openEdit(i){
   editIdx=i;const m=meals[i];
   document.getElementById('mealTitle').textContent='Edit Entry';
   document.getElementById('mealSaveBtn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Save Changes';
+  const _aaBtn=document.getElementById('addAnotherBtn');if(_aaBtn)_aaBtn.style.display='none';
   setCat(m.cat||'breakfast');
   document.getElementById('f-name').value=m.name;
   document.getElementById('f-time').value=m.time||'';
@@ -4256,6 +4301,7 @@ function openHistEdit(ds,i){
   document.getElementById('mealTitle').textContent='Edit History Entry';
   document.getElementById('mealSaveBtn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Save Changes';
   document.getElementById('mealSaveBtn').onclick=()=>submitHistEntry();
+  const _aaBtn2=document.getElementById('addAnotherBtn');if(_aaBtn2)_aaBtn2.style.display='none';
   setCat(e.cat||'breakfast');
   document.getElementById('f-name').value=e.name;
   document.getElementById('f-time').value=e.time||'';
