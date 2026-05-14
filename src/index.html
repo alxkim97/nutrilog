@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v2.0.0</title>
+<title>NutriLog v2.1.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -1098,7 +1098,7 @@ tbody tr:hover .row-acts { opacity:1; }
     </div>
 
     <!-- Streak counters + body weight widget row -->
-    <div id="todayWidgets" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+    <div id="todayWidgets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">
       <!-- streak and weight widgets rendered dynamically by renderStreaks/renderWeightWidget -->
       <div id="widget-weight" class="tcard" style="padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="openWeightLog()" title="Click to log weight">
         <div style="font-size:22px;">⚖️</div>
@@ -1108,21 +1108,15 @@ tbody tr:hover .row-acts { opacity:1; }
           <div id="widget-weight-delta" style="font-size:10px;color:var(--text3);">No check-ins yet</div>
         </div>
       </div>
-      <!-- Calorie budget widget -->
-      <div id="widget-kcal-budget" class="tcard" style="padding:12px 16px;display:flex;align-items:center;gap:12px;">
-        <div style="font-size:22px;">🔥</div>
-        <div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Calorie Budget</div>
-          <div id="widget-budget-val" style="font-size:20px;font-weight:700;">0</div>
-          <div id="widget-budget-lbl" style="font-size:10px;color:var(--text3);">kcal remaining</div>
-        </div>
-      </div>
     </div>
 
     <!-- Quick-log recent meals -->
     <div id="recentMealsWidget" style="display:none;margin-bottom:14px;">
       <div class="tcard" style="padding:12px 16px;">
-        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">⚡ Quick-Log Recent</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">⚡ Quick-Log Recent</div>
+          <button onclick="toggleWidgetHide('recent')" title="Hide section" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 6px;border-radius:4px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Hide ✕</button>
+        </div>
         <div id="recentMealsList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
       </div>
     </div>
@@ -1132,12 +1126,17 @@ tbody tr:hover .row-acts { opacity:1; }
       <div class="tcard" style="padding:12px 16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div style="font-size:13px;font-weight:600;">🍱 Quick Apply Template</div>
-          <button class="btn btn-ghost" onclick="showPage('foods',document.getElementById('nav-foods'));switchFdTab('templates')" style="height:26px;font-size:11px;padding:0 10px;">Manage</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-ghost" onclick="showPage('foods',document.getElementById('nav-foods'));switchFdTab('templates')" style="height:26px;font-size:11px;padding:0 10px;">Manage</button>
+            <button onclick="toggleWidgetHide('tpl')" title="Hide section" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 6px;border-radius:4px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Hide ✕</button>
+          </div>
         </div>
         <div id="quickTplList" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;"></div>
       </div>
     </div>
     <div>
+      <!-- Restore hidden widgets row -->
+      <div id="hiddenWidgetRestore" style="display:none;gap:6px;margin-bottom:10px;flex-wrap:wrap;"></div>
       <div class="sec-hdr" style="margin-bottom:12px">
         <div class="sec-title">Meal Log</div>
         <span class="pill" id="entryCount">0 entries</span>
@@ -1281,6 +1280,11 @@ tbody tr:hover .row-acts { opacity:1; }
         <div class="analysis-card-title">Meal Category Distribution</div>
         <div class="analysis-card-sub">Calories by meal time</div>
         <div class="chart-wrap" style="height:200px"><canvas id="catDistChart"></canvas></div>
+      </div>
+      <div class="analysis-card full">
+        <div class="analysis-card-title">Meal Timing</div>
+        <div class="analysis-card-sub" id="mealTimingSub">When you eat throughout the day</div>
+        <div id="mealTimingBody" style="margin-top:12px;"></div>
       </div>
     </div>
   </div>
@@ -2067,6 +2071,22 @@ tbody tr:hover .row-acts { opacity:1; }
   </div>
 </div>
 
+<!-- COPY DAY TO DATE MODAL -->
+<div class="conf-overlay" id="copyDayOverlay" style="z-index:1200;" onclick="if(event.target===this)closeCopyDay()">
+  <div class="conf-box" style="max-width:380px;width:92%;">
+    <div class="conf-title">Copy Day's Meals To…</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;" id="copyDaySrcLabel">Copy entries to another date</p>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px;">Target date</label>
+      <input type="date" id="copyDayTarget" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:var(--fb);font-size:13px;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+    <div class="conf-btns">
+      <button class="btn btn-ghost" onclick="closeCopyDay()">Cancel</button>
+      <button class="btn btn-accent" onclick="executeCopyDay()">Copy</button>
+    </div>
+  </div>
+</div>
+
 <!-- KEYBOARD SHORTCUTS MODAL -->
 <div class="conf-overlay" id="shortcutsOverlay" style="z-index:1200;" onclick="if(event.target===this)closeShortcuts()">
   <div class="conf-box" style="max-width:480px;width:92%;max-height:80vh;overflow-y:auto;">
@@ -2710,6 +2730,7 @@ const MACROS=[
 const MACRO_DEFAULT_ORDER=['protein','fat','carbs','fiber'];
 let macroOrder=[...MACRO_DEFAULT_ORDER]; // persisted in settings
 let streakOrder=[]; // persisted order of streak macro keys
+let _wHide={recent:false,tpl:false}; // widget visibility, persisted in settings
 
 function getMACROS(){ return macroOrder.map(k=>MACROS.find(m=>m.key===k)).filter(Boolean); }
 
@@ -2990,7 +3011,6 @@ function render(){
   }
   renderTable();
   renderWeeklySummary();
-  renderBudgetWidget(T.kcal,TGT.kcal);
   renderRecentMeals();
   const n=meals.length;
   document.getElementById('entryCount').textContent=n+' entr'+(n===1?'y':'ies');
@@ -3303,15 +3323,33 @@ function closeShortcuts(){
   if(ov)ov.classList.remove('open');
 }
 
-/* ── Calorie budget widget ── */
-function renderBudgetWidget(consumed,target){
-  const remaining=Math.round(target-consumed);
-  const valEl=document.getElementById('widget-budget-val');
-  const lblEl=document.getElementById('widget-budget-lbl');
-  if(!valEl)return;
-  valEl.textContent=Math.abs(remaining).toLocaleString();
-  valEl.style.color=remaining>200?'var(--green)':remaining>0?'var(--orange)':'var(--red)';
-  lblEl.textContent=remaining>=0?'kcal remaining':'kcal over target';
+/* ── Widget hide/show toggles ── */
+async function _saveWidgetHide(){
+  const s=await Store.get('nutrilog_settings');
+  if(s){s.widgetHide=_wHide;await Store.set('nutrilog_settings',s).catch(()=>{});}
+}
+function toggleWidgetHide(key){
+  _wHide[key]=true;
+  if(key==='recent'){const w=document.getElementById('recentMealsWidget');if(w)w.style.display='none';}
+  if(key==='tpl'){const w=document.getElementById('quickTplWidget');if(w)w.style.display='none';}
+  renderHiddenRestoreBar();
+  _saveWidgetHide();
+}
+function showWidget(key){
+  _wHide[key]=false;
+  renderHiddenRestoreBar();
+  if(key==='recent')renderRecentMeals();
+  if(key==='tpl')renderQuickTemplates();
+  _saveWidgetHide();
+}
+function renderHiddenRestoreBar(){
+  const bar=document.getElementById('hiddenWidgetRestore');
+  if(!bar)return;
+  const chips=[];
+  if(_wHide.recent)chips.push(`<button onclick="showWidget('recent')" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text2);cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">⚡ Show Recent</button>`);
+  if(_wHide.tpl)chips.push(`<button onclick="showWidget('tpl')" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text2);cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">🍱 Show Templates</button>`);
+  bar.innerHTML=chips.join('');
+  bar.style.display=chips.length?'flex':'none';
 }
 
 /* ── Quick-log recent meals ── */
@@ -3329,7 +3367,7 @@ function renderRecentMeals(){
       if(!seen.has(key)&&recent.length<6){seen.add(key);recent.push({...m});}
     });
   });
-  if(!recent.length){widget.style.display='none';return;}
+  if(!recent.length||_wHide.recent){widget.style.display='none';renderHiddenRestoreBar();return;}
   widget.style.display='block';
   list.innerHTML=recent.map((m,i)=>`
     <button onclick="quickLogMeal(${i})" title="Add to today" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left;transition:border-color var(--tr);display:flex;flex-direction:column;gap:2px;min-width:140px;max-width:200px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
@@ -4413,9 +4451,9 @@ function renderHistDetail(ds){
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
       <div style="font-family:var(--fd);font-size:17px;letter-spacing:-.3px;color:var(--text2)">${label}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn btn-ghost" style="height:30px;font-size:12px;padding:0 12px;" onclick="duplicateDayToToday('${ds}')" title="Copy all entries from this day to today">
+        <button class="btn btn-ghost" style="height:30px;font-size:12px;padding:0 12px;" onclick="openCopyDay('${ds}')" title="Copy all entries from this day to another date">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          Copy to Today
+          Copy to…
         </button>
         <button class="btn btn-accent" style="height:30px;font-size:12px;padding:0 12px;" onclick="openHistAdd('${ds}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -4549,7 +4587,46 @@ function saveDayNote(ds){
   },800);
 }
 
-/* ─── Duplicate day to today ─── */
+/* ─── Copy day to any date ─── */
+let _copyDaySrc=null;
+function openCopyDay(srcDs){
+  _copyDaySrc=srcDs;
+  const lbl=document.getElementById('copyDaySrcLabel');
+  if(lbl)lbl.textContent='Copying '+srcDs+' → select target date';
+  const inp=document.getElementById('copyDayTarget');
+  if(inp)inp.value=todayStr();
+  document.getElementById('copyDayOverlay').classList.add('open');
+}
+function closeCopyDay(){
+  document.getElementById('copyDayOverlay').classList.remove('open');
+  _copyDaySrc=null;
+}
+async function executeCopyDay(){
+  const src=_copyDaySrc;
+  const target=document.getElementById('copyDayTarget')?.value;
+  if(!src||!target){toast('Select a target date','err');return;}
+  const srcEntries=src===todayStr()?meals:(histIdx[src]||[]);
+  if(!srcEntries.length){toast('No entries on source date','err');return;}
+  closeCopyDay();
+  const count=srcEntries.length;
+  const copies=srcEntries.map(e=>({...e,date:target}));
+  if(target===todayStr()){
+    meals.push(...copies);
+    render();
+    queueAutoSave();
+  } else {
+    const h=(await Store.get('nutrilog_history'))||{};
+    h[target]=[...(h[target]||[]),...copies];
+    histIdx[target]=h[target];
+    await Store.set('nutrilog_history',h);
+    if(selDate===target)renderHistDetail(target);
+    renderCalendar();
+    renderWeeklySummary();
+  }
+  toast(count+' entr'+(count===1?'y':'ies')+' copied to '+target,'ok');
+}
+
+/* ─── Duplicate day to today (kept for copy-yesterday shortcut) ─── */
 function duplicateDayToToday(ds){
   const srcEntries=histIdx[ds];
   if(!srcEntries||!srcEntries.length){toast('No entries on that day','err');return;}
@@ -4709,6 +4786,84 @@ function renderAnalysis(){
     },
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:text3,font:{size:11}},grid:{display:false}},y:{ticks:{color:text3,font:{size:10},callback:v=>v.toLocaleString()},grid:{color:border}}}}
   });
+
+  // ── Meal Timing ──
+  renderMealTiming(activeDays);
+}
+
+function renderMealTiming(activeDays){
+  const body=document.getElementById('mealTimingBody');
+  const sub=document.getElementById('mealTimingSub');
+  if(!body)return;
+  if(!activeDays.length){body.innerHTML='<div style="color:var(--text3);font-size:13px;padding:8px 0">No data in period</div>';return;}
+
+  // Bucket entries into 2-hour windows 0–24
+  const buckets=Array.from({length:12},(_,i)=>({label:(i*2)+':00–'+(i*2+2)+':00',kcal:0,count:0,hour:i*2}));
+  const times=[];
+  activeDays.forEach(d=>d.entries.forEach(e=>{
+    const t=e.time||'';
+    const m=t.match(/^(\d{1,2}):(\d{2})$/);
+    if(!m)return;
+    const hr=+m[1],min=+m[2];
+    const totalMin=hr*60+min;
+    times.push(totalMin);
+    const bi=Math.min(Math.floor(hr/2),11);
+    buckets[bi].kcal+=+e.kcal||0;
+    buckets[bi].count++;
+  }));
+
+  const maxKcal=Math.max(...buckets.map(b=>b.kcal),1);
+
+  // Stats
+  let statsHtml='';
+  if(times.length){
+    const sorted=[...times].sort((a,b)=>a-b);
+    const avgArr=times.reduce((a,b)=>a+b,0)/times.length;
+    const fmt=m=>{const h=Math.floor(m/60),mn=m%60;return h+':'+(mn<10?'0':'')+mn;};
+    // Avg gap between meals (per-day)
+    const gaps=[];
+    activeDays.forEach(d=>{
+      const ts=d.entries.map(e=>e.time||'').filter(t=>/^\d{1,2}:\d{2}$/.test(t))
+        .map(t=>{const p=t.split(':');return +p[0]*60+(+p[1]||0);}).sort((a,b)=>a-b);
+      for(let i=1;i<ts.length;i++)gaps.push(ts[i]-ts[i-1]);
+    });
+    const avgGap=gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):null;
+    statsHtml=`<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px;">
+      <div><div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">First Meal</div><div style="font-size:15px;font-weight:700;color:var(--text);font-family:var(--fm);">${fmt(sorted[0])}</div></div>
+      <div><div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Last Meal</div><div style="font-size:15px;font-weight:700;color:var(--text);font-family:var(--fm);">${fmt(sorted[sorted.length-1])}</div></div>
+      <div><div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Avg Meal Time</div><div style="font-size:15px;font-weight:700;color:var(--text);font-family:var(--fm);">${fmt(Math.round(avgArr))}</div></div>
+      ${avgGap!==null?`<div><div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Avg Gap Between Meals</div><div style="font-size:15px;font-weight:700;color:var(--text);font-family:var(--fm);">${Math.floor(avgGap/60)}h ${avgGap%60}m</div></div>`:''}
+    </div>`;
+  }
+
+  // Show only non-empty buckets plus neighbours; if all empty show placeholder
+  const activeBuckets=buckets.filter(b=>b.kcal>0);
+  if(!activeBuckets.length){body.innerHTML=statsHtml+'<div style="color:var(--text3);font-size:13px;">Entries need a time set to appear here</div>';return;}
+
+  const barsHtml=buckets.map(b=>{
+    const pct=Math.round(b.kcal/maxKcal*100);
+    if(b.kcal===0&&pct===0)return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:52px;opacity:.3;">
+      <div style="font-size:9px;color:var(--text3);font-family:var(--fm);">0</div>
+      <div style="width:100%;height:100px;background:var(--bg3);border-radius:4px;position:relative;"></div>
+      <div style="font-size:9px;color:var(--text3);font-family:var(--fm);text-align:center;">${b.hour}:00</div>
+    </div>`;
+    const col=b.hour<6?'var(--blue)':b.hour<12?'var(--orange)':b.hour<18?'var(--green)':'var(--accent)';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:52px;" title="${b.label}: ${Math.round(b.kcal)} kcal · ${b.count} entries">
+      <div style="font-size:9px;color:var(--text3);font-family:var(--fm);">${Math.round(b.kcal)}</div>
+      <div style="width:100%;height:100px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;">
+        <div style="position:absolute;bottom:0;left:0;right:0;height:${pct}%;background:${col};border-radius:4px 4px 0 0;transition:height .3s;"></div>
+      </div>
+      <div style="font-size:9px;color:var(--text3);font-family:var(--fm);text-align:center;">${b.hour}:00</div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML=statsHtml+`<div style="display:flex;gap:4px;align-items:flex-end;">${barsHtml}</div>
+  <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;">
+    <span style="font-size:10px;color:var(--text3);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--blue);margin-right:4px;"></span>Night (0–6h)</span>
+    <span style="font-size:10px;color:var(--text3);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--orange);margin-right:4px;"></span>Morning (6–12h)</span>
+    <span style="font-size:10px;color:var(--text3);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--green);margin-right:4px;"></span>Afternoon (12–18h)</span>
+    <span style="font-size:10px;color:var(--text3);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--accent);margin-right:4px;"></span>Evening (18–24h)</span>
+  </div>`;
 }
 
 /* ═══ SETTINGS ═══ */
@@ -4764,6 +4919,8 @@ async function loadSettings(){
         tplOrder=s.templateOrder;
       if(s.streakOrder&&Array.isArray(s.streakOrder))
         streakOrder=s.streakOrder;
+      if(s.widgetHide&&typeof s.widgetHide==='object')
+        _wHide={recent:!!s.widgetHide.recent,tpl:!!s.widgetHide.tpl};
     }
     // Fields just loaded from storage — not unsaved changes
     setTimeout(()=>{if(typeof clearDirty==='function')clearDirty();},0);
@@ -5213,7 +5370,7 @@ function renderQuickTemplates(){
   const list=document.getElementById('quickTplList');
   if(!w||!list)return;
   const ids=getOrderedTplIds();
-  if(!ids.length){w.style.display='none';return;}
+  if(!ids.length||_wHide.tpl){w.style.display='none';renderHiddenRestoreBar();return;}
   w.style.display='block';
   list.innerHTML='';
   ids.forEach(id=>{
@@ -5518,7 +5675,7 @@ function toast(msg,type='info'){
 
 /* ═══ KEYBOARD ═══ */
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeModal();closeConf();closeDbModal();closeImport();closeWeightLog();closeShortcuts();acHide();}
+  if(e.key==='Escape'){closeModal();closeConf();closeDbModal();closeImport();closeWeightLog();closeShortcuts();closeCopyDay();acHide();}
   if(e.key==='?'&&!e.ctrlKey&&!e.metaKey&&document.activeElement.tagName!=='INPUT'&&document.activeElement.tagName!=='TEXTAREA'){openShortcuts();}
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     if(document.getElementById('mealOverlay').classList.contains('open'))submitMeal();
