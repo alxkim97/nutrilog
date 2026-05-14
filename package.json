@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "1.8.1",
-  "description": "NutriLog v1.8.1 — Macro Tracker with Analysis & Multi-Select",
+  "version": "1.9.0",
+  "description": "NutriLog v1.9.0 — Macro Tracker with Analysis & Multi-Select",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

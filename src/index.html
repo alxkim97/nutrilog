@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v1.8.1</title>
+<title>NutriLog v1.9.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -879,22 +879,28 @@ tbody tr:hover .row-acts { opacity:1; }
         <button class="btn btn-ghost" onclick="exportExcel('all');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📊 All Data</button>
       </div>
     </div>
-    <button class="btn btn-ghost" onclick="openImport()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      Import
-    </button>
-    <button class="btn btn-ghost" onclick="copyYesterdayToToday()" title="Copy all of yesterday's meals to today">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      Copy Yesterday
-    </button>
-    <button class="btn btn-ghost" onclick="saveSession()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-      Save
-    </button>
-    <button class="btn btn-ghost danger" onclick="confirmClearAll()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
-      Clear
-    </button>
+    <div style="position:relative;display:inline-flex;" id="moreMenuWrapper">
+      <button class="btn btn-ghost" onclick="toggleMoreMenu()" id="moreMenuBtn" title="More actions">⋯ More</button>
+      <div id="moreMenu" style="display:none;position:absolute;top:38px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:180px;box-shadow:var(--sh);z-index:300;">
+        <button class="btn btn-ghost" onclick="openImport();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import
+        </button>
+        <button class="btn btn-ghost" onclick="copyYesterdayToToday();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy Yesterday
+        </button>
+        <button class="btn btn-ghost" onclick="saveSession();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save
+        </button>
+        <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
+        <button class="btn btn-ghost danger" onclick="confirmClearAll();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          Clear Today
+        </button>
+      </div>
+    </div>
     <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleTheme()">🌙</button>
     <!-- Local save status -->
     <div id="savePill" title="Local save status">
@@ -2510,14 +2516,16 @@ async function pullFromSupabase(){
       if(Object.keys(merged).length) await sbSetHistory(merged);
     }
     if(remCheckins){await Store._localSet('nutrilog_checkins',remCheckins);}
-    if(remTemplates){
-      // Local-priority merge: local keys win over cloud (prevents cloud from wiping local-only templates)
+    {
+      // Always merge local + cloud templates regardless of which side has data.
+      // Skipping when cloud was empty meant local templates never uploaded.
       const localTemplates=(await Store._localGet('nutrilog_templates'))||{};
-      const merged={...remTemplates,...localTemplates}; // local wins
-      await Store._localSet('nutrilog_templates',merged);
-      mealTemplates=merged;
-      // Push merged back to cloud so new local templates propagate up
-      await sbSet('templates',merged);
+      const merged=remTemplates?{...remTemplates,...localTemplates}:{...localTemplates};
+      if(Object.keys(merged).length){
+        await Store._localSet('nutrilog_templates',merged);
+        mealTemplates=merged;
+        await sbSet('templates',merged);
+      }
     }
     // Pull today's session
     const todayMeals=await sbGetSessions(todayStr());
@@ -3959,10 +3967,18 @@ function exportData(){
 function toggleExportMenu(){
   const m=document.getElementById('exportMenu');
   m.style.display=m.style.display==='none'?'block':'none';
+  document.getElementById('moreMenu').style.display='none';
+}
+function toggleMoreMenu(){
+  const m=document.getElementById('moreMenu');
+  m.style.display=m.style.display==='none'?'block':'none';
+  document.getElementById('exportMenu').style.display='none';
 }
 document.addEventListener('click',function(e){
-  const w=document.getElementById('exportDropWrapper');
-  if(w&&!w.contains(e.target))document.getElementById('exportMenu').style.display='none';
+  const ew=document.getElementById('exportDropWrapper');
+  if(ew&&!ew.contains(e.target))document.getElementById('exportMenu').style.display='none';
+  const mw=document.getElementById('moreMenuWrapper');
+  if(mw&&!mw.contains(e.target))document.getElementById('moreMenu').style.display='none';
 });
 
 function exportExcel(range){
@@ -4146,11 +4162,14 @@ function exportHistSelected(){
 function deleteHistSelected(){
   if(!histMultiSel.size){toast('No dates selected','err');return;}
   showConf('Delete '+histMultiSel.size+' day(s)?','This removes the history data for those dates.','Delete',async()=>{
-    histMultiSel.forEach(ds=>delete histIdx[ds]);
+    const toDelete=[...histMultiSel];
+    toDelete.forEach(ds=>delete histIdx[ds]);
     const h={...histIdx};
     await Store.set('nutrilog_history',h).catch(()=>{});
+    toDelete.forEach(ds=>sbDeleteDate(ds)); // remove from Supabase
     histMultiSel.clear();
     toggleHistMulti();
+    renderWeeklySummary();
     toast('Deleted','info');
   });
 }
@@ -4422,9 +4441,11 @@ function delHistEntry(ds,i){
     histIdx[ds].splice(i,1);
     const h=(await Store.get('nutrilog_history'))||{};
     h[ds]=histIdx[ds];
-    if(!h[ds].length)delete h[ds];
+    if(!h[ds].length){
+      delete h[ds];
+      sbDeleteDate(ds); // remove from Supabase so sync can't restore it
+    }
     await Store.set('nutrilog_history',h).catch(()=>{});
-    // If today, sync live meals
     if(ds===todayStr()){meals=histIdx[ds]||[];render();}
     toast('Entry deleted','info');
     renderHistDetail(ds);
