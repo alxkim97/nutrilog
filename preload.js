@@ -39,5 +39,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMenuNav:        (cb) => ipcRenderer.on('menu:nav',          (_, p) => cb(p)),
   onMenuTheme:      (cb) => ipcRenderer.on('menu:theme',        () => cb()),
   onMenuPushCloud:  (cb) => ipcRenderer.on('menu:push-cloud',   () => cb()),
+  onMenuPullCloud:  (cb) => ipcRenderer.on('menu:pull-cloud',   () => cb()),
   onBeforeQuit:     (cb) => ipcRenderer.on('app:before-quit',   () => cb()),
 });

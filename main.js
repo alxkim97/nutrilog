@@ -86,13 +86,17 @@ function buildMenu() {
       submenu: [
         {
           label: 'Save Session',
-          accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow?.webContents.send('menu:save')
         },
         {
           label: 'Push All to Cloud',
-          accelerator: 'CmdOrCtrl+Shift+U',
+          accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow?.webContents.send('menu:push-cloud')
+        },
+        {
+          label: 'Pull from Cloud',
+          accelerator: 'CmdOrCtrl+Shift+U',
+          click: () => mainWindow?.webContents.send('menu:pull-cloud')
         },
         { type: 'separator' },
         {

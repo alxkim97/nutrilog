@@ -328,14 +328,22 @@ async function pullFromSupabase(){
       const today=todayStr();
       // Cloud-first merge: cloud dates may come from another device — always include them.
       // Local dates override cloud for the same date (local edits win on conflict).
-      // Today is excluded — it lives in sessions/nutrilog_v1, not history.
+      // Today is excluded from disk — it lives in sessions/nutrilog_v1, not history.
       const merged={...remHistory};
       Object.keys(localHistory).forEach(date=>{ if(date!==today)merged[date]=localHistory[date]; });
-      delete merged[today]; // never store today in history.json to prevent stale data on push
+      delete merged[today]; // don't persist today in history.json (prevents stale push)
       // Remove intentionally deleted dates — prevents other devices from restoring them
       _deletedDates.forEach(d=>delete merged[d]);
       await Store._localSet('nutrilog_history',merged);
       Object.assign(histIdx,merged);
+      // Restore pre-logged meals for today in memory only (cloud + local, deduplicated)
+      const cloudToday=remHistory[today]||[];
+      const localToday=localHistory[today]||[];
+      const todayPreLogged=[...cloudToday];
+      localToday.forEach(m=>{
+        if(!todayPreLogged.some(x=>x.name===m.name&&x.time===m.time)) todayPreLogged.push(m);
+      });
+      if(todayPreLogged.length) histIdx[today]=todayPreLogged;
       // Push merged result back (deletions included — overwrites stale cloud data)
       if(Object.keys(merged).length) await sbSetHistory(merged);
       // Ensure deleted dates are removed from Supabase too (propagates deletion to cloud)
@@ -450,6 +458,8 @@ if (IS_ELECTRON) {
   window.electronAPI.onBeforeQuit(() => saveSession());
   if(window.electronAPI.onMenuPushCloud)
     window.electronAPI.onMenuPushCloud(() => forcePushToCloud());
+  if(window.electronAPI.onMenuPullCloud)
+    window.electronAPI.onMenuPullCloud(() => pullFromSupabase());
 }
 
 /* ── Periodic background sync every 5 minutes ── */
@@ -618,10 +628,7 @@ function tick(){
 
 async function handleDayRollover(){
   try{
-    // Archive yesterday's meals to history before clearing
     if(meals.length){
-      const yesterday=_currentDateStr; // already updated — but we need the OLD date
-      // Re-derive the previous date from today minus 1
       const prevDate=new Date();prevDate.setDate(prevDate.getDate()-1);
       const prevStr=prevDate.getFullYear()+'-'+pad2(prevDate.getMonth()+1)+'-'+pad2(prevDate.getDate());
       const h=(await Store.get('nutrilog_history'))||{};
@@ -629,11 +636,14 @@ async function handleDayRollover(){
       await Store.set('nutrilog_history',h);
       Object.assign(histIdx,h);
     }
-    // Clear today's meals and save a clean session for the new day
-    meals=[];
-    await Store.set('nutrilog_v1',{ts:Date.now(),date:_currentDateStr,meals:[]});
+    // Load any pre-logged meals for the new day
+    const today=_currentDateStr;
+    const preLogged=histIdx[today]||[];
+    meals=preLogged.length?[...preLogged]:[];
+    await Store.set('nutrilog_v1',{ts:Date.now(),date:today,meals});
     render();
-    toast('New day started — yesterday archived 📅','info');
+    if(preLogged.length) toast('New day — loaded '+preLogged.length+' pre-logged meal'+(preLogged.length===1?'':'s')+' 📅','ok');
+    else toast('New day started — yesterday archived 📅','info');
   }catch(e){console.warn('handleDayRollover error',e);}
 }
 
@@ -2928,13 +2938,20 @@ async function saveSession(){
 }
 async function autoLoad(){
   try{
-    const d=await Store.get('nutrilog_v1');if(!d)return;
     const today=todayStr();
-    // Only load if the stored date string matches today — no timestamp fallback
-    const storedDate=d.date||d.savedDate||null;
-    if(storedDate===today&&d.meals?.length){
-      meals=d.meals;render();toast('Auto-loaded '+meals.length+' entries from today','info');
+    const d=await Store.get('nutrilog_v1');
+    if(d){
+      const storedDate=d.date||d.savedDate||null;
+      if(storedDate===today&&d.meals?.length) meals=d.meals;
     }
+    // Merge pre-logged meals stored in history for today
+    const preLogged=histIdx[today]||[];
+    if(preLogged.length){
+      const fp=new Set(meals.map(m=>m.name+'|'+m.time+'|'+(m.serving||'')));
+      const fresh=preLogged.filter(m=>!fp.has(m.name+'|'+m.time+'|'+(m.serving||'')));
+      if(fresh.length) meals=[...meals,...fresh];
+    }
+    if(meals.length) render();
   }catch{}
 }
 
