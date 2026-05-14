@@ -88,6 +88,11 @@ function buildMenu() {
           accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow?.webContents.send('menu:save')
         },
+        {
+          label: 'Push All to Cloud',
+          accelerator: 'CmdOrCtrl+Shift+U',
+          click: () => mainWindow?.webContents.send('menu:push-cloud')
+        },
         { type: 'separator' },
         {
           label: 'Export Food Log (JSON)',

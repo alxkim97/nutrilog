@@ -34,9 +34,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteEggImage: (name)  => ipcRenderer.invoke('egg:delete', name),
 
   // ── Menu events → renderer ──
-  onMenuSave:    (cb) => ipcRenderer.on('menu:save',   () => cb()),
-  onMenuExport:  (cb) => ipcRenderer.on('menu:export', (_, p) => cb(p)),
-  onMenuNav:     (cb) => ipcRenderer.on('menu:nav',    (_, p) => cb(p)),
-  onMenuTheme:   (cb) => ipcRenderer.on('menu:theme',  () => cb()),
-  onBeforeQuit:  (cb) => ipcRenderer.on('app:before-quit', () => cb()),
+  onMenuSave:       (cb) => ipcRenderer.on('menu:save',         () => cb()),
+  onMenuExport:     (cb) => ipcRenderer.on('menu:export',       (_, p) => cb(p)),
+  onMenuNav:        (cb) => ipcRenderer.on('menu:nav',          (_, p) => cb(p)),
+  onMenuTheme:      (cb) => ipcRenderer.on('menu:theme',        () => cb()),
+  onMenuPushCloud:  (cb) => ipcRenderer.on('menu:push-cloud',   () => cb()),
+  onBeforeQuit:     (cb) => ipcRenderer.on('app:before-quit',   () => cb()),
 });
