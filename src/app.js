@@ -2665,31 +2665,37 @@ function renderHeatmap(){
     weeks.push(week);
   }
 
-  // Month label row
-  let monthHtml='<div style="display:flex;gap:2px;margin-bottom:3px;padding-left:20px;">';
+  // Fixed dimensions — must match cell/gap sizes below
+  const CELL=12, GAP=2, STRIDE=CELL+GAP; // 14px per week column
+  const DOW_W=16; // fixed width of the day-of-week label column
+
+  // Month labels: absolutely positioned so they always align with their week column
+  let monthHtml=`<div style="position:relative;height:14px;margin-left:${DOW_W+4}px;margin-bottom:2px;">`;
   let lastMonth=-1;
   weeks.forEach((w,wi)=>{
     const m=w[0].date.getMonth();
-    if(m!==lastMonth){monthHtml+=`<div style="flex:${wi===0?1:1};font-size:9px;color:var(--text3);font-family:var(--fm);min-width:12px;">${MONTHS_SHORT[m]}</div>`;lastMonth=m;}
-    else monthHtml+=`<div style="flex:1;min-width:12px;"></div>`;
+    if(m!==lastMonth){
+      monthHtml+=`<div style="position:absolute;left:${wi*STRIDE}px;font-size:9px;color:var(--text3);font-family:var(--fm);white-space:nowrap;">${MONTHS_SHORT[m]}</div>`;
+      lastMonth=m;
+    }
   });
   monthHtml+='</div>';
 
-  // Grid rows (DOW labels + cells)
+  // Grid: fixed DOW column + fixed-width week columns
   let gridHtml='<div style="display:flex;gap:0;">';
-  // DOW labels column
-  gridHtml+='<div style="display:flex;flex-direction:column;gap:2px;margin-right:4px;">';
+  // DOW labels column (fixed width)
+  gridHtml+=`<div style="width:${DOW_W}px;display:flex;flex-direction:column;gap:${GAP}px;margin-right:4px;flex-shrink:0;">`;
   DOW.forEach((d,i)=>{
-    gridHtml+=`<div style="height:12px;font-size:8px;color:var(--text3);font-family:var(--fm);line-height:12px;visibility:${i%2===1?'visible':'hidden'}">${d}</div>`;
+    gridHtml+=`<div style="height:${CELL}px;font-size:8px;color:var(--text3);font-family:var(--fm);line-height:${CELL}px;visibility:${i%2===1?'visible':'hidden'}">${d}</div>`;
   });
   gridHtml+='</div>';
-  // Week columns
+  // Week columns — each exactly STRIDE px wide
   weeks.forEach(week=>{
-    gridHtml+='<div style="display:flex;flex-direction:column;gap:2px;">';
+    gridHtml+=`<div style="display:flex;flex-direction:column;gap:${GAP}px;margin-right:${GAP}px;flex-shrink:0;">`;
     week.forEach(cell=>{
       const col=cell.future?'transparent':cellColor(cell.kcal);
-      const tip=cell.future?'':`${cell.ds}: ${cell.kcal?Math.round(cell.kcal)+' kcal, '+cell.count+' entries':'no data'}`;
-      gridHtml+=`<div title="${tip}" style="width:12px;height:12px;border-radius:2px;background:${col};cursor:${cell.kcal?'pointer':'default'};" ${cell.kcal?`onclick="pickHistDate('${cell.ds}');showPage('history',document.getElementById('nav-history'))"`:''}></div>`;
+      const tip=cell.future?'':`${cell.ds}: ${cell.kcal?Math.round(cell.kcal)+' kcal · '+cell.count+' entries':'no data'}`;
+      gridHtml+=`<div title="${tip}" style="width:${CELL}px;height:${CELL}px;border-radius:2px;background:${col};cursor:${cell.kcal?'pointer':'default'};" ${cell.kcal?`onclick="pickHistDate('${cell.ds}');showPage('history',document.getElementById('nav-history'))"`:''}></div>`;
     });
     gridHtml+='</div>';
   });
