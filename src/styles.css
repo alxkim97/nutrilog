@@ -755,7 +755,7 @@ tbody tr:hover .row-acts { opacity:1; }
 #eggImgWrap{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#000;}
 #eggOverlay img {
   max-width:100%;max-height:100%;object-fit:contain;user-select:none;pointer-events:none;
-  transition:opacity .18s;
+  transition:opacity .1s;
 }
 #eggFooter{
   display:flex;align-items:center;justify-content:space-between;

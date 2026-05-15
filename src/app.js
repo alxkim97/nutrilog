@@ -351,13 +351,17 @@ async function pullFromSupabase(){
     }
     if(remCheckins){await Store._localSet('nutrilog_checkins',remCheckins);}
     {
-      // Always merge local + cloud templates regardless of which side has data.
-      // Skipping when cloud was empty meant local templates never uploaded.
+      // Always merge local + cloud templates. Local wins on any key conflict.
+      // New IDs that only exist in cloud are added; local-only IDs are kept and pushed back up.
       const localTemplates=(await Store._localGet('nutrilog_templates'))||{};
       const merged=remTemplates?{...remTemplates,...localTemplates}:{...localTemplates};
       if(Object.keys(merged).length){
         await Store._localSet('nutrilog_templates',merged);
         mealTemplates=merged;
+        // Reconcile tplOrder: keep existing order, append any new IDs from merge
+        const allIds=Object.keys(merged);
+        tplOrder=tplOrder.filter(id=>merged[id]);
+        allIds.forEach(id=>{if(!tplOrder.includes(id))tplOrder.push(id);});
         await sbSet('templates',merged);
       }
     }
@@ -374,6 +378,9 @@ async function pullFromSupabase(){
     toast('Data synced from cloud ☁️','ok');
     // Re-init UI with new data — build rows FIRST so render() has elements to fill
     buildSidebarRows(); await autoLoad(); render();
+    // Explicitly refresh widgets that derive from synced data
+    renderQuickTemplates();
+    renderRecentMeals();
     setTimeout(()=>{if(typeof clearDirty==='function')clearDirty();},50);
     maybeShowCheckin(); // check-in after sync so cloud data is fresh
   }catch(e){
@@ -3755,12 +3762,14 @@ async function eggLoadPhotos(){
       if(names&&names.length){
         const dataUrls=await Promise.all(names.map(n=>window.electronAPI.readEggImage(n)));
         _eggPhotos=dataUrls.filter(Boolean).map((d,i)=>({src:d,name:names[i]}));
+        // Pre-decode every image into the browser's bitmap cache so switching is instant
+        _eggPhotos.forEach(p=>{const img=new Image();img.src=p.src;});
         return;
       }
     }catch(e){}
   }
-  // Fallback: wrap static array
   _eggPhotos=_EGG_PHOTOS.map(src=>({src,name:''}));
+  _eggPhotos.forEach(p=>{const img=new Image();img.src=p.src;});
 }
 
 function eggTap(){
@@ -3836,11 +3845,11 @@ function eggShow(){
   if(!_eggPhotos.length)return;
   const img=document.getElementById('eggImg');
   img.style.opacity='0';
+  // 30ms lets the fade-out start; images are pre-decoded so no additional decode wait
   setTimeout(()=>{
     img.src=_eggPhotos[_eggIdx].src;
-    img.onload=()=>{img.style.opacity='1';};
-    if(img.complete&&img.naturalWidth)img.style.opacity='1';
-  },80);
+    img.style.opacity='1';
+  },30);
   const counter=document.getElementById('eggCounter');
   if(counter){counter.textContent=(_eggIdx+1)+' / '+_eggPhotos.length;counter.style.cursor='pointer';counter.onclick=eggCounterTap;}
 }
