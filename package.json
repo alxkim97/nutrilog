@@ -1,6 +1,6 @@
 {
   "name": "nutrilog",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "NutriLog v2.2.0 — Heatmap, Daily Reminder, Smarter Sync",
   "main": "main.js",
   "scripts": {

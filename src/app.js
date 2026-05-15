@@ -2601,8 +2601,115 @@ function renderAnalysis(){
 
   // ── Meal Timing ──
   renderMealTiming(activeDays);
-  // ── Heatmap (uses full history, not just period) ──
+  // ── Heatmap + Achievements (use full history, not just period) ──
   renderHeatmap();
+  renderAchievements();
+}
+
+/* ── Achievements ── */
+let _prevUnlocked=new Set(); // track previously unlocked to detect newly earned
+
+function renderAchievements(){
+  const el=document.getElementById('achievement-grid');
+  if(!el)return;
+
+  // Gather all history including live today
+  const liveHist={...histIdx};
+  const todayDs=todayStr();
+  if(meals.length)liveHist[todayDs]=meals;
+
+  const loggedDates=Object.keys(liveHist).filter(d=>(liveHist[d]||[]).length>0).sort();
+  const totalDays=loggedDates.length;
+  const totalEntries=Object.values(liveHist).reduce((a,e)=>a+(e?.length||0),0);
+  const totalCheckins=(typeof checkins!=='undefined'?checkins:[]).length;
+  const totalFoods=(typeof foodLib!=='undefined'?foodLib:[]).length;
+
+  // Best logging streak
+  let bestStreak=0,curRun=0,prevD=null;
+  loggedDates.forEach(d=>{
+    const dt=new Date(d+'T00:00:00');
+    if(prevD){curRun=Math.round((dt-prevD)/86400000)===1?curRun+1:1;}else curRun=1;
+    if(curRun>bestStreak)bestStreak=curRun;
+    prevD=dt;
+  });
+
+  // Best protein target streak
+  let bestProtStreak=0,protRun=0;
+  loggedDates.forEach(d=>{
+    const entries=liveHist[d]||[];
+    const prot=entries.reduce((a,e)=>a+(+e.protein||0),0);
+    if(prot>=TGT.protein){protRun++;if(protRun>bestProtStreak)bestProtStreak=protRun;}
+    else protRun=0;
+  });
+
+  // Days that hit all macros (kcal within range, protein ≥ target)
+  let macroPerfectDays=0;
+  loggedDates.forEach(d=>{
+    const entries=liveHist[d]||[];
+    const T=totals(entries);
+    const kcalOk=TGT_MIN.kcal?T.kcal>=TGT_MIN.kcal:true;
+    const protOk=T.protein>=TGT.protein;
+    if(kcalOk&&protOk)macroPerfectDays++;
+  });
+
+  // Unique food names logged
+  const uniqueFoods=new Set(Object.values(liveHist).flat().map(e=>e.name)).size;
+
+  const defs=[
+    // ── Logging milestones ──
+    {icon:'🏁',name:'First Log',      desc:'Log your first meal',                u:totalDays>=1},
+    {icon:'📝',name:'10 Days',        desc:'Log meals on 10 different days',      u:totalDays>=10,  prog:`${Math.min(totalDays,10)}/10`},
+    {icon:'📅',name:'30 Days',        desc:'Log meals on 30 different days',      u:totalDays>=30,  prog:`${Math.min(totalDays,30)}/30`},
+    {icon:'💯',name:'Century',        desc:'Log meals on 100 different days',     u:totalDays>=100, prog:`${Math.min(totalDays,100)}/100`},
+    {icon:'💎',name:'Elite 200',      desc:'Log meals on 200 different days',     u:totalDays>=200, prog:`${Math.min(totalDays,200)}/200`},
+    // ── Streaks ──
+    {icon:'⚡',name:'3-Day Streak',   desc:'Log 3 days in a row',                u:bestStreak>=3},
+    {icon:'🔥',name:'Week Warrior',   desc:'Log 7 days in a row',                u:bestStreak>=7,  prog:`${Math.min(bestStreak,7)}/7`},
+    {icon:'🌟',name:'Fortnight',      desc:'Log 14 days straight',               u:bestStreak>=14, prog:`${Math.min(bestStreak,14)}/14`},
+    {icon:'👑',name:'Month Master',   desc:'Log 30 days in a row',               u:bestStreak>=30, prog:`${Math.min(bestStreak,30)}/30`},
+    // ── Entries ──
+    {icon:'🍽️',name:'100 Entries',   desc:'Log 100 meal entries total',         u:totalEntries>=100,  prog:`${Math.min(totalEntries,100)}/100`},
+    {icon:'🍲',name:'500 Entries',    desc:'Log 500 meal entries total',          u:totalEntries>=500,  prog:`${Math.min(totalEntries,500)}/500`},
+    {icon:'🌮',name:'1K Entries',     desc:'Log 1,000 meal entries total',        u:totalEntries>=1000, prog:`${Math.min(totalEntries,1000)}/1000`},
+    // ── Protein ──
+    {icon:'💪',name:'Protein Week',   desc:'Hit protein target 7 days in a row', u:bestProtStreak>=7,  prog:`${Math.min(bestProtStreak,7)}/7`},
+    {icon:'🥩',name:'Protein Beast',  desc:'Hit protein target 30 days in a row',u:bestProtStreak>=30, prog:`${Math.min(bestProtStreak,30)}/30`},
+    // ── Variety ──
+    {icon:'🥗',name:'Foodie',         desc:'Log 10 unique foods',                u:uniqueFoods>=10,  prog:`${Math.min(uniqueFoods,10)}/10`},
+    {icon:'👨‍🍳',name:'Chef',         desc:'Log 30 unique foods',                u:uniqueFoods>=30,  prog:`${Math.min(uniqueFoods,30)}/30`},
+    {icon:'🍴',name:'Gourmet',        desc:'Add 50 foods to your database',      u:totalFoods>=50,   prog:`${Math.min(totalFoods,50)}/50`},
+    // ── Macros ──
+    {icon:'🎯',name:'On Point',       desc:'Hit all macro targets on 10 days',   u:macroPerfectDays>=10, prog:`${Math.min(macroPerfectDays,10)}/10`},
+    {icon:'🧬',name:'Macro Master',   desc:'Hit all macro targets on 30 days',   u:macroPerfectDays>=30, prog:`${Math.min(macroPerfectDays,30)}/30`},
+    // ── Check-ins ──
+    {icon:'📋',name:'Reflector',      desc:'Complete 5 weight check-ins',        u:totalCheckins>=5,  prog:`${Math.min(totalCheckins,5)}/5`},
+    {icon:'🏆',name:'Dedicated',      desc:'Complete 20 weight check-ins',       u:totalCheckins>=20, prog:`${Math.min(totalCheckins,20)}/20`},
+  ];
+
+  // Detect newly unlocked — show a toast for each
+  const nowUnlocked=new Set(defs.filter(a=>a.u).map(a=>a.name));
+  nowUnlocked.forEach(name=>{
+    if(!_prevUnlocked.has(name)&&_prevUnlocked.size>0){
+      const a=defs.find(d=>d.name===name);
+      toast(`🎯 Achievement unlocked: ${a.icon} ${name}`,'ok');
+    }
+  });
+  _prevUnlocked=nowUnlocked;
+
+  // Sort: unlocked first, then locked
+  defs.sort((a,b)=>(b.u?1:0)-(a.u?1:0));
+
+  const unlocked=defs.filter(a=>a.u).length;
+  const countEl=document.getElementById('achievementCount');
+  if(countEl)countEl.textContent=`${unlocked} / ${defs.length} unlocked`;
+
+  el.innerHTML=defs.map(a=>`
+    <div class="achievement-card ${a.u?'unlocked':'locked'}" title="${a.desc}">
+      <div class="achievement-icon">${a.icon}</div>
+      <div class="achievement-name">${a.name}</div>
+      <div class="achievement-desc">${a.desc}</div>
+      ${!a.u&&a.prog?`<div class="achievement-progress">${a.prog}</div>`:''}
+    </div>`).join('');
 }
 
 /* ── Food Log Heatmap ── */

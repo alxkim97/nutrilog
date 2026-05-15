@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v2.2.1</title>
+<title>NutriLog v2.3.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -462,6 +462,16 @@
         </div>
         <div id="heatmapBody" style="margin-top:14px;overflow-x:auto;padding-bottom:4px;"></div>
         <div id="heatmapStats" style="margin-top:10px;display:flex;gap:20px;flex-wrap:wrap;"></div>
+      </div>
+      <div class="analysis-card full">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div>
+            <div class="analysis-card-title">🎯 Achievements</div>
+            <div class="analysis-card-sub" id="achievementSub">Unlock milestones as you log</div>
+          </div>
+          <div id="achievementCount" style="font-family:var(--fm);font-size:11px;color:var(--text3);"></div>
+        </div>
+        <div class="achievement-grid" id="achievement-grid"></div>
       </div>
     </div>
   </div>
