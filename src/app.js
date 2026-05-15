@@ -2665,9 +2665,11 @@ function renderHeatmap(){
     weeks.push(week);
   }
 
-  // Fixed dimensions — must match cell/gap sizes below
-  const CELL=12, GAP=2, STRIDE=CELL+GAP; // 14px per week column
-  const DOW_W=16; // fixed width of the day-of-week label column
+  // Calculate cell size to fill the available card width
+  const DOW_W=16, DOW_MARGIN=4, GAP=2;
+  const containerW=(body.parentElement?.clientWidth||body.clientWidth||900);
+  const CELL=Math.max(10,Math.floor((containerW-DOW_W-DOW_MARGIN-weeks.length*GAP)/weeks.length));
+  const STRIDE=CELL+GAP;
 
   // Month labels: absolutely positioned so they always align with their week column
   let monthHtml=`<div style="position:relative;height:14px;margin-left:${DOW_W+4}px;margin-bottom:2px;">`;
