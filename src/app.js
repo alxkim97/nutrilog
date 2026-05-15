@@ -351,10 +351,22 @@ async function pullFromSupabase(){
     }
     if(remCheckins){await Store._localSet('nutrilog_checkins',remCheckins);}
     {
-      // Always merge local + cloud templates. Local wins on any key conflict.
-      // New IDs that only exist in cloud are added; local-only IDs are kept and pushed back up.
+      // Template merge strategy:
+      // - IDs only in local → add to cloud (bootstrap / new template)
+      // - IDs only in cloud → adopt from cloud
+      // - IDs in both → keep whichever has the newer updatedAt timestamp
+      // Net effect: first run pushes local; subsequent syncs cloud wins unless user just edited locally.
       const localTemplates=(await Store._localGet('nutrilog_templates'))||{};
-      const merged=remTemplates?{...remTemplates,...localTemplates}:{...localTemplates};
+      const base=remTemplates?{...remTemplates}:{};
+      Object.entries(localTemplates).forEach(([id,t])=>{
+        if(!base[id]){
+          base[id]=t; // local-only: push up
+        } else {
+          const localNewer=new Date(t.updatedAt||0)>new Date(base[id].updatedAt||0);
+          if(localNewer) base[id]=t; // local edit wins only if it's newer
+        }
+      });
+      const merged=base;
       if(Object.keys(merged).length){
         await Store._localSet('nutrilog_templates',merged);
         mealTemplates=merged;
@@ -578,6 +590,26 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   document.getElementById('datePill').textContent=
     now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   tick(); setInterval(tick,1000);
+  // Daily reminder: check every minute
+  let _lastReminderDate='';
+  setInterval(()=>{
+    const enabled=document.getElementById('s-reminder-enabled')?.checked;
+    const remTime=document.getElementById('s-reminder-time')?.value||'20:00';
+    if(!enabled)return;
+    const now=new Date();
+    const hh=pad2(now.getHours()),mm=pad2(now.getMinutes());
+    const todayKey=todayStr();
+    if(hh+':'+mm===remTime&&_lastReminderDate!==todayKey&&!meals.length){
+      _lastReminderDate=todayKey;
+      if(Notification.permission==='granted'){
+        new Notification('NutriLog',{body:"You haven't logged any meals today yet. Stay on track!",icon:'../assets/icon.png'});
+      } else if(Notification.permission!=='denied'){
+        Notification.requestPermission().then(p=>{
+          if(p==='granted')new Notification('NutriLog',{body:"You haven't logged any meals today yet. Stay on track!",icon:'../assets/icon.png'});
+        });
+      }
+    }
+  },60*1000);
   await loadSettings();
   await initFoodLib();
   await initTemplates();
@@ -2569,6 +2601,127 @@ function renderAnalysis(){
 
   // ── Meal Timing ──
   renderMealTiming(activeDays);
+  // ── Heatmap (uses full history, not just period) ──
+  renderHeatmap();
+}
+
+/* ── Food Log Heatmap ── */
+function renderHeatmap(){
+  const body=document.getElementById('heatmapBody');
+  const statsEl=document.getElementById('heatmapStats');
+  const legendEl=document.getElementById('heatmapLegend');
+  if(!body)return;
+
+  // Build a lookup of dateStr → kcal for the past 365 days
+  const today=new Date();
+  const liveHistIdx={...histIdx};
+  const todayDs=todayStr();
+  if(meals.length)liveHistIdx[todayDs]=meals;
+
+  // Determine max kcal for colour scaling
+  let maxKcal=0;
+  const dateMap={};
+  for(let i=0;i<365;i++){
+    const d=new Date(today);d.setDate(d.getDate()-i);
+    const ds=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+    const entries=liveHistIdx[ds]||[];
+    const kcal=entries.reduce((a,e)=>a+(+e.kcal||0),0);
+    dateMap[ds]={kcal,count:entries.length};
+    if(kcal>maxKcal)maxKcal=kcal;
+  }
+  if(maxKcal===0)maxKcal=1;
+
+  // Colour function: 0 = empty, 1-4 = shades of accent
+  const accent=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#7c6af7';
+  function cellColor(kcal){
+    if(!kcal)return'var(--bg3)';
+    const t=Math.min(kcal/maxKcal,1);
+    if(t<0.25)return accent+'44';
+    if(t<0.5) return accent+'88';
+    if(t<0.75)return accent+'bb';
+    return accent;
+  }
+
+  // Build week columns: 52 weeks, each column = 7 days (Mon–Sun)
+  // Find start: go back to the nearest Sunday 52 weeks ago
+  const start=new Date(today);
+  start.setDate(start.getDate()-364);
+  // Align to Sunday
+  start.setDate(start.getDate()-start.getDay());
+
+  const DOW=['S','M','T','W','T','F','S'];
+  const MONTHS_SHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  // Generate columns
+  const weeks=[];
+  let cur=new Date(start);
+  while(cur<=today){
+    const week=[];
+    for(let d=0;d<7;d++){
+      const ds=cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate());
+      week.push({ds,date:new Date(cur),...(dateMap[ds]||{kcal:0,count:0}),future:cur>today});
+      cur.setDate(cur.getDate()+1);
+    }
+    weeks.push(week);
+  }
+
+  // Month label row
+  let monthHtml='<div style="display:flex;gap:2px;margin-bottom:3px;padding-left:20px;">';
+  let lastMonth=-1;
+  weeks.forEach((w,wi)=>{
+    const m=w[0].date.getMonth();
+    if(m!==lastMonth){monthHtml+=`<div style="flex:${wi===0?1:1};font-size:9px;color:var(--text3);font-family:var(--fm);min-width:12px;">${MONTHS_SHORT[m]}</div>`;lastMonth=m;}
+    else monthHtml+=`<div style="flex:1;min-width:12px;"></div>`;
+  });
+  monthHtml+='</div>';
+
+  // Grid rows (DOW labels + cells)
+  let gridHtml='<div style="display:flex;gap:0;">';
+  // DOW labels column
+  gridHtml+='<div style="display:flex;flex-direction:column;gap:2px;margin-right:4px;">';
+  DOW.forEach((d,i)=>{
+    gridHtml+=`<div style="height:12px;font-size:8px;color:var(--text3);font-family:var(--fm);line-height:12px;visibility:${i%2===1?'visible':'hidden'}">${d}</div>`;
+  });
+  gridHtml+='</div>';
+  // Week columns
+  weeks.forEach(week=>{
+    gridHtml+='<div style="display:flex;flex-direction:column;gap:2px;">';
+    week.forEach(cell=>{
+      const col=cell.future?'transparent':cellColor(cell.kcal);
+      const tip=cell.future?'':`${cell.ds}: ${cell.kcal?Math.round(cell.kcal)+' kcal, '+cell.count+' entries':'no data'}`;
+      gridHtml+=`<div title="${tip}" style="width:12px;height:12px;border-radius:2px;background:${col};cursor:${cell.kcal?'pointer':'default'};" ${cell.kcal?`onclick="pickHistDate('${cell.ds}');showPage('history',document.getElementById('nav-history'))"`:''}></div>`;
+    });
+    gridHtml+='</div>';
+  });
+  gridHtml+='</div>';
+
+  body.innerHTML=monthHtml+gridHtml;
+
+  // Legend
+  if(legendEl){
+    legendEl.innerHTML=['var(--bg3)',accent+'44',accent+'88',accent+'bb',accent].map(c=>`<span style="width:12px;height:12px;border-radius:2px;background:${c};display:inline-block;"></span>`).join('');
+  }
+
+  // Stats
+  const loggedDays=Object.values(dateMap).filter(v=>v.count>0).length;
+  const totalEntries=Object.values(dateMap).reduce((a,v)=>a+v.count,0);
+  const avgKcal=loggedDays?Math.round(Object.values(dateMap).filter(v=>v.kcal>0).reduce((a,v)=>a+v.kcal,0)/loggedDays):0;
+  // Longest streak
+  let streak=0,best=0,cur2=0;
+  for(let i=364;i>=0;i--){
+    const d=new Date(today);d.setDate(d.getDate()-i);
+    const ds=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+    if(dateMap[ds]?.count>0){cur2++;if(cur2>best)best=cur2;}else{cur2=0;}
+    if(i===0)streak=cur2;
+  }
+  statsEl.innerHTML=[
+    {l:'Days Logged (365d)',v:loggedDays+' days'},
+    {l:'Consistency',v:Math.round(loggedDays/365*100)+'%'},
+    {l:'Total Entries',v:totalEntries.toLocaleString()},
+    {l:'Avg kcal / logged day',v:avgKcal.toLocaleString()},
+    {l:'Current Streak',v:streak+'d'},
+    {l:'Best Streak (365d)',v:best+'d'},
+  ].map(s=>`<div><div style="font-size:9px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">${s.l}</div><div style="font-size:15px;font-weight:700;color:var(--text);font-family:var(--fm);">${s.v}</div></div>`).join('');
 }
 
 function renderMealTiming(activeDays){
@@ -2686,6 +2839,8 @@ async function loadSettings(){
       if(kcalDispEl)kcalDispEl.value=s.kcalTarget?Math.round(s.kcalTarget):'';
       if(s.macroCustomized){setMacroCustomized(true);}
       if(s.checkinFreq&&document.getElementById('s-checkin-freq'))document.getElementById('s-checkin-freq').value=s.checkinFreq;
+      if(s.reminderEnabled!==undefined&&document.getElementById('s-reminder-enabled'))document.getElementById('s-reminder-enabled').checked=s.reminderEnabled;
+      if(s.reminderTime&&document.getElementById('s-reminder-time'))document.getElementById('s-reminder-time').value=s.reminderTime;
       if(s.streakMacros){
         ['protein','carbs','fat','fiber'].forEach(k=>{
           const el=document.getElementById('s-streak-'+k);
@@ -2888,6 +3043,8 @@ function saveSettings(){
     deletedDates:[..._deletedDates],
     savedAt:new Date().toISOString(),
     checkinFreq:+document.getElementById('s-checkin-freq')?.value||7,
+    reminderEnabled:document.getElementById('s-reminder-enabled')?.checked??false,
+    reminderTime:document.getElementById('s-reminder-time')?.value||'20:00',
     streakMacros:{
       protein:document.getElementById('s-streak-protein')?.checked??true,
       carbs:document.getElementById('s-streak-carbs')?.checked??false,

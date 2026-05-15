@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v2.1.2</title>
+<title>NutriLog v2.2.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -448,6 +448,21 @@
         <div class="analysis-card-sub" id="mealTimingSub">When you eat throughout the day</div>
         <div id="mealTimingBody" style="margin-top:12px;"></div>
       </div>
+      <div class="analysis-card full">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div class="analysis-card-title">Food Log Heatmap</div>
+            <div class="analysis-card-sub">Logging consistency over the past year</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text3);">
+            <span>Less</span>
+            <span id="heatmapLegend" style="display:flex;gap:2px;"></span>
+            <span>More</span>
+          </div>
+        </div>
+        <div id="heatmapBody" style="margin-top:14px;overflow-x:auto;padding-bottom:4px;"></div>
+        <div id="heatmapStats" style="margin-top:10px;display:flex;gap:20px;flex-wrap:wrap;"></div>
+      </div>
     </div>
   </div>
 
@@ -574,6 +589,11 @@
             <input type="checkbox" id="s-lifetime" onchange="markPIDirty();updateCalc()" style="width:16px;height:16px;accent-color:var(--accent);">
             <span style="font-size:12px;color:var(--text2)">Gentle recomp (−100 kcal)</span>
           </label></div>
+        <div class="srow"><div><div class="srow-label">Daily Log Reminder</div><div class="srow-sub">notify if no meals logged by this time</div></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="s-reminder-enabled" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="saveSettings()">
+            <input type="time" id="s-reminder-time" value="20:00" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-family:var(--fm);font-size:12px;outline:none;width:90px;" onchange="saveSettings()">
+          </div></div>
         <div class="srow"><div><div class="srow-label">Check-in Frequency</div><div class="srow-sub">how often to prompt weekly check-in</div></div>
           <select id="s-checkin-freq" class="sselect" onchange="markPIDirty()" style="width:160px;">
             <option value="3">Every 3 days</option>
