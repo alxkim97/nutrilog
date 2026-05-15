@@ -184,16 +184,16 @@ async function forcePushToCloud(){
     }
     // Settings
     const sett=await Store._localGet('nutrilog_settings');
-    if(sett&&!await sbSet('settings',sett))failures++;
+    if(sett&&!await sbSet('nutrilog_settings',sett))failures++;
     // Food library
     const fl=await Store._localGet('nutrilog_foodlib');
-    if(fl&&!await sbSet('food_library',fl))failures++;
+    if(fl&&!await sbSet('nutrilog_food_library',fl))failures++;
     // Templates
     const tmpl=await Store._localGet('nutrilog_templates');
-    if(tmpl&&!await sbSet('templates',tmpl))failures++;
+    if(tmpl&&!await sbSet('nutrilog_templates',tmpl))failures++;
     // Check-ins
     const ckins=await Store._localGet('nutrilog_checkins');
-    if(ckins&&!await sbSet('checkins',ckins))failures++;
+    if(ckins&&!await sbSet('nutrilog_checkins',ckins))failures++;
   }catch(e){
     console.warn('forcePushToCloud error',e);
     failures++;
@@ -259,7 +259,7 @@ async function sbSet(table,value){
 async function sbGetSessions(date){
   if(!_syncEnabled||!_supaUser)return null;
   try{
-    const {data,error}=await supa.from('sessions').select('meals').eq('user_id',_supaUser.id).eq('date',date).single();
+    const {data,error}=await supa.from('nutrilog_sessions').select('meals').eq('user_id',_supaUser.id).eq('date',date).single();
     if(error&&error.code!=='PGRST116')throw error;
     return data?.meals||null;
   }catch(e){return null;}
@@ -268,7 +268,7 @@ async function sbGetSessions(date){
 async function sbSetSession(date,mealsArr){
   if(!_syncEnabled||!_supaUser)return false;
   try{
-    await supa.from('sessions').upsert({user_id:_supaUser.id,date,meals:mealsArr,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+    await supa.from('nutrilog_sessions').upsert({user_id:_supaUser.id,date,meals:mealsArr,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
     return true;
   }catch(e){
     console.warn('sbSetSession',e);
@@ -280,7 +280,7 @@ async function sbSetSession(date,mealsArr){
 async function sbGetHistory(){
   if(!_syncEnabled||!_supaUser)return null;
   try{
-    const {data,error}=await supa.from('history').select('date,meals').eq('user_id',_supaUser.id);
+    const {data,error}=await supa.from('nutrilog_history').select('date,meals').eq('user_id',_supaUser.id);
     if(error)throw error;
     if(!data?.length)return null;
     const h={};data.forEach(r=>{h[r.date]=r.meals;});
@@ -293,7 +293,7 @@ async function sbSetHistory(histObj){
   try{
     const rows=Object.entries(histObj).map(([date,meals])=>({user_id:_supaUser.id,date,meals,updated_at:new Date().toISOString()}));
     if(!rows.length)return true;
-    await supa.from("history").upsert(rows,{onConflict:"user_id,date"});
+    await supa.from("nutrilog_history").upsert(rows,{onConflict:"user_id,date"});
     return true;
   }catch(e){
     console.warn("sbSetHistory",e);
@@ -305,21 +305,21 @@ async function sbSetHistory(histObj){
 async function sbDeleteDate(date){
   if(!_syncEnabled||!_supaUser)return;
   try{
-    await supa.from("history").delete().eq("user_id",_supaUser.id).eq("date",date);
+    await supa.from("nutrilog_history").delete().eq("user_id",_supaUser.id).eq("date",date);
   }catch(e){console.warn("sbDeleteDate",e);}
 }
 
 async function sbDeleteSession(date){
   if(!_syncEnabled||!_supaUser)return;
   try{
-    await supa.from("sessions").delete().eq("user_id",_supaUser.id).eq("date",date);
+    await supa.from("nutrilog_sessions").delete().eq("user_id",_supaUser.id).eq("date",date);
   }catch(e){console.warn("sbDeleteSession",e);}
 }
 
 async function pullFromSupabase(){
   try{
     const [remSettings,remFoodLib,remHistory,remCheckins,remTemplates]=await Promise.all([
-      sbGet('settings'),sbGet('food_library'),sbGetHistory(),sbGet('checkins'),sbGet('templates')
+      sbGet('nutrilog_settings'),sbGet('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates')
     ]);
     if(remSettings){await Store._localSet('nutrilog_settings',remSettings);}
     if(remFoodLib) {await Store._localSet('nutrilog_foodlib',remFoodLib);}
@@ -374,7 +374,7 @@ async function pullFromSupabase(){
         const allIds=Object.keys(merged);
         tplOrder=tplOrder.filter(id=>merged[id]);
         allIds.forEach(id=>{if(!tplOrder.includes(id))tplOrder.push(id);});
-        await sbSet('templates',merged);
+        await sbSet('nutrilog_templates',merged);
       }
     }
     // Pull today's session
@@ -430,11 +430,11 @@ const Store = {
       setSyncBadge('syncing','Saving…');
       let ok=false;
       try{
-        if(key==='nutrilog_settings')       ok=await sbSet('settings',value);
-        else if(key==='nutrilog_foodlib')   ok=await sbSet('food_library',value);
+        if(key==='nutrilog_settings')       ok=await sbSet('nutrilog_settings',value);
+        else if(key==='nutrilog_foodlib')   ok=await sbSet('nutrilog_food_library',value);
         else if(key==='nutrilog_history')   ok=await sbSetHistory(value);
-        else if(key==='nutrilog_checkins')  ok=await sbSet('checkins',value);
-        else if(key==='nutrilog_templates') ok=await sbSet('templates',value);
+        else if(key==='nutrilog_checkins')  ok=await sbSet('nutrilog_checkins',value);
+        else if(key==='nutrilog_templates') ok=await sbSet('nutrilog_templates',value);
         else if(key==='nutrilog_v1'){
           const d=todayStr(); const m=value?.meals||[];
           ok=await sbSetSession(d,m);
@@ -3902,6 +3902,7 @@ let _eggTapTimer=null;
 let _eggPinned=false;
 let _eggIntervalId=null;
 let _eggPhotos=[]; // loaded dynamically from file system (falls back to _EGG_PHOTOS)
+let _eggCached=false; // true after first full load+decode — reused on subsequent opens
 
 /* ── Hidden egg-settings tap state ── */
 let _eggSetTapCount=0,_eggSetTapTimer=null;
@@ -3913,20 +3914,31 @@ let _eggResizing=false,_eggRX=0,_eggRY=0,_eggRW=0,_eggRH=0;
 
 /* Load photos from file system, fall back to hardcoded array */
 async function eggLoadPhotos(){
+  // Skip reload if already fully decoded — reuse the cache
+  if(_eggCached&&_eggPhotos.length)return;
   if(IS_ELECTRON&&window.electronAPI?.listEggImages){
     try{
       const names=await window.electronAPI.listEggImages();
       if(names&&names.length){
         const dataUrls=await Promise.all(names.map(n=>window.electronAPI.readEggImage(n)));
-        _eggPhotos=dataUrls.filter(Boolean).map((d,i)=>({src:d,name:names[i]}));
-        // Pre-decode every image into the browser's bitmap cache so switching is instant
-        _eggPhotos.forEach(p=>{const img=new Image();img.src=p.src;});
+        const valid=dataUrls.map((d,i)=>d?{src:d,name:names[i]}:null).filter(Boolean);
+        // Wait for every image to fully decode before marking ready
+        await Promise.all(valid.map(p=>new Promise(res=>{
+          const img=new Image();
+          img.onload=res; img.onerror=res;
+          img.src=p.src;
+        })));
+        _eggPhotos=valid;
+        _eggCached=true;
         return;
       }
     }catch(e){}
   }
   _eggPhotos=_EGG_PHOTOS.map(src=>({src,name:''}));
-  _eggPhotos.forEach(p=>{const img=new Image();img.src=p.src;});
+  await Promise.all(_eggPhotos.map(p=>new Promise(res=>{
+    const img=new Image();img.onload=res;img.onerror=res;img.src=p.src;
+  })));
+  _eggCached=true;
 }
 
 function eggTap(){
@@ -4001,12 +4013,12 @@ function eggTogglePin(){
 function eggShow(){
   if(!_eggPhotos.length)return;
   const img=document.getElementById('eggImg');
+  // Fade out, swap src on next frame, fade in — all images are pre-decoded so src swap is instant
   img.style.opacity='0';
-  // 30ms lets the fade-out start; images are pre-decoded so no additional decode wait
-  setTimeout(()=>{
+  requestAnimationFrame(()=>{
     img.src=_eggPhotos[_eggIdx].src;
-    img.style.opacity='1';
-  },30);
+    requestAnimationFrame(()=>{ img.style.opacity='1'; });
+  });
   const counter=document.getElementById('eggCounter');
   if(counter){counter.textContent=(_eggIdx+1)+' / '+_eggPhotos.length;counter.style.cursor='pointer';counter.onclick=eggCounterTap;}
 }
@@ -4091,9 +4103,9 @@ async function renderEggSettings(){
       if(IS_ELECTRON&&window.electronAPI?.deleteEggImage&&p.name){
         await window.electronAPI.deleteEggImage(p.name);
       } else {
-        // fallback: remove from static array by index
         _EGG_PHOTOS.splice(i,1);
       }
+      _eggCached=false; _eggPhotos=[]; // invalidate cache so next open reloads
       await renderEggSettings();
     };
     const nm=document.createElement('div');nm.className='egg-thumb-name';nm.textContent=p.name||('Photo '+(i+1));
@@ -4104,7 +4116,7 @@ async function renderEggSettings(){
 async function eggSettingsAdd(){
   if(IS_ELECTRON&&window.electronAPI?.addEggImages){
     const added=await window.electronAPI.addEggImages();
-    if(added&&added.length)await renderEggSettings();
+    if(added&&added.length){_eggCached=false;_eggPhotos=[];await renderEggSettings();}
   } else {
     toast('File picking requires Electron app','warning');
   }
