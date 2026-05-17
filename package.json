@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.3.2",
-  "description": "NutriLog v2.3.2 — Auto macro recalculation from body weight, evidence-based targets",
+  "version": "2.3.3",
+  "description": "NutriLog v2.3.3 — UI polish pass, auto macro recalc, sync fixes",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

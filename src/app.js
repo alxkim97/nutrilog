@@ -2329,7 +2329,7 @@ function renderHistDetail(ds){
 
   document.getElementById('histDetail').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
-      <div style="font-family:var(--fd);font-size:17px;letter-spacing:-.3px;color:var(--text2)">${label}</div>
+      <div style="font-family:var(--fb);font-size:15px;font-weight:600;letter-spacing:-.1px;color:var(--text2)">${label}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="btn btn-ghost" style="height:30px;font-size:12px;padding:0 12px;" onclick="openCopyDay('${ds}')" title="Copy all entries from this day to another date">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
