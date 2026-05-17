@@ -255,6 +255,13 @@
           <div class="weekly-title">Weekly Summary</div>
           <div class="weekly-sub" id="weeklySubLbl">This week's calorie intake</div>
         </div>
+        <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+          <button id="wk-grid"   onclick="toggleWeeklyOpt('gridLines')"  class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Horizontal grid lines">Grid</button>
+          <button id="wk-target" onclick="toggleWeeklyOpt('targetLine')" class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Calorie target line">Target</button>
+          <button id="wk-zone"   onclick="toggleWeeklyOpt('minMaxZone')" class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Floor/ceiling zone">Zone</button>
+          <button id="wk-trend"  onclick="toggleWeeklyOpt('trendLine')"  class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Day-to-day trend line">Trend</button>
+          <button id="wk-avg"    onclick="toggleWeeklyOpt('avgLine')"    class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Weekly average line">Avg</button>
+        </div>
       </div>
       <div style="position:relative;">
         <div class="weekly-grid" id="weeklyGrid"></div>
@@ -674,7 +681,10 @@
               <input class="sinput" id="s-kcal-max" type="number" min="0" max="9999" placeholder="e.g. 2600" style="width:100%;border-color:var(--red);" oninput="markMTDirty()">
             </div>
           </div>
-          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Shown as a zone on the calorie bar · Does not affect projection</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Shown as a zone on the calorie bar · Does not affect projection</div>
+            <button class="btn btn-ghost" onclick="autoCalorieRange()" style="height:24px;font-size:10px;padding:0 10px;flex-shrink:0;" title="Set floor/ceiling to ±200 kcal around target">Auto</button>
+          </div>
         </div>
         <!-- Protein -->
         <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;">

@@ -3,7 +3,7 @@
 **Last updated:** 2026-05-17 (Condo PC)
 **Current version:** v2.3.3
 **Branch:** main
-**Supabase project:** lifelog (renamed from nutrilog)
+**Supabase project:** lifelog (renamed from nutrilog — dashboard only, no code change)
 
 ---
 
@@ -12,105 +12,110 @@
 NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vanilla HTML/CSS/JS, no framework. Data stored locally as JSON + optional Supabase cloud sync.
 
 **Key files:**
-- `src/app.js` — 4,300+ line renderer (all UI + logic)
+- `src/app.js` — 4,400+ line renderer (all UI + logic)
 - `src/styles.css` — dark/light theme via CSS custom properties
 - `src/index.html` — HTML shell
 - `main.js` — Electron main process (IPC, file ops, HEIC photos)
 - `preload.js` — context bridge (34 IPC methods as `window.electronAPI`)
-- `PRODUCT.md` — impeccable design context (Clean · Calm · Motivated)
+- `PRODUCT.md` — impeccable design context (Clean · Calm · Motivated / Raycast)
 
-**Data directory (Windows):** `%APPDATA%\NutriLog\NutriLogData\`
+**Run:** `npm start` | **Build:** `npm run build:win`
+**Data dir (Windows):** `%APPDATA%\NutriLog\NutriLogData\`
 
 ---
 
-## What was done this session (2026-05-17)
+## What was done this session (2026-05-17, Condo PC)
 
 ### Bug fixes (v2.3.1)
-- XSS: template/meal names now escaped with `esc()` in all innerHTML slots
+- XSS: template/meal names escaped in all innerHTML slots
 - Theme: persisted to `localStorage`, no flash on startup
-- Silent saves: critical saves now toast on failure; history saves `console.warn`
-- Sync race: `_periodicSyncRunning` + `_pullInProgress` flags prevent interval stacking and concurrent pulls
-- `pullFromSupabase()`: union merge for past dates — cloud-only entries (e.g. late-night meals) are no longer lost on pull
-- Day rollover: pulls cloud first, then union-merges session into history
-- Copy Yesterday: now shows confirmation if today already has meals
-- Autocomplete: starts-with matches ranked before contains matches
-- Modal Tab: focus trap added (Tab cycles within open modal)
-- Streak animations: `IntersectionObserver` pauses flame CSS when Today page is off-screen
-- Trend canvas: debounced resize listener redraws the trend line
-- Sidenav scrollbar: custom 4px scrollbar + `scrollbar-width: thin` for Firefox
-- HEIC: `egg:add` returns `{added, failed}`, renderer toasts on import failures
-- `pullFromSupabase()`: also checks `nutrilog_sessions` for past dates — fixed missing entries that were in the sessions table but not history
+- Silent saves: critical saves toast on failure, history saves `console.warn`
+- `_periodicSyncRunning` + `_pullInProgress` flags prevent overlapping syncs
+- History pull: union merge for past dates — cloud-only entries no longer lost
+- `pullFromSupabase()` now checks `nutrilog_sessions` for past dates (fixed missing May 16 entries)
+- Day rollover: pulls cloud before archiving, then union-merges session
+- Copy Yesterday: confirms before overwriting existing meals
+- Autocomplete: starts-with before contains ranking
+- Modal Tab trap, streak animation perf, trend canvas resize, sidenav scrollbar, HEIC errors
 
-### Feature (v2.3.2)
-- Auto macro recalculation from body weight
-  - `recalcMacrosFromWeight(kg)` — protein 2.0 g/kg target, 1.8 g/kg min; carbs from remaining kcal; fiber 14g/1000kcal (IOM)
-  - Fat is NOT auto-recalculated (AHA cholesterol constraint: ≤65g)
-  - Rolling average of last 3 check-ins used for stability (`getAvgWeight()`)
-  - Check-in dialog now offers "Recalculate" instead of "save settings to apply"
-  - Settings page has "⚖️ Recalculate Macros from Latest Weight" button
-- `maybeShowCheckin()` moved to `onSignedIn()` — always fires after sync, not buried inside pull
-- "Log Check-in" added to ⋯ More menu for on-demand check-in
+### Feature: Auto Macro Recalculation (v2.3.2)
+- `recalcMacrosFromWeight(kg)` — 2.0 g/kg protein target, 1.8 g/kg min, IOM fiber
+- Rolling average of last 3 check-ins for stability
+- Check-in dialog auto-recalculates when weight differs ≥0.5 kg
+- "⚖️ Recalculate Macros from Latest Weight" button in Settings
+- `maybeShowCheckin()` moved to `onSignedIn()` — always fires after startup
+- "Log Check-in" added to ⋯ More menu
+- Direct settings.json fix: proteinMin 156→137g, fiber 40→36g (IOM)
 
 ### UI polish (v2.3.3)
-- `DM Serif Display` removed from all product surfaces → `Outfit 600`
-  - Affects: page titles, section titles, modal titles, weekly summary header, history date label, empty states, Photo Manager
-  - Serif kept only in the logo mark (`.logo-name`)
-- Kcal bar gradient replaced with solid `var(--mk)` color
-- Modal animation: `ease` → `cubic-bezier(0,0,.2,1)` (ease-out)
-- Category badges: `border-radius: 100px` pill → `5px` chip
-- Weekly summary bars: `60px` → `90px` tall (better day-to-day difference visibility)
-- Font floor raised: 9px → 10px minimum across all small labels
-- Firefox scrollbar: `scrollbar-width: thin` on `#main` and `.sidenav`
-- `btn-accent` focus ring: `focus-visible` outline added
-- Nav section label tracking reduced `.8px` → `.4px`
-- `PRODUCT.md` created for impeccable skill context
+- DM Serif Display removed from product surfaces → Outfit 600 (kept in logo)
+- Kcal bar gradient → solid var(--mk)
+- Modal ease → ease-out cubic-bezier
+- Category badges: pill → 5px chip
+- Weekly bars: 140px tall, 88% fill (bars closer to date labels)
+- Font floor raised to 10px minimum
+- Firefox scrollbar-width:thin
+- btn-accent focus-visible ring
+- Auto button in Settings for calorie range (±200 kcal around target)
+- Weekly Summary: 5 chart toggles (Grid, Target, Zone, Trend, Avg) with collision-safe labels
+- Streak widgets: column layout, flame left + wider (scaleX 1.35), text fills card
+- PRODUCT.md created
 
 ### Git checkpoint
-- Commit `3c2c19a` = safe rollback point before UI redesign
-- To revert UI changes only: `git reset --hard 3c2c19a`
+- Commit `3c2c19a` = safe rollback before UI redesign
+- `git reset --hard 3c2c19a` to revert UI changes only
 
 ---
 
-## Known issues / not yet fixed
+## Current macro settings (76.4→77 kg)
 
-- Protein streak broke May 16 (155.9g logged vs 156g min) — fix: click "⚖️ Recalculate Macros from Latest Weight" in Settings after app starts
-- Check-in prompt frequency ("Every 3 days") should trigger automatically — test after restarting app
-- Ring size was reduced to 100px during UI pass then reverted — user prefers 150px
+Settings auto-recalculated after weight update to 77 kg:
+- Protein: 155g target, 139g min, no max
+- Fat: 56g target, 45g min, 65g max (AHA cholesterol constraint — do NOT auto-recalc)
+- Carbs: 348g target, 313g min, 384g max
+- Fiber: 36g target, 29g min, 45g max
+- Kcal target: 2517, range 2300–2700
 
 ---
 
 ## What to continue next session
 
-1. **Run macro recalculation** — open app → Settings → "⚖️ Recalculate Macros from Latest Weight" to fix protein streak min/max based on 76.4 kg
-2. **Impeccable recommendations pending** — streak row redesign, date/time pill differentiation, ring card hover affordance review
-3. **Test check-in auto-prompt** — verify it fires on next startup (fixed in this session, not yet verified)
-4. **Consider** — the impeccable audit also noted the streak row reads as 5 identical cards; worth a dedicated redesign pass
+1. **Pending impeccable audit items:**
+   - Date pill vs time pill should look visually distinct (currently identical style)
+   - Streak row could be tighter with less per-card padding
+   - Ring card hover `translateY(-2px)` — rings are draggable so it's intentional, but worth reviewing
 
----
+2. **Test across both PCs** — verify sync works correctly after the union-merge fixes
 
-## How to run
-
-```
-npm start        # dev (no dev tools)
-npm run dev      # dev with --dev flag
-npm run build:win  # build Windows installer → dist/
-```
-
----
-
-## Supabase
-
-- Project: lifelog (supabase.com)
-- Tables: `nutrilog_sessions`, `nutrilog_history`, `nutrilog_settings`, `nutrilog_food_library`, `nutrilog_checkins`, `nutrilog_templates`, `nutrilog_eggs`
-- Key: public anon key, security via RLS
-- Sync: pull merges history + sessions tables; push writes all tables
+3. **Consider adding** — weekly macro breakdown view (protein/carbs/fat stacked bars by day)
 
 ---
 
 ## Session protocol
 
 When you type **"git push"** to Claude Code:
-1. Claude generates/updates `HANDOFF.md`
-2. Commits all staged changes with a version bump
-3. Pushes to GitHub (`origin/main`)
-4. Returns the handoff prompt for the other PC
+1. Claude updates `HANDOFF.md` with session summary
+2. Bumps version if needed
+3. Commits all staged changes
+4. Pushes to GitHub (`origin/main`)
+5. Returns the handoff prompt for the other PC
+
+## How to continue on company PC
+
+Paste this prompt into a new Claude Code session after pulling latest:
+
+```
+Continue NutriLog development. Pull latest from GitHub first.
+Read HANDOFF.md for full session context. Current version: v2.3.3.
+
+Key facts:
+- Electron 31, vanilla HTML/CSS/JS, no framework
+- src/app.js (4400+ lines), src/styles.css, src/index.html, main.js
+- Supabase cloud sync (project: lifelog), local JSON data store
+- PRODUCT.md has design context (Clean · Calm · Motivated, Raycast reference)
+- Git checkpoint 3c2c19a = safe rollback before UI changes
+- run: npm start
+
+Pending: date/time pill visual distinction, streak row padding review,
+weekly macro breakdown view (stacked bars). Test sync on this PC first.
+```

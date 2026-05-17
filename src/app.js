@@ -891,6 +891,32 @@ function render(){
 }
 
 /* ═══ WEEKLY SUMMARY ═══ */
+// Chart display options — persisted in localStorage
+let _weeklyChartOpts=(()=>{
+  try{return JSON.parse(localStorage.getItem('nutrilog_weekly_opts')||'{}');}catch{return{};}
+})();
+_weeklyChartOpts={trendLine:true,gridLines:true,targetLine:true,minMaxZone:true,avgLine:false,..._weeklyChartOpts};
+
+function saveWeeklyOpts(){localStorage.setItem('nutrilog_weekly_opts',JSON.stringify(_weeklyChartOpts));}
+
+function toggleWeeklyOpt(key){
+  _weeklyChartOpts[key]=!_weeklyChartOpts[key];
+  saveWeeklyOpts();
+  renderWeeklySummary();
+}
+
+function updateWeeklyOptButtons(){
+  const map={trendLine:'wk-trend',gridLines:'wk-grid',targetLine:'wk-target',minMaxZone:'wk-zone',avgLine:'wk-avg'};
+  Object.entries(map).forEach(([key,id])=>{
+    const btn=document.getElementById(id);
+    if(!btn)return;
+    const on=_weeklyChartOpts[key];
+    btn.style.color=on?'var(--accent)':'var(--text3)';
+    btn.style.borderColor=on?'var(--accent-dim)':'var(--border)';
+    btn.style.background=on?'var(--accent-glow)':'var(--bg3)';
+  });
+}
+
 function renderWeeklySummary(){
   const grid=document.getElementById('weeklyGrid');
   const now=new Date();
@@ -920,14 +946,15 @@ function renderWeeklySummary(){
       <div class="week-day-lbl">${DAYS_SHORT[d.getDay()]}</div>
       <div class="week-day-date">${d.getDate()}</div>
       <div class="week-bar-wrap">
-        <div class="week-bar" style="height:${Math.max(pct*.6,kcal?2:0)}%;background:${barColor};opacity:${kcal?1:.2}"></div>
+        <div class="week-bar" style="height:${Math.max(pct*.88,kcal?2:0)}%;background:${barColor};opacity:${kcal?1:.2}"></div>
       </div>
       <div class="week-day-kcal">${kcal?kcal.toLocaleString():'-'}</div>
     </div>`;
   }).join('');
 
-  // Draw trend line on canvas overlay
+  // Draw chart overlay (trend, grid, target, zone, avg)
   requestAnimationFrame(()=>drawTrendLine(kcals,maxKcal));
+  updateWeeklyOptButtons();
 
   // Update streaks and widgets
   renderStreaks();
@@ -945,37 +972,129 @@ function drawTrendLine(kcals,maxKcal){
   canvas.height=gRect.height;
   const ctx=canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  // Only draw trend for days that have data
-  const pts=[];
+
+  // Get reference bar-wrap for coordinate system
   const cols=grid.querySelectorAll('.week-day-col');
-  cols.forEach((col,i)=>{
-    if(!kcals[i])return;
-    const wrap=col.querySelector('.week-bar-wrap');
-    if(!wrap)return;
-    const wRect=wrap.getBoundingClientRect();
-    const bar=col.querySelector('.week-bar');
-    const bRect=bar?bar.getBoundingClientRect():null;
-    const x=wRect.left-gRect.left+wRect.width/2;
-    // y = top of bar
-    const pct=maxKcal>0?Math.min(kcals[i]/maxKcal,1):0;
-    const barH=pct*0.6*wRect.height;
-    const y=wRect.bottom-gRect.top-barH;
-    pts.push({x,y,v:kcals[i]});
-  });
-  if(pts.length<2)return;
-  ctx.beginPath();
-  ctx.setLineDash([4,3]);
-  ctx.strokeStyle='rgba(160,160,200,0.5)';
-  ctx.lineWidth=1.5;
-  pts.forEach((p,i)=>{i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
-  ctx.stroke();
-  // Dots
-  pts.forEach(p=>{
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,3,0,Math.PI*2);
-    ctx.fillStyle='rgba(160,160,220,0.7)';
-    ctx.fill();
-  });
+  if(!cols.length)return;
+  let refWrap=null;
+  cols.forEach(col=>{if(!refWrap)refWrap=col.querySelector('.week-bar-wrap');});
+  if(!refWrap)return;
+  const refRect=refWrap.getBoundingClientRect();
+
+  const FILL=0.88; // must match renderWeeklySummary bar fill
+
+  // Convert a kcal value to canvas Y coordinate
+  const kcalToY=(v)=>{
+    const pct=Math.min(Math.max(v/maxKcal,0),1);
+    return refRect.bottom-gRect.top-(pct*FILL*refRect.height);
+  };
+  const chartBottom=refRect.bottom-gRect.top;
+  const chartTop=chartBottom-FILL*refRect.height;
+  ctx.font=`10px 'DM Mono',monospace`;
+
+  // Collect grid Y positions for collision avoidance
+  const step=maxKcal<=3000?500:1000;
+  const gridYs=[];
+  for(let v=step;v<maxKcal;v+=step){
+    const y=kcalToY(v);
+    if(y>=chartTop-4&&y<=chartBottom+4)gridYs.push(y);
+  }
+
+  // Helper: find a non-colliding Y for a label (shifts up/down 13px if blocked)
+  const LDIST=13;
+  function safeY(y,usedYs){
+    let candidate=y-3;
+    for(const uy of usedYs){if(Math.abs(uy-candidate)<LDIST){candidate=uy-LDIST;}}
+    usedYs.push(candidate);
+    return candidate;
+  }
+  const usedLabelYs=[];
+
+  // ── GRID LINES ──
+  if(_weeklyChartOpts.gridLines){
+    ctx.setLineDash([2,5]);
+    ctx.lineWidth=1;
+    for(const y of gridYs){
+      ctx.strokeStyle='rgba(255,255,255,0.15)';
+      ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(canvas.width,y);ctx.stroke();
+      const v=Math.round(maxKcal*(chartBottom-y)/(FILL*refRect.height));
+      const lbl=v>=1000?(v/1000).toFixed(v%1000?1:0)+'k':String(v);
+      const ly=safeY(y,usedLabelYs);
+      ctx.fillStyle='rgba(255,255,255,0.5)';
+      ctx.textAlign='left';
+      ctx.fillText(lbl,2,ly);
+    }
+  }
+
+  // ── MIN/MAX CALORIE ZONE ──
+  if(_weeklyChartOpts.minMaxZone&&TGT_MIN.kcal&&TGT_MAX.kcal){
+    const yLow=kcalToY(TGT_MIN.kcal);
+    const yHigh=kcalToY(TGT_MAX.kcal);
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(62,207,142,0.07)';
+    ctx.fillRect(0,yHigh,canvas.width,yLow-yHigh);
+    ctx.strokeStyle='rgba(62,207,142,0.2)';
+    ctx.lineWidth=1;
+    ctx.setLineDash([3,4]);
+    ctx.beginPath();ctx.moveTo(0,yLow);ctx.lineTo(canvas.width,yLow);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,yHigh);ctx.lineTo(canvas.width,yHigh);ctx.stroke();
+  }
+
+  // ── TARGET LINE ──
+  const rightUsedYs=[];
+  if(_weeklyChartOpts.targetLine&&TGT.kcal){
+    const yT=kcalToY(TGT.kcal);
+    ctx.setLineDash([6,4]);
+    ctx.strokeStyle='rgba(247,162,106,0.7)';
+    ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(0,yT);ctx.lineTo(canvas.width,yT);ctx.stroke();
+    ctx.fillStyle='rgba(247,162,106,0.85)';
+    ctx.textAlign='right';
+    ctx.fillText(TGT.kcal.toLocaleString()+' target',canvas.width-4,safeY(yT,rightUsedYs));
+  }
+
+  // ── WEEKLY AVERAGE LINE ──
+  if(_weeklyChartOpts.avgLine){
+    const nonZero=kcals.filter(k=>k>0);
+    if(nonZero.length>1){
+      const avg=Math.round(nonZero.reduce((a,b)=>a+b,0)/nonZero.length);
+      const yA=kcalToY(avg);
+      ctx.setLineDash([3,5]);
+      ctx.strokeStyle='rgba(124,106,247,0.55)';
+      ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(0,yA);ctx.lineTo(canvas.width,yA);ctx.stroke();
+      ctx.fillStyle='rgba(124,106,247,0.65)';
+      ctx.textAlign='right';
+      ctx.fillText('avg '+avg.toLocaleString(),canvas.width-4,safeY(yA,rightUsedYs));
+    }
+  }
+
+  // ── TREND LINE + DOTS ──
+  if(_weeklyChartOpts.trendLine){
+    const pts=[];
+    cols.forEach((col,i)=>{
+      if(!kcals[i])return;
+      const wrap=col.querySelector('.week-bar-wrap');
+      if(!wrap)return;
+      const wRect=wrap.getBoundingClientRect();
+      const x=wRect.left-gRect.left+wRect.width/2;
+      const y=kcalToY(kcals[i]);
+      pts.push({x,y});
+    });
+    if(pts.length>=2){
+      ctx.setLineDash([4,3]);
+      ctx.strokeStyle='rgba(160,160,210,0.6)';
+      ctx.lineWidth=1.5;
+      ctx.beginPath();
+      pts.forEach((p,i)=>{i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);});
+      ctx.stroke();
+      ctx.setLineDash([]);
+      pts.forEach(p=>{
+        ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);
+        ctx.fillStyle='rgba(160,160,220,0.85)';ctx.fill();
+      });
+    }
+  }
 }
 
 async function renderStreaks(){
@@ -1040,60 +1159,66 @@ async function renderStreaks(){
     } else if(s>=30){
       // LARGE BLUE FLAME
       cardBorder='box-shadow:0 0 18px rgba(56,182,255,.5);border-color:rgba(56,182,255,.6);';
-      flameHtml=`<div style="position:relative;width:36px;height:44px;flex-shrink:0;">
-        <svg viewBox="0 0 36 50" width="36" height="44" style="animation:flame-lg 0.9s ease-in-out infinite;filter:drop-shadow(0 0 8px #38b6ff);">
-          <ellipse cx="18" cy="44" rx="10" ry="5" fill="rgba(56,182,255,.3)"/>
-          <path d="M18 4 C10 14 4 20 6 32 C8 40 14 46 18 46 C22 46 28 40 30 32 C32 20 26 14 18 4Z" fill="url(#blueFlame${r.key})"/>
-          <path d="M18 16 C14 22 12 28 14 35 C15 39 17 42 18 42 C19 42 21 39 22 35 C24 28 22 22 18 16Z" fill="rgba(180,240,255,.8)"/>
-          <defs>
-            <linearGradient id="blueFlame${r.key}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#38b6ff"/>
-              <stop offset="60%" stop-color="#0077ff"/>
-              <stop offset="100%" stop-color="#003fa3"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;text-shadow:0 0 4px #38b6ff;white-space:nowrap;">${s}🔥</div>
+      flameHtml=`<div style="position:relative;width:52px;height:56px;flex-shrink:0;">
+        <div style="transform:scaleX(1.35);transform-origin:center center;">
+          <svg viewBox="0 0 36 50" width="52" height="56" style="animation:flame-lg 0.9s ease-in-out infinite;filter:drop-shadow(0 0 10px #38b6ff);">
+            <ellipse cx="18" cy="44" rx="10" ry="5" fill="rgba(56,182,255,.3)"/>
+            <path d="M18 4 C10 14 4 20 6 32 C8 40 14 46 18 46 C22 46 28 40 30 32 C32 20 26 14 18 4Z" fill="url(#blueFlame${r.key})"/>
+            <path d="M18 16 C14 22 12 28 14 35 C15 39 17 42 18 42 C19 42 21 39 22 35 C24 28 22 22 18 16Z" fill="rgba(180,240,255,.8)"/>
+            <defs>
+              <linearGradient id="blueFlame${r.key}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#38b6ff"/>
+                <stop offset="60%" stop-color="#0077ff"/>
+                <stop offset="100%" stop-color="#003fa3"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#fff;text-shadow:0 0 4px #38b6ff;white-space:nowrap;">${s}🔥</div>
       </div>`;
     } else if(s>=15){
       // LARGER ORANGE FLAME
       cardBorder='box-shadow:0 0 14px rgba(255,140,0,.4);border-color:rgba(255,140,0,.5);';
-      flameHtml=`<div style="position:relative;width:32px;height:40px;flex-shrink:0;">
-        <svg viewBox="0 0 32 46" width="32" height="40" style="animation:flame-md 1s ease-in-out infinite;filter:drop-shadow(0 0 6px #ff8c00);">
-          <ellipse cx="16" cy="41" rx="9" ry="4" fill="rgba(255,100,0,.25)"/>
-          <path d="M16 6 C9 15 5 22 7 32 C9 39 13 43 16 43 C19 43 23 39 25 32 C27 22 23 15 16 6Z" fill="url(#orangeFlame${r.key})"/>
-          <path d="M16 18 C13 24 11 30 13 36 C14 39 15.5 41 16 41 C16.5 41 18 39 19 36 C21 30 19 24 16 18Z" fill="rgba(255,220,100,.7)"/>
-          <defs>
-            <linearGradient id="orangeFlame${r.key}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#ffcc00"/>
-              <stop offset="45%" stop-color="#ff6600"/>
-              <stop offset="100%" stop-color="#cc2200"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <div style="position:absolute;bottom:1px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;text-shadow:0 0 4px #ff6600;white-space:nowrap;">${s}🔥</div>
+      flameHtml=`<div style="position:relative;width:62px;height:54px;flex-shrink:0;">
+        <div style="transform:scaleX(1.35);transform-origin:center center;">
+          <svg viewBox="0 0 32 46" width="62" height="54" style="animation:flame-md 1s ease-in-out infinite;filter:drop-shadow(0 0 8px #ff8c00);">
+            <ellipse cx="16" cy="41" rx="9" ry="4" fill="rgba(255,100,0,.25)"/>
+            <path d="M16 6 C9 15 5 22 7 32 C9 39 13 43 16 43 C19 43 23 39 25 32 C27 22 23 15 16 6Z" fill="url(#orangeFlame${r.key})"/>
+            <path d="M16 18 C13 24 11 30 13 36 C14 39 15.5 41 16 41 C16.5 41 18 39 19 36 C21 30 19 24 16 18Z" fill="rgba(255,220,100,.7)"/>
+            <defs>
+              <linearGradient id="orangeFlame${r.key}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffcc00"/>
+                <stop offset="45%" stop-color="#ff6600"/>
+                <stop offset="100%" stop-color="#cc2200"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div style="position:absolute;bottom:1px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:#fff;text-shadow:0 0 4px #ff6600;white-space:nowrap;">${s}🔥</div>
       </div>`;
     } else if(s>=10){
       // SMALL ORANGE-RED FLAME
       cardBorder='box-shadow:0 0 10px rgba(255,80,0,.3);border-color:rgba(255,80,0,.4);';
-      flameHtml=`<div style="position:relative;width:28px;height:34px;flex-shrink:0;">
-        <svg viewBox="0 0 28 40" width="28" height="34" style="animation:flame-sm 1.1s ease-in-out infinite;filter:drop-shadow(0 0 4px #ff5000);">
-          <ellipse cx="14" cy="36" rx="7" ry="3.5" fill="rgba(255,80,0,.2)"/>
-          <path d="M14 8 C8 16 5 22 7 30 C8.5 35 12 38 14 38 C16 38 19.5 35 21 30 C23 22 20 16 14 8Z" fill="url(#redFlame${r.key})"/>
-          <path d="M14 18 C11 23 10 28 12 33 C13 35.5 14 37 14 37 C14 37 15 35.5 16 33 C18 28 17 23 14 18Z" fill="rgba(255,200,80,.65)"/>
-          <defs>
-            <linearGradient id="redFlame${r.key}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#ffaa00"/>
-              <stop offset="50%" stop-color="#ff4400"/>
-              <stop offset="100%" stop-color="#aa1100"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;color:#fff;text-shadow:0 0 3px #ff4400;white-space:nowrap;">${s}🔥</div>
+      flameHtml=`<div style="position:relative;width:40px;height:44px;flex-shrink:0;">
+        <div style="transform:scaleX(1.35);transform-origin:center center;">
+          <svg viewBox="0 0 28 40" width="40" height="44" style="animation:flame-sm 1.1s ease-in-out infinite;filter:drop-shadow(0 0 6px #ff5000);">
+            <ellipse cx="14" cy="36" rx="7" ry="3.5" fill="rgba(255,80,0,.2)"/>
+            <path d="M14 8 C8 16 5 22 7 30 C8.5 35 12 38 14 38 C16 38 19.5 35 21 30 C23 22 20 16 14 8Z" fill="url(#redFlame${r.key})"/>
+            <path d="M14 18 C11 23 10 28 12 33 C13 35.5 14 37 14 37 C14 37 15 35.5 16 33 C18 28 17 23 14 18Z" fill="rgba(255,200,80,.65)"/>
+            <defs>
+              <linearGradient id="redFlame${r.key}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffaa00"/>
+                <stop offset="50%" stop-color="#ff4400"/>
+                <stop offset="100%" stop-color="#aa1100"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;text-shadow:0 0 3px #ff4400;white-space:nowrap;">${s}🔥</div>
       </div>`;
     } else {
       // Plain icon, no flame
-      flameHtml=`<div style="font-size:26px;flex-shrink:0;">${s>0?'🔥':'—'}</div>`;
+      flameHtml=`<div style="font-size:36px;flex-shrink:0;line-height:1;">${s>0?'🔥':'—'}</div>`;
     }
 
     const mn=TGT_MIN[r.tgtKey]??TGT[r.tgtKey]??0;
@@ -1104,8 +1229,12 @@ async function renderStreaks(){
     div.dataset.streakKey=r.key;
     div.draggable=true;
     div.title='Drag to reorder';
-    div.style.cssText=`padding:12px 16px;display:flex;align-items:center;gap:12px;${cardBorder}`;
-    div.innerHTML=`${flameHtml}<div><div style="font-size:20px;margin-bottom:2px;">${r.icon}</div><div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">${r.label}</div><div style="font-size:20px;font-weight:700;color:${r.col};">${r.noTarget?'No target':s+' day'+(s!==1?'s':'')}</div><div style="font-size:9px;color:var(--text3);font-family:var(--fm);margin-top:2px;">${rangeHint}</div></div>`;
+    div.style.cssText=`padding:12px 18px;display:flex;align-items:center;gap:18px;${cardBorder}`;
+    div.innerHTML=`${flameHtml}<div style="flex:1;min-width:0;">
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">${r.icon} ${r.label}</div>
+      <div style="font-size:22px;font-weight:700;color:${r.col};line-height:1;letter-spacing:-.3px;margin-bottom:4px;">${r.noTarget?'No target':s+' day'+(s!==1?'s':'')}</div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">${rangeHint}</div>
+    </div>`;
     // Drag-to-reorder handlers
     div.addEventListener('dragstart',e=>{e.dataTransfer.setData('streakKey',r.key);div.style.opacity='.5';});
     div.addEventListener('dragend',()=>{div.style.opacity='';document.querySelectorAll('.streak-widget').forEach(c=>c.classList.remove('drag-over'));});
@@ -3218,6 +3347,17 @@ async function recalcFromLatestWeight(){
   const kg=await getAvgWeight();
   if(!kg){toast('No check-in weight found — log your weight first','err');return;}
   recalcMacrosFromWeight(kg);
+}
+
+// Auto-set calorie floor/ceiling ±200 kcal around the auto-calculated target
+function autoCalorieRange(){
+  const kcal=+document.getElementById('s-kcal-display')?.value||TGT.kcal||2500;
+  const floor=Math.round((kcal-200)/50)*50;
+  const ceil=Math.round((kcal+200)/50)*50;
+  document.getElementById('s-kcal-min').value=floor;
+  document.getElementById('s-kcal-max').value=ceil;
+  markMTDirty();
+  toast(`Calorie range set: ${floor}–${ceil} kcal`,'ok');
 }
 
 function updateMacroCalc(){
