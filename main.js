@@ -317,6 +317,7 @@ ipcMain.handle('egg:add', async () => {
   if (!filePaths || !filePaths.length) return [];
   ensureEggsDir();
   const added = [];
+  const failed = [];
   for (const fp of filePaths) {
     const isHeic = HEIC_EXTS.test(fp);
     // HEIC saved as .jpg; all images resized to ≤1920px at import time
@@ -332,9 +333,12 @@ ipcMain.handle('egg:add', async () => {
       const processed = await processEggImage(fs.readFileSync(fp), isHeic);
       fs.writeFileSync(destPath, processed);
       added.push(destName);
-    } catch(e) { console.error('egg:add failed for', fp, e.message); }
+    } catch(e) {
+      console.error('egg:add failed for', fp, e.message);
+      failed.push(path.basename(fp));
+    }
   }
-  return added;
+  return {added, failed};
 });
 
 ipcMain.handle('egg:delete', (_, name) => {

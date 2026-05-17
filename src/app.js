@@ -6,6 +6,7 @@ const IS_ELECTRON = typeof window.electronAPI !== 'undefined';
 
 /* ═══ SUPABASE ═══ */
 const SUPA_URL = 'https://jpsisvaprkrcyvwnmasb.supabase.co';
+// SUPA_KEY is a public anon key — intentionally client-visible. Security is enforced via Supabase Row Level Security, not key secrecy.
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impwc2lzdmFwcmtyY3l2d25tYXNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MDM3NDgsImV4cCI6MjA5MzQ3OTc0OH0.Q7kmjiYSayzFJkjH42RoEXhbr9hjI9lXaDmX5Es4D4M';
 const supa = (typeof supabase !== 'undefined') ? supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let _supaUser = null;
@@ -69,7 +70,8 @@ async function onSignedIn(){
   _syncEnabled=true;
   setSyncBadge('syncing','Syncing…');
   updateAccountSection();
-  await pullFromSupabase();
+  await pullFromSupabase().catch(e=>console.warn('Sync failed on sign-in',e));
+  maybeShowCheckin(); // always runs after sync attempt, not buried inside pull
   setSyncBadge('online','Alex Kim');
 }
 
@@ -132,6 +134,8 @@ async function forceSyncNow(){
 }
 
 let _lastSyncedAt=null; // tracks last successful cloud write
+let _periodicSyncRunning=false;
+let _pullInProgress=false;
 
 function setSyncBadge(state, label){
   const dot=document.getElementById('syncDot');
@@ -317,6 +321,8 @@ async function sbDeleteSession(date){
 }
 
 async function pullFromSupabase(){
+  if(_pullInProgress)return;
+  _pullInProgress=true;
   try{
     const [remSettings,remFoodLib,remHistory,remCheckins,remTemplates]=await Promise.all([
       sbGet('nutrilog_settings'),sbGet('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates')
@@ -326,12 +332,43 @@ async function pullFromSupabase(){
     if(remHistory) {
       const localHistory=await Store._localGet('nutrilog_history')||{};
       const today=todayStr();
-      // Cloud-first merge: cloud dates may come from another device — always include them.
-      // Local dates override cloud for the same date (local edits win on conflict).
+      // Union merge: cloud is the base, local edits win for matching (name+time) entries,
+      // but cloud-only entries (e.g. late-night additions from another session) are added in.
       // Today is excluded from disk — it lives in sessions/nutrilog_v1, not history.
       const merged={...remHistory};
-      Object.keys(localHistory).forEach(date=>{ if(date!==today)merged[date]=localHistory[date]; });
+      Object.keys(localHistory).forEach(date=>{
+        if(date===today)return;
+        const cloudDay=merged[date]||[];
+        const localDay=localHistory[date]||[];
+        if(!localDay.length)return;
+        if(!cloudDay.length){merged[date]=localDay;return;}
+        // Start with local (preserves user edits), append cloud-only entries
+        const union=[...localDay];
+        cloudDay.forEach(cm=>{
+          if(!union.some(lm=>lm.name===cm.name&&lm.time===cm.time))union.push(cm);
+        });
+        union.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+        merged[date]=union;
+      });
       delete merged[today]; // don't persist today in history.json (prevents stale push)
+      // Also check nutrilog_sessions for past dates — captures entries that were pushed
+      // to the sessions table but never made it into history (e.g. late-night rollover gaps)
+      try{
+        const {data:pastSessions}=await supa.from('nutrilog_sessions')
+          .select('date,meals').eq('user_id',_supaUser.id).lt('date',today);
+        if(pastSessions?.length){
+          pastSessions.forEach(({date,meals})=>{
+            if(!meals?.length||_deletedDates.has(date))return;
+            const existing=merged[date]||[];
+            const union=[...existing];
+            meals.forEach(m=>{
+              if(!union.some(x=>x.name===m.name&&x.time===m.time))union.push(m);
+            });
+            union.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+            merged[date]=union;
+          });
+        }
+      }catch(e){console.warn('Past sessions merge failed',e);}
       // Remove intentionally deleted dates — prevents other devices from restoring them
       _deletedDates.forEach(d=>delete merged[d]);
       await Store._localSet('nutrilog_history',merged);
@@ -394,11 +431,12 @@ async function pullFromSupabase(){
     renderQuickTemplates();
     renderRecentMeals();
     setTimeout(()=>{if(typeof clearDirty==='function')clearDirty();},50);
-    maybeShowCheckin(); // check-in after sync so cloud data is fresh
   }catch(e){
     console.warn('pullFromSupabase error',e);
     appendSyncLog({type:'pull_fail',error:e?.message||String(e),at:new Date().toISOString()});
     setSyncBadge('online','Alex Kim');
+  }finally{
+    _pullInProgress=false;
   }
 }
 
@@ -483,7 +521,8 @@ if (IS_ELECTRON) {
 
 /* ── Periodic background sync every 5 minutes ── */
 setInterval(async()=>{
-  if(!_syncEnabled||!_supaUser)return;
+  if(!_syncEnabled||!_supaUser||_periodicSyncRunning)return;
+  _periodicSyncRunning=true;
   try{
     const sess=await Store._localGet('nutrilog_v1');
     if(sess?.meals?.length){
@@ -492,6 +531,7 @@ setInterval(async()=>{
       await sbSetHistory({[d]:sess.meals});
     }
   }catch(e){console.warn('periodic sync error',e);}
+  finally{_periodicSyncRunning=false;}
 },5*60*1000);
 
 /* ═══ CONSTANTS ═══ */
@@ -589,6 +629,9 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   calY=now.getFullYear(); calM=now.getMonth();
   document.getElementById('datePill').textContent=
     now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  // Restore persisted theme before first render to avoid flash
+  const _savedTheme=localStorage.getItem('nutrilog_theme');
+  if(_savedTheme==='light'){isDark=false;document.body.classList.add('light');}
   tick(); setInterval(tick,1000);
   // Daily reminder: check every minute
   let _lastReminderDate='';
@@ -652,6 +695,17 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   }
 });
 
+// Pause streak flame animations when the today page is off-screen
+(function(){
+  const todayPage=document.getElementById('page-today');
+  if(!todayPage||!('IntersectionObserver' in window))return;
+  new IntersectionObserver(([entry])=>{
+    document.querySelectorAll('.streak-widget').forEach(card=>{
+      card.classList.toggle('anim-paused',!entry.isIntersecting);
+    });
+  },{threshold:0.01}).observe(todayPage);
+})();
+
 let _currentDateStr=todayStr();
 function tick(){
   const n=new Date();
@@ -667,11 +721,22 @@ function tick(){
 
 async function handleDayRollover(){
   try{
+    // Pull cloud first so any late-night entries from other sessions are captured before archiving
+    if(_supaUser&&_syncEnabled){
+      await pullFromSupabase().catch(e=>console.warn('Pre-rollover sync failed',e));
+    }
     if(meals.length){
       const prevDate=new Date();prevDate.setDate(prevDate.getDate()-1);
       const prevStr=prevDate.getFullYear()+'-'+pad2(prevDate.getMonth()+1)+'-'+pad2(prevDate.getDate());
       const h=(await Store.get('nutrilog_history'))||{};
-      if(!h[prevStr])h[prevStr]=meals;
+      // Union merge: preserve any existing history for that date plus current session
+      const existing=h[prevStr]||[];
+      const union=[...existing];
+      meals.forEach(m=>{
+        if(!union.some(x=>x.name===m.name&&x.time===m.time))union.push(m);
+      });
+      union.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+      h[prevStr]=union;
       await Store.set('nutrilog_history',h);
       Object.assign(histIdx,h);
     }
@@ -1115,7 +1180,7 @@ async function saveWeightLog(){
   if(!val||val<20||val>300){toast('Enter a valid weight (20–300 kg)','err');return;}
   const cks=await loadCheckins();
   cks.push({date:new Date().toISOString(),weight:val,mood:'good',notes:'Quick log'});
-  await Store.set('nutrilog_checkins',cks).catch(()=>{});
+  await Store.set('nutrilog_checkins',cks).catch(e=>{console.error('Checkins save failed',e);toast('Save failed — check disk space','err');});
   closeWeightLog();
   renderWeightWidget();
   toast('Weight logged: '+val+' kg','ok');
@@ -1134,7 +1199,7 @@ function closeShortcuts(){
 /* ── Widget hide/show toggles ── */
 async function _saveWidgetHide(){
   const s=await Store.get('nutrilog_settings');
-  if(s){s.widgetHide=_wHide;await Store.set('nutrilog_settings',s).catch(()=>{});}
+  if(s){s.widgetHide=_wHide;await Store.set('nutrilog_settings',s).catch(e=>{console.error('Settings save failed',e);toast('Save failed — check disk space','err');});}
 }
 function toggleWidgetHide(key){
   _wHide[key]=true;
@@ -1543,7 +1608,7 @@ function deleteSpecificDate(){
     if(histIdx[d]){delete histIdx[d];}
     const stored=await Store.get('nutrilog_history').catch(()=>({}));
     if(stored&&stored[d])delete stored[d];
-    await Store.set('nutrilog_history',stored||{}).catch(()=>{});
+    await Store.set('nutrilog_history',stored||{}).catch(e=>console.warn('History save failed',e));
     // Also explicitly delete from Supabase so it doesn't come back on sync
     await sbDeleteDate(d);
     await sbDeleteSession(d);
@@ -1582,7 +1647,7 @@ function submitForm(){
       if(!h[logDate])h[logDate]=[];
       h[logDate].push({...entry,date:logDate});
       histIdx[logDate]=h[logDate];
-      Store.set('nutrilog_history',h).catch(()=>{});
+      Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     });
     if(document.getElementById('f-savelib').checked)
       addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
@@ -1705,7 +1770,7 @@ function submitPaste(){
         h[date]=[...h[date],...entries.filter(e=>!existing.has(e.name+'|'+e.time+'|'+(e.serving||'')))];
         histIdx[date]=h[date];
       }
-      Store.set('nutrilog_history',h).catch(()=>{});
+      Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     });
   }
 
@@ -1758,7 +1823,7 @@ async function clearAllHistory(){
   showConf('Clear ALL history?','This permanently deletes every saved day. Today\'s unsaved log is not affected.','Delete All',async()=>{
     histIdx={};
     // Re-seed with empty (no LOG_SEED — user explicitly cleared)
-    await Store.set('nutrilog_history',{}).catch(()=>{});
+    await Store.set('nutrilog_history',{}).catch(e=>console.warn('History clear failed',e));
     toast('All history deleted','info');
     if(document.getElementById('page-history').classList.contains('active')){
       selDate=null; renderCalendar();
@@ -1783,7 +1848,7 @@ async function initFoodLib(){
   else{const b=document.getElementById('dbBadge');if(b)b.textContent=foodLib.length;}
 }
 function saveFoodLib(){
-  Store.set('nutrilog_foodlib', foodLib).catch(()=>{});
+  Store.set('nutrilog_foodlib', foodLib).catch(e=>{console.error('Food library save failed',e);toast('Save failed — check disk space','err');});
   document.getElementById('dbBadge').textContent=foodLib.length;
 }
 function addToLib(e){
@@ -1794,7 +1859,11 @@ function addToLib(e){
 function acSearch(q){
   acIdx=-1;const list=document.getElementById('acList');
   if(!q){acHide();return;}
-  const matches=foodLib.filter(f=>f.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  const ql=q.toLowerCase();
+  const all=foodLib.filter(f=>f.name.toLowerCase().includes(ql));
+  const startsWith=all.filter(f=>f.name.toLowerCase().startsWith(ql));
+  const contains=all.filter(f=>!f.name.toLowerCase().startsWith(ql));
+  const matches=[...startsWith,...contains].slice(0,8);
   if(!matches.length){acHide();return;}
   list.innerHTML=matches.map((f,i)=>`<div class="ac-item" onmousedown="acPick(${i})"><span class="ac-name">${esc(f.name)}</span><span class="ac-info">${f.kcal} kcal · P${f.protein}g F${f.fat}g C${f.carbs}g</span></div>`).join('');
   list._m=matches;list.classList.add('open');
@@ -2156,7 +2225,7 @@ function deleteHistSelected(){
     const toDelete=[...histMultiSel];
     toDelete.forEach(ds=>delete histIdx[ds]);
     const h={...histIdx};
-    await Store.set('nutrilog_history',h).catch(()=>{});
+    await Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     await Promise.all(toDelete.map(async ds=>{
       await addDeletedDate(ds); // log deletion so other devices honour it
       await sbDeleteDate(ds);
@@ -2374,7 +2443,7 @@ async function submitHistEntry(){
     meals=h[ds].map(e=>({...e}));
     render();
   }
-  await Store.set('nutrilog_history',h).catch(()=>{});
+  await Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
   // Reset save btn back to normal for today modal
   document.getElementById('mealSaveBtn').onclick=()=>submitMeal();
   _histEditDs=null; _histEditIdx=null;
@@ -2392,7 +2461,7 @@ function saveDayNote(ds){
   if(!val)delete dayNotes[ds];
   if(_noteTimer)clearTimeout(_noteTimer);
   _noteTimer=setTimeout(async()=>{
-    await Store.set('nutrilog_daynotes',dayNotes).catch(()=>{});
+    await Store.set('nutrilog_daynotes',dayNotes).catch(e=>console.warn('Day notes save failed',e));
     const lbl=document.getElementById('notesavedLabel');
     if(lbl){lbl.classList.add('show');setTimeout(()=>lbl.classList.remove('show'),1800);}
   },800);
@@ -2464,7 +2533,11 @@ function copyYesterdayToToday(){
   const ds=yest.getFullYear()+'-'+pad2(yest.getMonth()+1)+'-'+pad2(yest.getDate());
   const src=histIdx[ds];
   if(!src||!src.length){toast('No data from yesterday','err');return;}
-  duplicateDayToToday(ds);
+  if(meals.length){
+    showConf('Replace today\'s meals?','This will overwrite your '+meals.length+' existing meal'+(meals.length===1?'':'s')+' with yesterday\'s log.','Replace',()=>duplicateDayToToday(ds));
+  } else {
+    duplicateDayToToday(ds);
+  }
 }
 
 function delHistEntry(ds,i){
@@ -2479,7 +2552,7 @@ function delHistEntry(ds,i){
       await addDeletedDate(ds); // log deletion so other devices honour it
       await sbDeleteDate(ds);
     }
-    await Store.set('nutrilog_history',h).catch(()=>{});
+    await Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     if(ds===todayStr()){meals=histIdx[ds]||[];render();}
     toast('Entry deleted','info');
     renderHistDetail(ds);
@@ -3092,6 +3165,61 @@ function resetToAutoMacro(){
   updateCalc(); // will auto-fill macros since _macroCustomized is now false
   markMTDirty();
 }
+
+// Returns rolling average of last 3 check-in weights (more stable than single weigh-in)
+async function getAvgWeight(){
+  const cks=await loadCheckins();
+  const withW=cks.filter(c=>c.weight&&c.weight>0).slice(-3);
+  if(!withW.length)return null;
+  const avg=withW.reduce((s,c)=>s+c.weight,0)/withW.length;
+  return Math.round(avg*10)/10;
+}
+
+// Recalculate protein/carbs/fiber targets from body weight using evidence-based formulas.
+// Fat is NOT recalculated — it stays medically constrained (AHA cholesterol limit).
+async function recalcMacrosFromWeight(kg){
+  if(!kg||kg<30||kg>300){toast('Invalid weight for macro recalc','err');return;}
+  const kcal=+(document.getElementById('s-kcal-display')?.value||0)||TGT.kcal||2552;
+  // Keep fat exactly as currently set — medically informed, don't override
+  const fat=+(document.getElementById('s-fat')?.value||0)||TGT.fat||57;
+  // Protein: 2.0 g/kg target, 1.8 g/kg min, no upper cap (recomp consensus, Helms et al.)
+  const protein=Math.round(kg*2.0);
+  const proteinMin=Math.round(kg*1.8);
+  // Carbs: remaining kcal after protein + fat
+  const carbKcal=Math.max(0,kcal-(protein*4)-(fat*9));
+  const carbs=Math.round(carbKcal/4);
+  const carbsMin=Math.round(carbs*0.88);
+  const carbsMax=Math.round(carbs*1.08);
+  // Fiber: 14g per 1000 kcal (IOM AI), min 80%, max 125%, hard cap at 60g
+  const fiber=Math.max(20,Math.min(60,Math.round(14*kcal/1000)));
+  const fiberMin=Math.round(fiber*0.80);
+  const fiberMax=Math.min(60,Math.round(fiber*1.25));
+  // Apply to settings form
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+  set('s-weight',kg);
+  set('s-protein',protein);
+  set('s-protein-min',proteinMin);
+  const pmEl=document.getElementById('s-protein-max');
+  if(pmEl)pmEl.value=''; // no upper cap
+  set('s-carbs',carbs);
+  set('s-carbs-min',carbsMin);
+  set('s-carbs-max',carbsMax);
+  set('s-fiber',fiber);
+  set('s-fiber-min',fiberMin);
+  set('s-fiber-max',fiberMax);
+  setMacroCustomized(true);
+  updateCalc();
+  updateMacroCalc();
+  saveSettings();
+  toast(`Macros recalculated for ${kg}kg — protein ${protein}g · carbs ${carbs}g · fiber ${fiber}g ✓`,'ok');
+}
+
+async function recalcFromLatestWeight(){
+  const kg=await getAvgWeight();
+  if(!kg){toast('No check-in weight found — log your weight first','err');return;}
+  recalcMacrosFromWeight(kg);
+}
+
 function updateMacroCalc(){
   const p=+document.getElementById('s-protein').value||0;
   const f=+document.getElementById('s-fat').value||0;
@@ -3176,7 +3304,7 @@ function saveSettings(){
   TGT_MAX={protein:s.proteinMax,fat:s.fatMax,carbs:s.carbsMax,fiber:s.fiberMax,kcal:s.kcalMax??null};
   const _kd=document.getElementById('s-kcal-display');if(_kd)_kd.value=Math.round(kcalTarget);
   s.macroCustomized=_macroCustomized;
-  Store.set('nutrilog_settings', s).catch(()=>{});
+  Store.set('nutrilog_settings', s).catch(e=>{console.error('Settings save failed',e);toast('Save failed — check disk space','err');});
   clearDirty();
   buildRings();buildSidebarRows();render();
   renderProjection();
@@ -3341,15 +3469,10 @@ async function saveCheckin(){
   if(diff>=0.5){
     setTimeout(()=>{
       showConf(
-        '⚖️ Update Weight in Settings?',
-        `Your logged weight (${w}kg) differs from settings (${settingsW}kg) by ${diff.toFixed(1)}kg. Update it to recalculate your targets?`,
-        'Update Weight',
-        ()=>{
-          document.getElementById('s-weight').value=+w;
-          markPIDirty();
-          updateCalc();
-          toast('Weight updated — save settings to apply','info');
-        }
+        '⚖️ Update Weight & Recalculate Macros?',
+        `Your logged weight (${w}kg) differs from settings (${settingsW}kg) by ${diff.toFixed(1)}kg. Recalculate protein, carbs, and fiber targets automatically?`,
+        'Recalculate',
+        ()=>recalcMacrosFromWeight(+w)
       );
     },400);
   } else {
@@ -3401,7 +3524,7 @@ function renderTplList(){
     return `<div class="tcard" style="padding:14px 18px;margin-bottom:10px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <div style="flex:1;min-width:200px;">
-          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${t.name}</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${esc(t.name)}</div>
           <div style="font-size:11px;color:var(--text3);">${t.meals.length} meal${t.meals.length!==1?'s':''} · ${Math.round(tot.kcal)} kcal · ${Math.round(tot.protein)}g P · ${Math.round(tot.fat)}g F · ${Math.round(tot.carbs)}g C · ${Math.round(tot.fiber)}g Fi</div>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -3412,7 +3535,7 @@ function renderTplList(){
         </div>
       </div>
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px;">
-        ${t.meals.map(m=>`<div style="font-size:11px;color:var(--text2);padding:4px 8px;background:var(--bg3);border-radius:6px;">${m.name} · ${m.serving} ${m.unit} · ${m.kcal} kcal</div>`).join('')}
+        ${t.meals.map(m=>`<div style="font-size:11px;color:var(--text2);padding:4px 8px;background:var(--bg3);border-radius:6px;">${esc(m.name)} · ${m.serving} ${m.unit} · ${m.kcal} kcal</div>`).join('')}
       </div>
     </div>`;
   }).join('');
@@ -3442,7 +3565,7 @@ function renderQuickTemplates(){
     btn.draggable=true;
     btn.dataset.tplId=id;
     btn.style.cssText='flex-direction:column;height:auto;padding:8px 12px;align-items:flex-start;gap:2px;cursor:grab;flex-shrink:0;';
-    btn.innerHTML=`<span style="font-weight:600;">${t.name}</span><span style="font-size:10px;color:var(--text3);">${Math.round(tot.kcal)} kcal · ${Math.round(tot.protein)}g P</span>`;
+    btn.innerHTML=`<span style="font-weight:600;">${esc(t.name)}</span><span style="font-size:10px;color:var(--text3);">${Math.round(tot.kcal)} kcal · ${Math.round(tot.protein)}g P</span>`;
     btn.addEventListener('click',()=>quickApplyTpl(id));
     btn.addEventListener('dragstart',e=>{e.dataTransfer.setData('tplId',id);btn.style.opacity='.5';});
     btn.addEventListener('dragend',()=>{btn.style.opacity='';list.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));});
@@ -3498,7 +3621,7 @@ function renderTplDraftMeals(){
     list.innerHTML=_tplDraftMeals.map((m,i)=>`
       <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:8px 10px;flex-wrap:wrap;">
         <div style="flex:1;min-width:120px;">
-          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(m.name)}</div>
           <div style="font-size:10px;color:var(--text3);">${m.kcal} kcal · ${m.protein}g P</div>
         </div>
         <select onchange="_tplDraftMeals[${i}].cat=this.value"
@@ -3724,7 +3847,7 @@ async function undoTplHistoryApply(){
 }
 
 /* ═══ THEME ═══ */
-function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light',!isDark);document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';}
+function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light',!isDark);document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';localStorage.setItem('nutrilog_theme',isDark?'dark':'light');}
 
 /* ═══ TOAST ═══ */
 let ttmr;
@@ -3741,6 +3864,18 @@ document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     if(document.getElementById('mealOverlay').classList.contains('open'))submitMeal();
   }
+  // Tab focus trap: keep Tab cycling inside the open modal
+  if(e.key==='Tab'){
+    const openModal=document.querySelector('.overlay.open');
+    if(openModal){
+      const focusable=openModal.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+      if(focusable.length){
+        const first=focusable[0],last=focusable[focusable.length-1];
+        if(e.shiftKey){if(document.activeElement===first){e.preventDefault();last.focus();}}
+        else{if(document.activeElement===last){e.preventDefault();first.focus();}}
+      }
+    }
+  }
   // Undo / Redo keyboard shortcuts (only when no modal is open)
   const anyModal=document.querySelector('.overlay.open,.conf-overlay.open');
   if(!anyModal){
@@ -3752,6 +3887,16 @@ document.getElementById('mealOverlay').addEventListener('click',function(e){if(e
 document.getElementById('confOverlay').addEventListener('click',function(e){if(e.target===this)closeConf();});
 document.getElementById('dbOverlay').addEventListener('click',function(e){if(e.target===this)closeDbModal();});
 document.getElementById('importOverlay').addEventListener('click',function(e){if(e.target===this)closeImport();});
+
+// Redraw trend canvas when window is resized so it doesn't stay a stale size
+let _trendResizeTimer;
+window.addEventListener('resize',()=>{
+  clearTimeout(_trendResizeTimer);
+  _trendResizeTimer=setTimeout(()=>{
+    const canvas=document.getElementById('trendCanvas');
+    if(canvas&&canvas.offsetParent!==null)renderWeekly();
+  },200);
+});
 
 /* ═══ UTILS ═══ */
 function pnum(v){const n=parseFloat((v||'0').toString().replace(',','.').trim());return isNaN(n)?0:Math.round(n*10)/10;}
@@ -4230,8 +4375,11 @@ async function renderEggSettings(){
 }
 async function eggSettingsAdd(){
   if(IS_ELECTRON&&window.electronAPI?.addEggImages){
-    const added=await window.electronAPI.addEggImages();
-    if(added&&added.length){_eggCached=false;_eggPhotos=[];await renderEggSettings();}
+    const result=await window.electronAPI.addEggImages();
+    const added=result?.added||result||[];
+    const failed=result?.failed||[];
+    if(added.length){_eggCached=false;_eggPhotos=[];await renderEggSettings();}
+    if(failed.length){toast(`${failed.length} photo${failed.length===1?'':'s'} couldn't be imported (unsupported format or corrupted)`,'err');}
   } else {
     toast('File picking requires Electron app','warning');
   }

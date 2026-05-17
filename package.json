@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.3.0",
-  "description": "NutriLog v2.2.0 — Heatmap, Daily Reminder, Smarter Sync",
+  "version": "2.3.2",
+  "description": "NutriLog v2.3.2 — Auto macro recalculation from body weight, evidence-based targets",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

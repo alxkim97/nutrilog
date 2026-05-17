@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v2.3.0</title>
+<title>NutriLog v2.3.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -55,6 +55,10 @@
         <button class="btn btn-ghost" onclick="saveSession();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Save
+        </button>
+        <button class="btn btn-ghost" onclick="openCheckin();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Log Check-in
         </button>
         <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
         <button class="btn btn-ghost danger" onclick="confirmClearAll();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
@@ -789,6 +793,7 @@
             <div class="calc-row"><span class="calc-lbl" style="font-size:11px;color:var(--text3);">= Remaining kcal ÷ 4</span><span></span></div>
           </div>
         </details>
+        <button class="btn btn-ghost" onclick="recalcFromLatestWeight()" style="font-size:12px;height:36px;margin-bottom:8px;">⚖️ Recalculate Macros from Latest Weight</button>
         <button class="btn-save-settings" onclick="saveSettings()">💾 Save Settings &amp; Recalculate</button>
       </div>
       <!-- ACCOUNT SECTION -->

@@ -108,6 +108,7 @@ input, select, textarea { font-family:var(--fb); }
 @keyframes flame-sm{0%,100%{transform:scaleY(1) translateY(0);opacity:.8}50%{transform:scaleY(1.08) translateY(-2px);opacity:1}}
 @keyframes flame-md{0%,100%{transform:scaleY(1) translateY(0);opacity:.85}50%{transform:scaleY(1.12) translateY(-3px);opacity:1}}
 @keyframes flame-lg{0%,100%{transform:scaleY(1) translateY(0) scaleX(1);opacity:.9}33%{transform:scaleY(1.15) translateY(-4px) scaleX(1.05);opacity:1}66%{transform:scaleY(1.08) translateY(-2px) scaleX(.97);opacity:.95}}
+.streak-widget.anim-paused svg{animation-play-state:paused;}
 @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.7)} }
 .unsaved-label { font-size:10px; color:var(--orange); font-family:var(--fm); display:none; }
 .custom-macro-badge { display:none; align-items:center; gap:5px; padding:5px 10px;
@@ -115,6 +116,8 @@ input, select, textarea { font-family:var(--fb); }
   font-size:11px; color:var(--accent); font-family:var(--fm); margin-bottom:10px; }
 .custom-macro-badge svg { flex-shrink:0; }
 .sidenav { padding:12px 10px; flex:1; overflow-y:auto; }
+.sidenav::-webkit-scrollbar{width:4px;}
+.sidenav::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 .nav-section { font-size:10px; font-weight:600; letter-spacing:.8px; color:var(--text3);
   text-transform:uppercase; padding:0 10px 5px; margin-top:12px; }
 .nav-section:first-child { margin-top:0; }
