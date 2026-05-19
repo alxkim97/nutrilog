@@ -1,7 +1,7 @@
 # NutriLog — Session Handoff
 
-**Last updated:** 2026-05-17 (Condo PC)
-**Current version:** v2.3.3
+**Last updated:** 2026-05-19 (Condo PC)
+**Current version:** v2.3.4
 **Branch:** main
 **Supabase project:** lifelog (renamed from nutrilog — dashboard only, no code change)
 
@@ -17,14 +17,35 @@ NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vani
 - `src/index.html` — HTML shell
 - `main.js` — Electron main process (IPC, file ops, HEIC photos)
 - `preload.js` — context bridge (34 IPC methods as `window.electronAPI`)
-- `PRODUCT.md` — impeccable design context (Clean · Calm · Motivated / Raycast)
+- `PRODUCT.md` — design context (Clean · Calm · Motivated / Raycast)
 
 **Run:** `npm start` | **Build:** `npm run build:win`
 **Data dir (Windows):** `%APPDATA%\NutriLog\NutriLogData\`
 
 ---
 
-## What was done this session (2026-05-17, Condo PC)
+## What was done this session (2026-05-19, Condo PC)
+
+### Bug fix: sync duplicate meals (v2.3.4)
+
+**Root cause:** `autoLoad()` was double-merging today's meals from two sources:
+1. `nutrilog_v1` (written from `nutrilog_sessions` table during pull)
+2. `histIdx[today]` (written from `nutrilog_history` table during pull)
+
+If `time` or `serving` strings differed even slightly between the two tables, dedup failed and ghost duplicate rows appeared (e.g. 20:09 dinner + 22:11 copy of same dinner).
+
+**Fix (two parts):**
+- `pullFromSupabase()` now merges sessions + history for today into one clean list before writing `nutrilog_v1`, then deletes `histIdx[today]` so `autoLoad()` can't re-merge
+- `autoLoad()` simplified — loads `nutrilog_v1` only, no histIdx merge
+
+**Cleanup tool:**
+- Added `deduplicateHistory()` — scans all history dates, removes entries where `(name|category|serving)` duplicates within the same day, saves locally and pushes to Supabase
+- "🧹 Remove Duplicate Meals from History" button added to Settings
+- Silent dedup pass runs automatically after every cloud pull
+
+---
+
+## Previous session summary (v2.3.3, 2026-05-17)
 
 ### Bug fixes (v2.3.1)
 - XSS: template/meal names escaped in all innerHTML slots
@@ -45,21 +66,17 @@ NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vani
 - "⚖️ Recalculate Macros from Latest Weight" button in Settings
 - `maybeShowCheckin()` moved to `onSignedIn()` — always fires after startup
 - "Log Check-in" added to ⋯ More menu
-- Direct settings.json fix: proteinMin 156→137g, fiber 40→36g (IOM)
 
 ### UI polish (v2.3.3)
 - DM Serif Display removed from product surfaces → Outfit 600 (kept in logo)
 - Kcal bar gradient → solid var(--mk)
 - Modal ease → ease-out cubic-bezier
 - Category badges: pill → 5px chip
-- Weekly bars: 140px tall, 88% fill (bars closer to date labels)
-- Font floor raised to 10px minimum
-- Firefox scrollbar-width:thin
-- btn-accent focus-visible ring
-- Auto button in Settings for calorie range (±200 kcal around target)
+- Weekly bars: 140px tall, 88% fill
 - Weekly Summary: 5 chart toggles (Grid, Target, Zone, Trend, Avg) with collision-safe labels
 - Streak widgets: column layout, flame left + wider (scaleX 1.35), text fills card
-- PRODUCT.md created
+- Auto button in Settings for calorie range (±200 kcal around target)
+- PRODUCT.md created, HANDOFF.md + pre-push hook created
 
 ### Git checkpoint
 - Commit `3c2c19a` = safe rollback before UI redesign
@@ -67,27 +84,28 @@ NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vani
 
 ---
 
-## Current macro settings (76.4→77 kg)
+## Current macro settings (77 kg)
 
-Settings auto-recalculated after weight update to 77 kg:
 - Protein: 155g target, 139g min, no max
 - Fat: 56g target, 45g min, 65g max (AHA cholesterol constraint — do NOT auto-recalc)
-- Carbs: 348g target, 313g min, 384g max
-- Fiber: 36g target, 29g min, 45g max
+- Carbs: 348g target, 307g min, 377g max
+- Fiber: 35g target, 28g min, 44g max
 - Kcal target: 2517, range 2300–2700
 
 ---
 
 ## What to continue next session
 
-1. **Pending impeccable audit items:**
-   - Date pill vs time pill should look visually distinct (currently identical style)
-   - Streak row could be tighter with less per-card padding
-   - Ring card hover `translateY(-2px)` — rings are draggable so it's intentional, but worth reviewing
-
-2. **Test across both PCs** — verify sync works correctly after the union-merge fixes
-
-3. **Consider adding** — weekly macro breakdown view (protein/carbs/fat stacked bars by day)
+1. **Run dedup first** — Settings → "🧹 Remove Duplicate Meals from History" to clean any historical duplicates
+2. **Test sync on company PC** — pull latest, run npm start, verify no duplicates appear
+3. **Pending UI items:**
+   - Date pill vs time pill visual distinction (currently identical style)
+   - Streak row padding review
+4. **Feature ideas (priority order):**
+   - Weekly macro breakdown view (protein/carbs/fat stacked bars by day)
+   - Meal timing analysis (avg meal gaps, show in Analysis view)
+   - Body composition trend chart (weight + body fat % overlaid)
+   - Copy any past day (not just yesterday)
 
 ---
 
@@ -106,7 +124,7 @@ Paste this prompt into a new Claude Code session after pulling latest:
 
 ```
 Continue NutriLog development. Pull latest from GitHub first.
-Read HANDOFF.md for full session context. Current version: v2.3.3.
+Read HANDOFF.md for full session context. Current version: v2.3.4.
 
 Key facts:
 - Electron 31, vanilla HTML/CSS/JS, no framework
@@ -115,6 +133,9 @@ Key facts:
 - PRODUCT.md has design context (Clean · Calm · Motivated, Raycast reference)
 - Git checkpoint 3c2c19a = safe rollback before UI changes
 - run: npm start
+
+First: go to Settings → click "🧹 Remove Duplicate Meals from History" to clean
+any sync duplicates that accumulated before v2.3.4.
 
 Pending: date/time pill visual distinction, streak row padding review,
 weekly macro breakdown view (stacked bars). Test sync on this PC first.

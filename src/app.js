@@ -392,11 +392,17 @@ async function pullFromSupabase(){
         await sbSet('nutrilog_templates',merged);
       }
     }
-    // Pull today's session
+    // Pull today's session — merge with history so v1 is the single authoritative source
     const todayMeals=await sbGetSessions(todayStr());
-    if(todayMeals&&todayMeals.length){
-      await Store._localSet('nutrilog_v1',{date:todayStr(),ts:Date.now(),meals:todayMeals});
+    const histToday=histIdx[todayStr()]||[];
+    const mergedToday=[...(todayMeals||[])];
+    histToday.forEach(m=>{
+      if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
+    });
+    if(mergedToday.length){
+      await Store._localSet('nutrilog_v1',{date:todayStr(),ts:Date.now(),meals:mergedToday});
     }
+    delete histIdx[todayStr()]; // v1 is now complete; autoLoad must not re-merge
     setSyncBadge('online','Alex Kim');
     _lastSyncedAt=new Date();
     const timeStr=_lastSyncedAt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -405,6 +411,8 @@ async function pullFromSupabase(){
     toast('Data synced from cloud ☁️','ok');
     // Re-init UI with new data — build rows FIRST so render() has elements to fill
     buildSidebarRows(); await autoLoad(); render();
+    // Silent dedup pass — cleans up any sync artifacts accumulated before the fix
+    deduplicateHistory(false).catch(()=>{});
     // Explicitly refresh widgets that derive from synced data
     renderQuickTemplates();
     renderRecentMeals();
@@ -3364,6 +3372,44 @@ function autoCalorieRange(){
   toast(`Calorie range set: ${floor}–${ceil} kcal`,'ok');
 }
 
+async function deduplicateHistory(showToast=true){
+  const hist=await Store._localGet('nutrilog_history')||{};
+  let totalRemoved=0;
+  const cleaned={};
+  Object.entries(hist).forEach(([date,entries])=>{
+    if(!Array.isArray(entries)){cleaned[date]=entries;return;}
+    const seen=new Set();
+    const deduped=entries.filter(m=>{
+      const key=`${m.name}|${m.category||''}|${String(m.serving||'')}`;
+      if(seen.has(key)){totalRemoved++;return false;}
+      seen.add(key);
+      return true;
+    });
+    cleaned[date]=deduped;
+  });
+  // Also dedup current session meals
+  if(meals.length){
+    const seen=new Set();
+    meals=meals.filter(m=>{
+      const key=`${m.name}|${m.category||''}|${String(m.serving||'')}`;
+      if(seen.has(key)){totalRemoved++;return false;}
+      seen.add(key);
+      return true;
+    });
+  }
+  if(totalRemoved>0){
+    await Store._localSet('nutrilog_history',cleaned);
+    Object.assign(histIdx,cleaned);
+    if(_supaUser&&_syncEnabled) sbSetHistory(cleaned).catch(e=>console.warn('dedup push failed',e));
+    await saveSession().catch(e=>console.warn('dedup session save failed',e));
+    if(showToast) toast(`Removed ${totalRemoved} duplicate meal${totalRemoved===1?'':'s'} from history`,'ok');
+    render();
+  } else {
+    if(showToast) toast('No duplicates found in history','ok');
+  }
+  return totalRemoved;
+}
+
 function updateMacroCalc(){
   const p=+document.getElementById('s-protein').value||0;
   const f=+document.getElementById('s-fat').value||0;
@@ -3497,13 +3543,6 @@ async function autoLoad(){
     if(d){
       const storedDate=d.date||d.savedDate||null;
       if(storedDate===today&&d.meals?.length) meals=d.meals;
-    }
-    // Merge pre-logged meals stored in history for today
-    const preLogged=histIdx[today]||[];
-    if(preLogged.length){
-      const fp=new Set(meals.map(m=>m.name+'|'+m.time+'|'+(m.serving||'')));
-      const fresh=preLogged.filter(m=>!fp.has(m.name+'|'+m.time+'|'+(m.serving||'')));
-      if(fresh.length) meals=[...meals,...fresh];
     }
     if(meals.length) render();
   }catch{}

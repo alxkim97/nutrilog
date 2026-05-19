@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.3.3",
-  "description": "NutriLog v2.3.3 — UI polish pass, auto macro recalc, sync fixes",
+  "version": "2.3.4",
+  "description": "NutriLog v2.3.4 — fix sync duplicate meals, dedup history cleanup",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
