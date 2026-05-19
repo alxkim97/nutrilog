@@ -542,19 +542,25 @@ let autoSaveTimer=null;
 let _saveState='saved'; // 'saved' | 'dirty' | 'saving'
 let _cloudDirty=false; // true when local meals are ahead of cloud
 
-// Safety-net: push today's meals to cloud every 30s if there's anything pending
+// Safety-net: push today's meals every 30s whenever there are meals and a user is signed in.
+// Runs unconditionally — does NOT rely on _cloudDirty or _syncEnabled flags so it
+// cannot be silenced by a failed-but-resolved Promise clearing the flag prematurely.
 setInterval(async()=>{
-  if(!_cloudDirty||!meals.length||!_syncEnabled||!_supaUser)return;
+  if(!meals.length||!_supaUser)return;
   const today=todayStr();
   try{
-    const {error:e1}=await supa.from('nutrilog_sessions').upsert({user_id:_supaUser.id,date:today,meals,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
-    const rows=[{user_id:_supaUser.id,date:today,meals:meals.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}];
+    const snap=[...meals]; // snapshot so concurrent adds don't mutate mid-push
+    const {error:e1}=await supa.from('nutrilog_sessions')
+      .upsert({user_id:_supaUser.id,date:today,meals:snap,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+    const rows=[{user_id:_supaUser.id,date:today,meals:snap.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}];
     const {error:e2}=await supa.from('nutrilog_history').upsert(rows,{onConflict:'user_id,date'});
     if(!e1&&!e2){
       _cloudDirty=false;
-      const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
       setSyncBadge('online','Alex Kim');
-      const el=document.getElementById('syncLastTime');if(el)el.textContent='· '+t;
+      const el=document.getElementById('syncLastTime');
+      if(el)el.textContent='· '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    }else{
+      console.warn('Safety-net push error:',e1||e2);
     }
   }catch(e){console.warn('Safety-net push failed',e);}
 },30*1000);
@@ -573,12 +579,8 @@ function setSavePill(state){
 }
 function queueAutoSave(){
   setSavePill('dirty');
-  _cloudDirty=true; // safety-net interval will push if immediate push fails
-  // Attempt immediate cloud push
-  Store.set('nutrilog_v1',{ts:Date.now(),date:todayStr(),meals})
-    .then(()=>{ _cloudDirty=false; })
-    .catch(()=>{});
-  // Debounced local disk save 1.5s later
+  _cloudDirty=true; // only cleared by safety-net on verified Supabase success
+  // Debounced local disk save + best-effort cloud push via Store.set
   if(autoSaveTimer)clearTimeout(autoSaveTimer);
   autoSaveTimer=setTimeout(()=>{
     saveSession().catch(e=>console.warn('Auto-save failed',e));
