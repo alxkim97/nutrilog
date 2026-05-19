@@ -553,22 +553,14 @@ function setSavePill(state){
 }
 function queueAutoSave(){
   setSavePill('dirty');
-  // Immediately push today's meals to cloud so other devices see them right away
-  cloudPushToday().catch(()=>{});
-  // Local save runs 1.5s later (debounced so rapid adds don't thrash disk)
+  // Push to cloud immediately via Store.set — the proven path that handles auth,
+  // badge updates, and pushes only today's 2 rows (session + history[today]).
+  Store.set('nutrilog_v1',{ts:Date.now(),date:todayStr(),meals}).catch(()=>{});
+  // Debounced local disk save 1.5s later
   if(autoSaveTimer)clearTimeout(autoSaveTimer);
   autoSaveTimer=setTimeout(()=>{
     saveSession().catch(e=>console.warn('Auto-save failed',e));
   },1500);
-}
-
-async function cloudPushToday(){
-  if(!_syncEnabled||!_supaUser)return;
-  const today=todayStr();
-  try{
-    await sbSetSession(today,meals);
-    if(meals.length)await sbSetHistory({[today]:meals.map(m=>({...m,date:today}))});
-  }catch(e){console.warn('cloudPushToday failed',e);}
 }
 let meals=[];
 let foodLib=[];
@@ -3462,16 +3454,14 @@ async function saveSession(){
   try{
     setSavePill('saving');
     const today=todayStr();
-    // Save session locally
-    await Store._localSet('nutrilog_v1',{ts:Date.now(),date:today,meals});
-    // Update local history for today
+    // Store.set handles both local save AND cloud push (session + history[today] only — not full history)
+    await Store.set('nutrilog_v1',{ts:Date.now(),date:today,meals});
+    // Keep local history.json in sync
     const h=(await Store._localGet('nutrilog_history'))||{};
     if(meals.length)h[today]=meals.map(m=>({...m,date:today}));
     else delete h[today];
     await Store._localSet('nutrilog_history',h);
     histIdx[today]=h[today]||[];
-    // Push only today's data to cloud (not entire 100+ day history)
-    await cloudPushToday();
     setSavePill('saved');
     toast('Session saved','ok');
   }catch(e){setSavePill('dirty');toast('Save failed','err');}
