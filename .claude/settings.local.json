@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -n '/\"2026-03/,/\"2026-06/p' /c/Users/alex_/AppData/Roaming/NutriLog/NutriLogData/history.json | grep -o '\"name\": \"[^\"]*[Ll]egum[^\"]*\"' | wc -l)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\alex_\\AppData\\Roaming\\NutriLog\\NutriLogData"
+    ]
+  }
+}
