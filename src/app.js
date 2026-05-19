@@ -351,24 +351,9 @@ async function pullFromSupabase(){
         merged[date]=union;
       });
       delete merged[today]; // don't persist today in history.json (prevents stale push)
-      // Also check nutrilog_sessions for past dates — captures entries that were pushed
-      // to the sessions table but never made it into history (e.g. late-night rollover gaps)
-      try{
-        const {data:pastSessions}=await supa.from('nutrilog_sessions')
-          .select('date,meals').eq('user_id',_supaUser.id).lt('date',today);
-        if(pastSessions?.length){
-          pastSessions.forEach(({date,meals})=>{
-            if(!meals?.length||_deletedDates.has(date))return;
-            const existing=merged[date]||[];
-            const union=[...existing];
-            meals.forEach(m=>{
-              if(!union.some(x=>x.name===m.name&&x.time===m.time))union.push(m);
-            });
-            union.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-            merged[date]=union;
-          });
-        }
-      }catch(e){console.warn('Past sessions merge failed',e);}
+      // NOTE: do NOT merge nutrilog_sessions for past dates here — sessions and history
+      // share the same meals but may have different timestamps, causing duplicates.
+      // nutrilog_history is the single source of truth for all past dates.
       // Remove intentionally deleted dates — prevents other devices from restoring them
       _deletedDates.forEach(d=>delete merged[d]);
       await Store._localSet('nutrilog_history',merged);
