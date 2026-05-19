@@ -332,23 +332,14 @@ async function pullFromSupabase(){
     if(remHistory) {
       const localHistory=await Store._localGet('nutrilog_history')||{};
       const today=todayStr();
-      // Union merge: cloud is the base, local edits win for matching (name+time) entries,
-      // but cloud-only entries (e.g. late-night additions from another session) are added in.
-      // Today is excluded from disk — it lives in sessions/nutrilog_v1, not history.
+      // Merge strategy: cloud is the base (covers dates only on cloud).
+      // For any date where local has data, local wins completely — no appending
+      // from cloud. This prevents sync artifacts (same food, different timestamp)
+      // from creating duplicates. Cloud-only dates are kept as-is.
       const merged={...remHistory};
       Object.keys(localHistory).forEach(date=>{
         if(date===today)return;
-        const cloudDay=merged[date]||[];
-        const localDay=localHistory[date]||[];
-        if(!localDay.length)return;
-        if(!cloudDay.length){merged[date]=localDay;return;}
-        // Start with local (preserves user edits), append cloud-only entries
-        const union=[...localDay];
-        cloudDay.forEach(cm=>{
-          if(!union.some(lm=>lm.name===cm.name&&lm.time===cm.time))union.push(cm);
-        });
-        union.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-        merged[date]=union;
+        if(localHistory[date]?.length) merged[date]=localHistory[date];
       });
       delete merged[today]; // don't persist today in history.json (prevents stale push)
       // NOTE: do NOT merge nutrilog_sessions for past dates here — sessions and history
