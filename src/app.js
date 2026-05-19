@@ -272,7 +272,8 @@ async function sbGetSessions(date){
 async function sbSetSession(date,mealsArr){
   if(!_syncEnabled||!_supaUser)return false;
   try{
-    await supa.from('nutrilog_sessions').upsert({user_id:_supaUser.id,date,meals:mealsArr,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+    const {error}=await supa.from('nutrilog_sessions').upsert({user_id:_supaUser.id,date,meals:mealsArr,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+    if(error)throw error;
     return true;
   }catch(e){
     console.warn('sbSetSession',e);
@@ -297,7 +298,8 @@ async function sbSetHistory(histObj){
   try{
     const rows=Object.entries(histObj).map(([date,meals])=>({user_id:_supaUser.id,date,meals,updated_at:new Date().toISOString()}));
     if(!rows.length)return true;
-    await supa.from("nutrilog_history").upsert(rows,{onConflict:"user_id,date"});
+    const {error}=await supa.from("nutrilog_history").upsert(rows,{onConflict:"user_id,date"});
+    if(error)throw error;
     return true;
   }catch(e){
     console.warn("sbSetHistory",e);
@@ -538,6 +540,24 @@ let TGT_MAX={protein:null,fat:65,carbs:380,fiber:50,kcal:null};
 // Auto-save debounce
 let autoSaveTimer=null;
 let _saveState='saved'; // 'saved' | 'dirty' | 'saving'
+let _cloudDirty=false; // true when local meals are ahead of cloud
+
+// Safety-net: push today's meals to cloud every 30s if there's anything pending
+setInterval(async()=>{
+  if(!_cloudDirty||!meals.length||!_syncEnabled||!_supaUser)return;
+  const today=todayStr();
+  try{
+    const {error:e1}=await supa.from('nutrilog_sessions').upsert({user_id:_supaUser.id,date:today,meals,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+    const rows=[{user_id:_supaUser.id,date:today,meals:meals.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}];
+    const {error:e2}=await supa.from('nutrilog_history').upsert(rows,{onConflict:'user_id,date'});
+    if(!e1&&!e2){
+      _cloudDirty=false;
+      const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      setSyncBadge('online','Alex Kim');
+      const el=document.getElementById('syncLastTime');if(el)el.textContent='· '+t;
+    }
+  }catch(e){console.warn('Safety-net push failed',e);}
+},30*1000);
 function setSavePill(state){
   _saveState=state;
   const pill=document.getElementById('savePill');
@@ -553,9 +573,11 @@ function setSavePill(state){
 }
 function queueAutoSave(){
   setSavePill('dirty');
-  // Push to cloud immediately via Store.set — the proven path that handles auth,
-  // badge updates, and pushes only today's 2 rows (session + history[today]).
-  Store.set('nutrilog_v1',{ts:Date.now(),date:todayStr(),meals}).catch(()=>{});
+  _cloudDirty=true; // safety-net interval will push if immediate push fails
+  // Attempt immediate cloud push
+  Store.set('nutrilog_v1',{ts:Date.now(),date:todayStr(),meals})
+    .then(()=>{ _cloudDirty=false; })
+    .catch(()=>{});
   // Debounced local disk save 1.5s later
   if(autoSaveTimer)clearTimeout(autoSaveTimer);
   autoSaveTimer=setTimeout(()=>{
