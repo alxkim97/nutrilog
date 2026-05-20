@@ -1,6 +1,6 @@
 {
   "name": "nutrilog",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "NutriLog v2.3.4 — fix sync duplicate meals, dedup history cleanup",
   "main": "main.js",
   "scripts": {

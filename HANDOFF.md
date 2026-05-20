@@ -1,7 +1,7 @@
 # NutriLog — Session Handoff
 
-**Last updated:** 2026-05-19 (Condo PC)
-**Current version:** v2.3.4
+**Last updated:** 2026-05-20 (Work PC)
+**Current version:** v2.3.5
 **Branch:** main
 **Supabase project:** lifelog (renamed from nutrilog — dashboard only, no code change)
 
@@ -21,6 +21,32 @@ NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vani
 
 **Run:** `npm start` | **Build:** `npm run build:win`
 **Data dir (Windows):** `%APPDATA%\NutriLog\NutriLogData\`
+
+---
+
+## What was done this session (2026-05-20, Work PC)
+
+### UI polish + weekly macro breakdown (v2.3.5)
+
+**Date/time pill visual distinction:**
+- Date pill: removed background and border — now a plain `text3` monospace caption (static context)
+- Time pill: `border-radius:6px`, full `--text` color, `letter-spacing:.5px` — live clock feel
+- Added subtle `·` separator between the two in the topbar
+
+**Weekly macro breakdown view:**
+- New **Macro** toggle button in Weekly Summary (before the separator)
+- Stacked bars: Protein (blue/bottom) → Carbs (green/mid) → Fat (yellow/top)
+- Scales to same max-kcal reference as normal bars
+- Label below each day shows protein grams when active
+- Overlay buttons (Trend/Target/Zone/Avg) dim to 40% opacity — they only apply to kcal view
+- Colour legend (P / C / F) appears below the grid
+- Weekly sub-label changes to "This week's macro breakdown"
+- State persisted to localStorage alongside other chart opts
+
+**Sync fixes (v2.3.4 work PC session):**
+- Safety-net interval now bypasses `_syncEnabled` flag — only checks `_supaUser`
+- `sbSetSession` and `sbSetHistory` now check `{error}` from Supabase response
+- Runs unconditionally every 30s when meals + user present
 
 ---
 
@@ -96,16 +122,16 @@ If `time` or `serving` strings differed even slightly between the two tables, de
 
 ## What to continue next session
 
-1. **Run dedup first** — Settings → "🧹 Remove Duplicate Meals from History" to clean any historical duplicates
-2. **Test sync on company PC** — pull latest, run npm start, verify no duplicates appear
-3. **Pending UI items:**
-   - Date pill vs time pill visual distinction (currently identical style)
-   - Streak row padding review
-4. **Feature ideas (priority order):**
-   - Weekly macro breakdown view (protein/carbs/fat stacked bars by day)
-   - Meal timing analysis (avg meal gaps, show in Analysis view)
-   - Body composition trend chart (weight + body fat % overlaid)
-   - Copy any past day (not just yesterday)
+1. **Run dedup** — Settings → "🧹 Remove Duplicate Meals from History" if first run on condo PC
+2. **Test sync** — add a meal, wait 30s without pressing Ctrl+S, verify Supabase `updated_at` refreshes
+3. **Pending items:**
+   - Streak row padding review (still pending)
+   - Body composition trend chart (weight + body fat % overlaid on Projection page)
+   - Meal timing analysis improvements (avg gap per day in Analysis)
+4. **Next features (priority order):**
+   - Body recomp progress: overlay weight trend + body fat estimate on Projection
+   - Quick-add from barcode scan (stretch goal)
+   - Export to CSV (easy, useful)
 
 ---
 
@@ -137,6 +163,6 @@ Key facts:
 First: go to Settings → click "🧹 Remove Duplicate Meals from History" to clean
 any sync duplicates that accumulated before v2.3.4.
 
-Pending: date/time pill visual distinction, streak row padding review,
-weekly macro breakdown view (stacked bars). Test sync on this PC first.
+Pending: streak row padding review, body composition trend chart,
+sync test (add meal → wait 30s → check Supabase without pressing Ctrl+S).
 ```
