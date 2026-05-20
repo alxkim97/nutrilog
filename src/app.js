@@ -907,7 +907,7 @@ function render(){
 let _weeklyChartOpts=(()=>{
   try{return JSON.parse(localStorage.getItem('nutrilog_weekly_opts')||'{}');}catch{return{};}
 })();
-_weeklyChartOpts={trendLine:true,gridLines:true,targetLine:true,minMaxZone:true,avgLine:false,..._weeklyChartOpts};
+_weeklyChartOpts={trendLine:true,gridLines:true,targetLine:true,minMaxZone:true,avgLine:false,macroView:false,..._weeklyChartOpts};
 
 function saveWeeklyOpts(){localStorage.setItem('nutrilog_weekly_opts',JSON.stringify(_weeklyChartOpts));}
 
@@ -918,7 +918,7 @@ function toggleWeeklyOpt(key){
 }
 
 function updateWeeklyOptButtons(){
-  const map={trendLine:'wk-trend',gridLines:'wk-grid',targetLine:'wk-target',minMaxZone:'wk-zone',avgLine:'wk-avg'};
+  const map={trendLine:'wk-trend',gridLines:'wk-grid',targetLine:'wk-target',minMaxZone:'wk-zone',avgLine:'wk-avg',macroView:'wk-macro'};
   Object.entries(map).forEach(([key,id])=>{
     const btn=document.getElementById(id);
     if(!btn)return;
@@ -927,6 +927,16 @@ function updateWeeklyOptButtons(){
     btn.style.borderColor=on?'var(--accent-dim)':'var(--border)';
     btn.style.background=on?'var(--accent-glow)':'var(--bg3)';
   });
+  // Dim overlay buttons when macro view is active (they apply to kcal bars only)
+  const macroOn=_weeklyChartOpts.macroView;
+  ['wk-trend','wk-target','wk-zone','wk-avg'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b)b.style.opacity=macroOn?'.4':'1';
+  });
+  const subLbl=document.getElementById('weeklySubLbl');
+  if(subLbl)subLbl.textContent=macroOn?"This week's macro breakdown":"This week's calorie intake";
+  const legend=document.getElementById('weeklyMacroLegend');
+  if(legend)legend.style.display=macroOn?'flex':'none';
 }
 
 function renderWeeklySummary(){
@@ -942,25 +952,54 @@ function renderWeeklySummary(){
   const liveHistIdx={...histIdx};
   liveHistIdx[today]=meals.length?meals.map(m=>({...m,date:today})):(histIdx[today]||[]);
 
-  const kcals=days.map(d=>{
+  const dayData=days.map(d=>{
     const ds=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
-    return Math.round(totals(liveHistIdx[ds]||[]).kcal);
+    const T=totals(liveHistIdx[ds]||[]);
+    return {ds,kcal:Math.round(T.kcal),protein:T.protein,fat:T.fat,carbs:T.carbs};
   });
-  const maxKcal=Math.max(...kcals,TGT.kcal);
+  const kcals=dayData.map(d=>d.kcal);
+  const macroOn=_weeklyChartOpts.macroView;
+  // Max for scaling: in macro mode use kcal equivalent of macros
+  const maxVal=macroOn
+    ? Math.max(...dayData.map(d=>d.protein*4+d.fat*9+d.carbs*4),TGT.kcal)
+    : Math.max(...kcals,TGT.kcal);
 
   grid.innerHTML=days.map((d,i)=>{
-    const ds=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+    const {ds,kcal,protein,fat,carbs}=dayData[i];
     const isToday=ds===today;
-    const kcal=kcals[i];
-    const pct=maxKcal>0?Math.min(kcal/maxKcal*100,100):0;
-    const barColor=isToday?'var(--accent)':kcal>=TGT.kcal?'var(--green)':'var(--text3)';
+
+    let barHtml='';
+    if(macroOn){
+      const pk=protein*4, fk=fat*9, ck=carbs*4;
+      const total=pk+fk+ck;
+      const totalPct=maxVal>0?Math.min(total/maxVal*100,100):0;
+      const wrapH=Math.max(totalPct*.88,total?2:0);
+      // Stacked segments: protein(bottom), carbs(mid), fat(top)
+      const pp=total?pk/total*100:0, cp=total?ck/total*100:0, fp=total?fk/total*100:0;
+      barHtml=`<div class="week-bar-wrap">
+        ${total?`<div style="height:${wrapH}%;width:100%;display:flex;flex-direction:column;justify-content:flex-end;position:absolute;bottom:0;gap:0;">
+          <div style="height:${pp}%;background:var(--mp);opacity:.85;border-radius:${cp+fp<1?'3px 3px':'0 0'} 0 0;min-height:${pk?2:0}px;transition:height .3s;"></div>
+          <div style="height:${cp}%;background:var(--mc);opacity:.85;min-height:${ck?2:0}px;transition:height .3s;"></div>
+          <div style="height:${fp}%;background:var(--mf);opacity:.85;border-radius:0 0 3px 3px;min-height:${fk?2:0}px;transition:height .3s;"></div>
+        </div>`:`<div style="height:2px;width:100%;background:var(--border);opacity:.3;position:absolute;bottom:0;"></div>`}
+      </div>`;
+    } else {
+      const pct=maxVal>0?Math.min(kcal/maxVal*100,100):0;
+      const barColor=isToday?'var(--accent)':kcal>=TGT.kcal?'var(--green)':'var(--text3)';
+      barHtml=`<div class="week-bar-wrap">
+        <div class="week-bar" style="height:${Math.max(pct*.88,kcal?2:0)}%;background:${barColor};opacity:${kcal?1:.2}"></div>
+      </div>`;
+    }
+
+    const label=macroOn
+      ? (kcal?`${Math.round(protein)}P`:`-`)
+      : (kcal?kcal.toLocaleString():'-');
+
     return `<div class="week-day-col${isToday?' today':''}">
       <div class="week-day-lbl">${DAYS_SHORT[d.getDay()]}</div>
       <div class="week-day-date">${d.getDate()}</div>
-      <div class="week-bar-wrap">
-        <div class="week-bar" style="height:${Math.max(pct*.88,kcal?2:0)}%;background:${barColor};opacity:${kcal?1:.2}"></div>
-      </div>
-      <div class="week-day-kcal">${kcal?kcal.toLocaleString():'-'}</div>
+      ${barHtml}
+      <div class="week-day-kcal">${label}</div>
     </div>`;
   }).join('');
 
