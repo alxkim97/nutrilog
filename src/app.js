@@ -803,6 +803,9 @@ function buildRings(){
           <circle class="r-track" cx="75" cy="75" r="${RR}" stroke="${m.dim}" stroke-width="${RSW}"/>
           <circle class="r-prog" id="rp_${m.key}" cx="75" cy="75" r="${RR}"
             stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"/>
+          <!-- Min tick: solid dot; Max tick: outlined dot -->
+          <circle id="rtmin_${m.key}" cx="75" cy="10" r="4" fill="${m.col}" style="display:none;"/>
+          <circle id="rtmax_${m.key}" cx="75" cy="10" r="4" fill="var(--bg2)" stroke="${m.col}" stroke-width="2.5" style="display:none;"/>
         </svg>
         <div class="ring-center">
           <div class="ring-val" id="rv_${m.key}" style="color:${m.col}">0</div>
@@ -875,18 +878,28 @@ function render(){
     document.getElementById('rtgt_'+m.key).textContent='target '+TGT[m.key]+'g';
     const rem=TGT[m.key]-v;
     document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':'+'+f1(-rem)+'g over';
-    // Range label: show min / max thresholds as text under the ring footer
+    // Range label text
     const rangeLbl=document.getElementById('rrange_'+m.key);
     if(rangeLbl){
       const mn=TGT_MIN[m.key], mx=TGT_MAX[m.key];
-      if(mn!=null||mx!=null){
-        const minTxt=mn!=null?mn+'g min':'';
-        const maxTxt=mx!=null?mx+'g max':'';
-        rangeLbl.textContent=[minTxt,maxTxt].filter(Boolean).join(' · ');
-      } else {
-        rangeLbl.textContent='';
-      }
+      rangeLbl.textContent=(mn!=null||mx!=null)?[mn!=null?mn+'g min':'',mx!=null?mx+'g max':''].filter(Boolean).join(' · '):'';
     }
+    // Tick marks: solid dot = min, outlined dot = max (positioned on the ring)
+    // SVG coord for pct: x=75+RR*cos(pct*2π), y=75+RR*sin(pct*2π)  (SVG rotated -90deg by CSS)
+    const minTick=document.getElementById('rtmin_'+m.key);
+    const maxTick=document.getElementById('rtmax_'+m.key);
+    if(minTick&&TGT_MIN[m.key]!=null){
+      const a=Math.min(TGT_MIN[m.key]/TGT[m.key],1)*2*Math.PI;
+      minTick.setAttribute('cx',(75+RR*Math.cos(a)).toFixed(1));
+      minTick.setAttribute('cy',(75+RR*Math.sin(a)).toFixed(1));
+      minTick.style.display='';
+    } else if(minTick) minTick.style.display='none';
+    if(maxTick&&TGT_MAX[m.key]!=null){
+      const a=Math.min(TGT_MAX[m.key]/TGT[m.key],1)*2*Math.PI;
+      maxTick.setAttribute('cx',(75+RR*Math.cos(a)).toFixed(1));
+      maxTick.setAttribute('cy',(75+RR*Math.sin(a)).toFixed(1));
+      maxTick.style.display='';
+    } else if(maxTick) maxTick.style.display='none';
     const sp=Math.min(pct*100,100);
     document.getElementById('msf_'+m.key).style.width=sp+'%';
     document.getElementById('msv_'+m.key).innerHTML='<strong>'+f1(v)+'</strong>/'+TGT[m.key]+'g';
