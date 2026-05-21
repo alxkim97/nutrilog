@@ -803,7 +803,7 @@ function buildRings(){
           <circle class="r-track" cx="75" cy="75" r="${RR}" stroke="${m.dim}" stroke-width="${RSW}"/>
           <circle class="r-range" id="rr_${m.key}" cx="75" cy="75" r="${RR}"
             stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="0 ${CIRC}" stroke-dashoffset="0"
-            opacity="0.22" style="transition:none;"/>
+            opacity="0.4" style="transition:none;stroke-linecap:round;"/>
           <circle class="r-prog" id="rp_${m.key}" cx="75" cy="75" r="${RR}"
             stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"/>
         </svg>
@@ -877,14 +877,16 @@ function render(){
     document.getElementById('rtgt_'+m.key).textContent='target '+TGT[m.key]+'g';
     const rem=TGT[m.key]-v;
     document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':'+'+f1(-rem)+'g over';
-    // Range arc: highlight min→max zone on the track
+    // Range arc: show min→max zone as a brighter band on the track
     const rangeEl=document.getElementById('rr_'+m.key);
     if(rangeEl&&TGT_MIN[m.key]!=null){
       const minPct=Math.min(TGT_MIN[m.key]/TGT[m.key],1);
-      const maxPct=TGT_MAX[m.key]!=null?Math.min(TGT_MAX[m.key]/TGT[m.key],1):1;
-      const arcLen=((maxPct-minPct)*CIRC).toFixed(2);
-      const offset=(CIRC*(1-maxPct)).toFixed(2);
-      rangeEl.style.strokeDasharray=`${arcLen} ${CIRC}`;
+      const maxPct=TGT_MAX[m.key]!=null?Math.min(TGT_MAX[m.key]/TGT[m.key],0.999):0.999;
+      const arcLen=+((maxPct-minPct)*CIRC).toFixed(2);
+      const gap=+(CIRC-arcLen).toFixed(2);
+      // dashoffset = CIRC*(1-minPct) positions the arc START at minPct on the ring
+      const offset=+(CIRC*(1-minPct)).toFixed(2);
+      rangeEl.style.strokeDasharray=`${arcLen} ${gap}`;
       rangeEl.style.strokeDashoffset=offset;
     }
     const sp=Math.min(pct*100,100);
