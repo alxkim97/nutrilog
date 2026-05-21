@@ -801,6 +801,9 @@ function buildRings(){
       <div class="ring-wrap">
         <svg class="ring-svg" viewBox="0 0 150 150">
           <circle class="r-track" cx="75" cy="75" r="${RR}" stroke="${m.dim}" stroke-width="${RSW}"/>
+          <circle class="r-range" id="rr_${m.key}" cx="75" cy="75" r="${RR}"
+            stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="0 ${CIRC}" stroke-dashoffset="0"
+            opacity="0.22" style="transition:none;"/>
           <circle class="r-prog" id="rp_${m.key}" cx="75" cy="75" r="${RR}"
             stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"/>
         </svg>
@@ -874,6 +877,16 @@ function render(){
     document.getElementById('rtgt_'+m.key).textContent='target '+TGT[m.key]+'g';
     const rem=TGT[m.key]-v;
     document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':'+'+f1(-rem)+'g over';
+    // Range arc: highlight min→max zone on the track
+    const rangeEl=document.getElementById('rr_'+m.key);
+    if(rangeEl&&TGT_MIN[m.key]!=null){
+      const minPct=Math.min(TGT_MIN[m.key]/TGT[m.key],1);
+      const maxPct=TGT_MAX[m.key]!=null?Math.min(TGT_MAX[m.key]/TGT[m.key],1):1;
+      const arcLen=((maxPct-minPct)*CIRC).toFixed(2);
+      const offset=(CIRC*(1-maxPct)).toFixed(2);
+      rangeEl.style.strokeDasharray=`${arcLen} ${CIRC}`;
+      rangeEl.style.strokeDashoffset=offset;
+    }
     const sp=Math.min(pct*100,100);
     document.getElementById('msf_'+m.key).style.width=sp+'%';
     document.getElementById('msv_'+m.key).innerHTML='<strong>'+f1(v)+'</strong>/'+TGT[m.key]+'g';
@@ -1024,7 +1037,7 @@ function renderWeeklySummary(){
   }).join('');
 
   // Draw chart overlay (trend, grid, target, zone, avg)
-  requestAnimationFrame(()=>drawTrendLine(kcals,maxKcal));
+  requestAnimationFrame(()=>drawTrendLine(kcals,maxVal));
   updateWeeklyOptButtons();
 
   // Update streaks and widgets
