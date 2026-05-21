@@ -242,7 +242,7 @@ input, select, textarea { font-family:var(--fb); }
 .week-day-col.has-data:hover .week-bar { filter:brightness(1.15); }
 .week-day-lbl { font-family:var(--fm); font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.4px; }
 .week-day-date { font-family:var(--fm); font-size:11px; color:var(--text2); }
-.week-bar-wrap { width:100%; height:140px; display:flex; align-items:flex-end; justify-content:center; position:relative; }
+.week-bar-wrap { width:100%; height:140px; display:flex; align-items:flex-end; justify-content:center; }
 .week-bar { width:75%; max-width:40px; border-radius:4px 4px 0 0; transition:height .5s ease, filter .15s; min-height:2px; }
 .week-day-kcal { font-family:var(--fm); font-size:10px; color:var(--text2); }
 .week-day-col.today .week-day-lbl { color:var(--accent); }

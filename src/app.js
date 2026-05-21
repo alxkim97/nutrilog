@@ -987,12 +987,15 @@ function renderWeeklySummary(){
       const wrapH=Math.max(totalPct*.88,total?2:0);
       // Stacked segments: protein(bottom), carbs(mid), fat(top)
       const pp=total?pk/total*100:0, cp=total?ck/total*100:0, fp=total?fk/total*100:0;
+      // position:relative on inner wrapper (not bar-wrap) so canvas z-index stays on top
       barHtml=`<div class="week-bar-wrap">
+        <div style="position:relative;width:75%;max-width:40px;height:100%;">
         ${total?`<div style="height:${wrapH}%;width:100%;display:flex;flex-direction:column;justify-content:flex-end;position:absolute;bottom:0;gap:0;">
           <div style="height:${pp}%;background:var(--mp);opacity:.85;border-radius:${cp+fp<1?'3px 3px':'0 0'} 0 0;min-height:${pk?2:0}px;transition:height .3s;"></div>
           <div style="height:${cp}%;background:var(--mc);opacity:.85;min-height:${ck?2:0}px;transition:height .3s;"></div>
           <div style="height:${fp}%;background:var(--mf);opacity:.85;border-radius:0 0 3px 3px;min-height:${fk?2:0}px;transition:height .3s;"></div>
         </div>`:`<div style="height:2px;width:100%;background:var(--border);opacity:.3;position:absolute;bottom:0;"></div>`}
+        </div>
       </div>`;
     } else {
       const pct=maxVal>0?Math.min(kcal/maxVal*100,100):0;
