@@ -1006,7 +1006,13 @@ function renderWeeklySummary(){
       ? (kcal?`${Math.round(protein)}P`:`-`)
       : (kcal?kcal.toLocaleString():'-');
 
-    return `<div class="week-day-col${isToday?' today':''}">
+    const hasData=kcal>0;
+    const clickHandler=hasData
+      ? (isToday
+          ? `onclick="showPage('today',document.getElementById('nav-today'))"`
+          : `onclick="showPage('history',document.getElementById('nav-history'));setTimeout(()=>pickHistDate('${ds}'),50)"`)
+      : '';
+    return `<div class="week-day-col${isToday?' today':''}${hasData?' has-data':''}" ${clickHandler} title="${hasData?(isToday?'Today — click to view':'Click to view '+ds):''}">
       <div class="week-day-lbl">${DAYS_SHORT[d.getDay()]}</div>
       <div class="week-day-date">${d.getDate()}</div>
       ${barHtml}
