@@ -392,17 +392,28 @@ async function pullFromSupabase(){
         await sbSet('nutrilog_templates',merged);
       }
     }
-    // Pull today's session — merge with history so v1 is the single authoritative source
-    const todayMeals=await sbGetSessions(todayStr());
-    const histToday=histIdx[todayStr()]||[];
+    // Pull today's session — merge sessions + history → single authoritative source
+    const today=todayStr();
+    const todayMeals=await sbGetSessions(today);
+    const histToday=histIdx[today]||[];
     const mergedToday=[...(todayMeals||[])];
     histToday.forEach(m=>{
       if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
     });
+    mergedToday.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     if(mergedToday.length){
-      await Store._localSet('nutrilog_v1',{date:todayStr(),ts:Date.now(),meals:mergedToday});
+      await Store._localSet('nutrilog_v1',{date:today,ts:Date.now(),meals:mergedToday});
+      // Self-heal: push merged result back to BOTH tables so they stay in sync.
+      // This corrects any divergence (e.g. sessions has 14 entries, history has 9).
+      try{
+        const {error:e1}=await supa.from('nutrilog_sessions')
+          .upsert({user_id:_supaUser.id,date:today,meals:mergedToday,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+        const {error:e2}=await supa.from('nutrilog_history')
+          .upsert([{user_id:_supaUser.id,date:today,meals:mergedToday.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}],{onConflict:'user_id,date'});
+        if(e1||e2)console.warn('Pull self-heal push partial failure',e1,e2);
+      }catch(e){console.warn('Pull self-heal push failed',e);}
     }
-    delete histIdx[todayStr()]; // v1 is now complete; autoLoad must not re-merge
+    delete histIdx[today]; // v1 is now complete; autoLoad must not re-merge
     setSyncBadge('online','Alex Kim');
     _lastSyncedAt=new Date();
     const timeStr=_lastSyncedAt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
