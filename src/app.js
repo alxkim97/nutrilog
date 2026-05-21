@@ -801,9 +801,6 @@ function buildRings(){
       <div class="ring-wrap">
         <svg class="ring-svg" viewBox="0 0 150 150">
           <circle class="r-track" cx="75" cy="75" r="${RR}" stroke="${m.dim}" stroke-width="${RSW}"/>
-          <circle class="r-range" id="rr_${m.key}" cx="75" cy="75" r="${RR}"
-            stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="0 ${CIRC}" stroke-dashoffset="0"
-            opacity="0.4" style="transition:none;stroke-linecap:round;"/>
           <circle class="r-prog" id="rp_${m.key}" cx="75" cy="75" r="${RR}"
             stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"/>
         </svg>
@@ -819,6 +816,7 @@ function buildRings(){
           <span id="rtgt_${m.key}">target ${TGT[m.key]}g</span>
           <span id="rrem_${m.key}" style="color:${m.col}">—</span>
         </div>
+        <div class="ring-range" id="rrange_${m.key}" style="font-size:10px;color:var(--text3);font-family:var(--fm);margin-top:2px;"></div>
       </div>`;
     // Drag-and-drop handlers
     el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',m.key);el.style.opacity='.5';});
@@ -877,17 +875,17 @@ function render(){
     document.getElementById('rtgt_'+m.key).textContent='target '+TGT[m.key]+'g';
     const rem=TGT[m.key]-v;
     document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':'+'+f1(-rem)+'g over';
-    // Range arc: show min→max zone as a brighter band on the track
-    const rangeEl=document.getElementById('rr_'+m.key);
-    if(rangeEl&&TGT_MIN[m.key]!=null){
-      const minPct=Math.min(TGT_MIN[m.key]/TGT[m.key],1);
-      const maxPct=TGT_MAX[m.key]!=null?Math.min(TGT_MAX[m.key]/TGT[m.key],0.999):0.999;
-      const arcLen=+((maxPct-minPct)*CIRC).toFixed(2);
-      const gap=+(CIRC-arcLen).toFixed(2);
-      // dashoffset = CIRC*(1-minPct) positions the arc START at minPct on the ring
-      const offset=+(CIRC*(1-minPct)).toFixed(2);
-      rangeEl.style.strokeDasharray=`${arcLen} ${gap}`;
-      rangeEl.style.strokeDashoffset=offset;
+    // Range label: show min / max thresholds as text under the ring footer
+    const rangeLbl=document.getElementById('rrange_'+m.key);
+    if(rangeLbl){
+      const mn=TGT_MIN[m.key], mx=TGT_MAX[m.key];
+      if(mn!=null||mx!=null){
+        const minTxt=mn!=null?mn+'g min':'';
+        const maxTxt=mx!=null?mx+'g max':'';
+        rangeLbl.textContent=[minTxt,maxTxt].filter(Boolean).join(' · ');
+      } else {
+        rangeLbl.textContent='';
+      }
     }
     const sp=Math.min(pct*100,100);
     document.getElementById('msf_'+m.key).style.width=sp+'%';
