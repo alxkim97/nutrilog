@@ -2098,7 +2098,14 @@ function acPick(i){
   const f=document.getElementById('acList')._m[i];if(!f)return;
   document.getElementById('f-name').value=f.name;
   const us=document.getElementById('f-unit');
-  if([...us.options].some(o=>o.value===f.unit))us.value=f.unit;else us.value='g';
+  // Remove any previously injected custom unit option
+  us.querySelectorAll('[data-custom]').forEach(o=>o.remove());
+  if(f.unit&&![...us.options].some(o=>o.value===f.unit)){
+    const opt=document.createElement('option');
+    opt.value=f.unit; opt.textContent=f.unit; opt.dataset.custom='1';
+    us.appendChild(opt);
+  }
+  us.value=f.unit||'g';
   document.getElementById('f-kcal').value=f.kcal;
   document.getElementById('f-protein').value=f.protein;
   document.getElementById('f-fat').value=f.fat;
