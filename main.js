@@ -257,6 +257,13 @@ ipcMain.handle('app:get-data-dir', () => DATA_DIR);
 // ── Easter egg image management ──
 const HEIC_EXTS = /\.(heic|heif)$/i;
 const IMG_EXTS  = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
+
+function isSafeEggName(name) {
+  if (typeof name !== 'string') return false;
+  if (name.includes('/') || name.includes('\\') || name.includes('..')) return false;
+  if (!IMG_EXTS.test(name)) return false;
+  return path.resolve(EGGS_DIR, name).startsWith(path.resolve(EGGS_DIR));
+}
 const MAX_EGG_PX = 1920; // resize iPhone photos to this width max
 
 async function processEggImage(srcBuf, isHeic) {
@@ -284,6 +291,7 @@ ipcMain.handle('egg:list', () => {
 });
 
 ipcMain.handle('egg:read', async (_, name) => {
+  if (!isSafeEggName(name)) return null;
   try {
     const filePath = path.join(EGGS_DIR, name);
     const isHeic = HEIC_EXTS.test(name);
@@ -342,6 +350,7 @@ ipcMain.handle('egg:add', async () => {
 });
 
 ipcMain.handle('egg:delete', (_, name) => {
+  if (!isSafeEggName(name)) return false;
   try { fs.unlinkSync(path.join(EGGS_DIR, name)); return true; }
   catch(e) { return false; }
 });

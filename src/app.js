@@ -97,7 +97,7 @@ async function onSignedIn(){
   await maybeArchiveStaleSession().catch(e=>console.warn('Stale archive failed',e));
   await pullFromSupabase().catch(e=>console.warn('Sync failed on sign-in',e));
   maybeShowCheckin(); // always runs after sync attempt, not buried inside pull
-  setSyncBadge('online','Alex Kim');
+  // Badge already set by pullFromSupabase — don't overwrite with a false 'online' here
 }
 
 function updateAccountSection(){
@@ -162,6 +162,7 @@ let _lastSyncedAt=null; // tracks last successful cloud write
 let _periodicSyncRunning=false;
 let _pullInProgress=false;
 
+function syncName(){ return _supaUser?.user_metadata?.name||_supaUser?.email?.split('@')[0]||'Synced'; }
 function setSyncBadge(state, label){
   const dot=document.getElementById('syncDot');
   const lbl=document.getElementById('syncLabel');
@@ -229,7 +230,7 @@ async function forcePushToCloud(){
   }
   if(failures===0){
     _lastSyncedAt=new Date();
-    setSyncBadge('online','Alex Kim');
+    setSyncBadge('online',syncName());
     toast('✅ All local data pushed to cloud successfully','ok');
     renderWeeklySummary();
   } else {
@@ -480,7 +481,7 @@ async function pullFromSupabase(){
       }
     }
     delete histIdx[today]; // v1 is now complete; autoLoad must not re-merge
-    setSyncBadge('online','Alex Kim');
+    setSyncBadge('online',syncName());
     _lastSyncedAt=new Date();
     const timeStr=_lastSyncedAt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     const el=document.getElementById('syncLastTime');
@@ -551,7 +552,7 @@ const Store = {
         const now=new Date();
         _lastSyncedAt=now;
         const timeStr=now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-        setSyncBadge('online','Alex Kim');
+        setSyncBadge('online',syncName());
         const el=document.getElementById('syncLastTime');
         if(el)el.textContent='· '+timeStr;
       } else {
@@ -588,11 +589,11 @@ setInterval(async()=>{
   if(!_syncEnabled||!_supaUser||_periodicSyncRunning)return;
   _periodicSyncRunning=true;
   try{
-    const sess=await Store._localGet('nutrilog_v1');
-    if(sess?.meals?.length){
-      const d=sess.date||todayStr();
-      await sbSetSession(d,sess.meals);
-      await sbSetHistory({[d]:sess.meals});
+    // Use in-memory meals[], not disk — disk may lag behind by up to 1.5s (auto-save debounce)
+    if(meals.length){
+      const d=todayStr();
+      await sbSetSession(d,meals);
+      await sbSetHistory({[d]:meals});
     }
   }catch(e){console.warn('periodic sync error',e);}
   finally{_periodicSyncRunning=false;}
@@ -642,7 +643,7 @@ setInterval(async()=>{
     const {error:e2}=await supa.from('nutrilog_history').upsert(rows,{onConflict:'user_id,date'});
     if(!e1&&!e2){
       _cloudDirty=false;
-      setSyncBadge('online','Alex Kim');
+      setSyncBadge('online',syncName());
       const el=document.getElementById('syncLastTime');
       if(el)el.textContent='· '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     }else{
@@ -1696,9 +1697,9 @@ function renderTable(){
       ${showChk?`<td class="chk"><input type="checkbox" ${sel?'checked':''} onchange="logToggle(${ri},this.checked)" style="cursor:pointer;accent-color:var(--accent)"></td>`:''}
       <td class="rn">${i+1}</td>
       <td class="tc">${m.time||'—'}</td>
-      <td><span class="badge ${m.cat}">${CAT[m.cat]||m.cat||'—'}</span></td>
+      <td><span class="badge ${['breakfast','lunch','dinner','snack'].includes(m.cat)?m.cat:'snack'}">${CAT[m.cat]||m.cat||'—'}</span></td>
       <td><div class="food-name">${esc(m.name)}</div>${m.notes?'<div class="sub">'+esc(m.notes)+'</div>':''}</td>
-      <td><div class="sub">${m.serving} ${m.unit}</div></td>
+      <td><div class="sub">${m.serving} ${esc(m.unit)}</div></td>
       <td class="nr ck">${f1(m.kcal)}</td>
       <td class="nr cp">${f1(m.protein)}g</td>
       <td class="nr cf">${f1(m.fat)}g</td>
@@ -2605,12 +2606,12 @@ function renderHistDetail(ds){
     return at<bt?-1:at>bt?1:0;
   });
   const rows=sorted.length
-    ? sorted.map(({e,i})=>`<tr>
-        <td class="rn">${i+1}</td>
+    ? sorted.map(({e,i},rowNum)=>`<tr>
+        <td class="rn">${rowNum+1}</td>
         <td class="tc">${e.time||'—'}</td>
-        <td><span class="badge ${e.cat}">${CAT[e.cat]||e.cat||'—'}</span></td>
+        <td><span class="badge ${['breakfast','lunch','dinner','snack'].includes(e.cat)?e.cat:'snack'}">${CAT[e.cat]||e.cat||'—'}</span></td>
         <td><div class="food-name">${esc(e.name)}</div>${e.notes?'<div class="sub">'+esc(e.notes)+'</div>':''}</td>
-        <td><div class="sub">${e.serving} ${e.unit}</div></td>
+        <td><div class="sub">${e.serving} ${esc(e.unit)}</div></td>
         <td class="nr ck">${f1(e.kcal)}</td>
         <td class="nr cp">${f1(e.protein)}g</td>
         <td class="nr cf">${f1(e.fat)}g</td>
@@ -3539,7 +3540,7 @@ async function deduplicateHistory(showToast=true){
     if(!Array.isArray(entries)){cleaned[date]=entries;return;}
     const seen=new Set();
     const deduped=entries.filter(m=>{
-      const key=`${m.name}|${m.category||''}|${String(m.serving||'')}`;
+      const key=`${m.name}|${m.cat||''}|${String(m.serving||'')}`;
       if(seen.has(key)){totalRemoved++;return false;}
       seen.add(key);
       return true;
@@ -3550,7 +3551,7 @@ async function deduplicateHistory(showToast=true){
   if(meals.length){
     const seen=new Set();
     meals=meals.filter(m=>{
-      const key=`${m.name}|${m.category||''}|${String(m.serving||'')}`;
+      const key=`${m.name}|${m.cat||''}|${String(m.serving||'')}`;
       if(seen.has(key)){totalRemoved++;return false;}
       seen.add(key);
       return true;
@@ -3561,6 +3562,7 @@ async function deduplicateHistory(showToast=true){
     Object.assign(histIdx,cleaned);
     if(_supaUser&&_syncEnabled) sbSetHistory(cleaned).catch(e=>console.warn('dedup push failed',e));
     await saveSession().catch(e=>console.warn('dedup session save failed',e));
+    queueAutoSave(); // persist cleaned meals[] to disk
     if(showToast) toast(`Removed ${totalRemoved} duplicate meal${totalRemoved===1?'':'s'} from history`,'ok');
     render();
   } else {
@@ -3880,7 +3882,7 @@ function renderTplList(){
         </div>
       </div>
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px;">
-        ${t.meals.map(m=>`<div style="font-size:11px;color:var(--text2);padding:4px 8px;background:var(--bg3);border-radius:6px;">${esc(m.name)} · ${m.serving} ${m.unit} · ${m.kcal} kcal</div>`).join('')}
+        ${t.meals.map(m=>`<div style="font-size:11px;color:var(--text2);padding:4px 8px;background:var(--bg3);border-radius:6px;">${esc(m.name)} · ${m.serving} ${esc(m.unit||'')} · ${m.kcal} kcal</div>`).join('')}
       </div>
     </div>`;
   }).join('');
@@ -3981,7 +3983,7 @@ function renderTplDraftMeals(){
         <input type="number" value="${m.serving}" min="0.1" step="any"
           style="width:60px;background:var(--bg4);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 6px;font-size:12px;text-align:right;"
           oninput="updateTplServing(${i},this.value)" title="Serving">
-        <span style="font-size:11px;color:var(--text3);">${m.unit}</span>
+        <span style="font-size:11px;color:var(--text3);">${esc(m.unit||'')}</span>
         <button onclick="removeTplMeal(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 2px;">✕</button>
       </div>`).join('');
   }
