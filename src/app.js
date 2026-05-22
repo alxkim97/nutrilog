@@ -162,7 +162,17 @@ let _lastSyncedAt=null; // tracks last successful cloud write
 let _periodicSyncRunning=false;
 let _pullInProgress=false;
 
-function syncName(){ return _supaUser?.user_metadata?.name||_supaUser?.email?.split('@')[0]||'Synced'; }
+let _displayName=''; // persisted in settings, overrides email in sync badge
+function syncName(){ return _displayName||_supaUser?.user_metadata?.name||_supaUser?.email?.split('@')[0]||'Synced'; }
+function saveDisplayName(){
+  _displayName=(document.getElementById('s-display-name')?.value||'').trim();
+  // Persist immediately alongside settings without a full saveSettings() call
+  Store.get('nutrilog_settings').then(s=>{
+    Store.set('nutrilog_settings',{...(s||{}),displayName:_displayName,savedAt:new Date().toISOString()});
+  }).catch(()=>{});
+  // Update badge live
+  if(_supaUser)setSyncBadge('online',syncName());
+}
 function setSyncBadge(state, label){
   const dot=document.getElementById('syncDot');
   const lbl=document.getElementById('syncLabel');
@@ -3081,6 +3091,29 @@ function renderAchievements(){
   // Unique food names logged
   const uniqueFoods=new Set(Object.values(liveHist).flat().map(e=>e.name)).size;
 
+  // Fiber target streak
+  let bestFiberStreak=0,fiberRun=0;
+  loggedDates.forEach(d=>{
+    const T=totals(liveHist[d]||[]);
+    if(T.fiber>=TGT.fiber){fiberRun++;if(fiberRun>bestFiberStreak)bestFiberStreak=fiberRun;}
+    else fiberRun=0;
+  });
+
+  // Days within kcal zone (between min and max, or ≤115% of target when no max set)
+  let kcalZoneDays=0;
+  loggedDates.forEach(d=>{
+    const T=totals(liveHist[d]||[]);
+    const lo=TGT_MIN.kcal??0, hi=TGT_MAX.kcal??(TGT.kcal*1.15);
+    if(T.kcal>=lo&&T.kcal<=hi)kcalZoneDays++;
+  });
+
+  // Days with all 4 meal categories logged
+  let allCatDays=0;
+  loggedDates.forEach(d=>{
+    const cats=new Set((liveHist[d]||[]).map(e=>e.cat));
+    if(['breakfast','lunch','dinner','snack'].every(c=>cats.has(c)))allCatDays++;
+  });
+
   const defs=[
     // ── Logging milestones ──
     {icon:'🏁',name:'First Log',      desc:'Log your first meal',                u:totalDays>=1},
@@ -3093,23 +3126,42 @@ function renderAchievements(){
     {icon:'🔥',name:'Week Warrior',   desc:'Log 7 days in a row',                u:bestStreak>=7,  prog:`${Math.min(bestStreak,7)}/7`},
     {icon:'🌟',name:'Fortnight',      desc:'Log 14 days straight',               u:bestStreak>=14, prog:`${Math.min(bestStreak,14)}/14`},
     {icon:'👑',name:'Month Master',   desc:'Log 30 days in a row',               u:bestStreak>=30, prog:`${Math.min(bestStreak,30)}/30`},
+    {icon:'🏔️',name:'50-Day Streak',  desc:'Log 50 days in a row',               u:bestStreak>=50, prog:`${Math.min(bestStreak,50)}/50`},
+    {icon:'💫',name:'100-Day Streak', desc:'Log 100 days in a row',              u:bestStreak>=100,prog:`${Math.min(bestStreak,100)}/100`},
     // ── Entries ──
     {icon:'🍽️',name:'100 Entries',   desc:'Log 100 meal entries total',         u:totalEntries>=100,  prog:`${Math.min(totalEntries,100)}/100`},
     {icon:'🍲',name:'500 Entries',    desc:'Log 500 meal entries total',          u:totalEntries>=500,  prog:`${Math.min(totalEntries,500)}/500`},
     {icon:'🌮',name:'1K Entries',     desc:'Log 1,000 meal entries total',        u:totalEntries>=1000, prog:`${Math.min(totalEntries,1000)}/1000`},
+    {icon:'🏅',name:'2K Entries',     desc:'Log 2,000 meal entries total',        u:totalEntries>=2000, prog:`${Math.min(totalEntries,2000)}/2000`},
     // ── Protein ──
-    {icon:'💪',name:'Protein Week',   desc:'Hit protein target 7 days in a row', u:bestProtStreak>=7,  prog:`${Math.min(bestProtStreak,7)}/7`},
-    {icon:'🥩',name:'Protein Beast',  desc:'Hit protein target 30 days in a row',u:bestProtStreak>=30, prog:`${Math.min(bestProtStreak,30)}/30`},
+    {icon:'💪',name:'Protein Week',   desc:'Hit protein target 7 days in a row',  u:bestProtStreak>=7,  prog:`${Math.min(bestProtStreak,7)}/7`},
+    {icon:'🦾',name:'Protein Fortnight',desc:'Hit protein target 14 days in a row',u:bestProtStreak>=14,prog:`${Math.min(bestProtStreak,14)}/14`},
+    {icon:'🥩',name:'Protein Beast',  desc:'Hit protein target 30 days in a row', u:bestProtStreak>=30, prog:`${Math.min(bestProtStreak,30)}/30`},
+    // ── Fiber ──
+    {icon:'🌾',name:'Fiber Week',     desc:'Hit fiber target 7 days in a row',    u:bestFiberStreak>=7, prog:`${Math.min(bestFiberStreak,7)}/7`},
+    {icon:'🌿',name:'Fiber Champion', desc:'Hit fiber target 30 days in a row',   u:bestFiberStreak>=30,prog:`${Math.min(bestFiberStreak,30)}/30`},
+    // ── Calorie zone ──
+    {icon:'⚖️',name:'Zone Control',  desc:'Stay within calorie range on 7 days', u:kcalZoneDays>=7,  prog:`${Math.min(kcalZoneDays,7)}/7`},
+    {icon:'🎖️',name:'Zone Master',   desc:'Stay within calorie range on 30 days',u:kcalZoneDays>=30, prog:`${Math.min(kcalZoneDays,30)}/30`},
+    // ── Balanced logging ──
+    {icon:'🍱',name:'Full Day',       desc:'Log all 4 meal categories in one day',u:allCatDays>=1},
+    {icon:'🌈',name:'Balanced Week',  desc:'Log all 4 categories on 7 days',      u:allCatDays>=7,  prog:`${Math.min(allCatDays,7)}/7`},
     // ── Variety ──
-    {icon:'🥗',name:'Foodie',         desc:'Log 10 unique foods',                u:uniqueFoods>=10,  prog:`${Math.min(uniqueFoods,10)}/10`},
-    {icon:'👨‍🍳',name:'Chef',         desc:'Log 30 unique foods',                u:uniqueFoods>=30,  prog:`${Math.min(uniqueFoods,30)}/30`},
-    {icon:'🍴',name:'Gourmet',        desc:'Add 50 foods to your database',      u:totalFoods>=50,   prog:`${Math.min(totalFoods,50)}/50`},
+    {icon:'🥗',name:'Foodie',         desc:'Log 10 unique foods',                 u:uniqueFoods>=10,  prog:`${Math.min(uniqueFoods,10)}/10`},
+    {icon:'👨‍🍳',name:'Chef',         desc:'Log 30 unique foods',                 u:uniqueFoods>=30,  prog:`${Math.min(uniqueFoods,30)}/30`},
+    {icon:'🌍',name:'Explorer',       desc:'Log 50 unique foods',                 u:uniqueFoods>=50,  prog:`${Math.min(uniqueFoods,50)}/50`},
+    {icon:'🎭',name:'Connoisseur',    desc:'Log 100 unique foods',                u:uniqueFoods>=100, prog:`${Math.min(uniqueFoods,100)}/100`},
+    // ── Food database ──
+    {icon:'🍴',name:'Gourmet',        desc:'Add 50 foods to your database',       u:totalFoods>=50,   prog:`${Math.min(totalFoods,50)}/50`},
+    {icon:'📚',name:'Food Librarian', desc:'Add 100 foods to your database',      u:totalFoods>=100,  prog:`${Math.min(totalFoods,100)}/100`},
     // ── Macros ──
-    {icon:'🎯',name:'On Point',       desc:'Hit all macro targets on 10 days',   u:macroPerfectDays>=10, prog:`${Math.min(macroPerfectDays,10)}/10`},
-    {icon:'🧬',name:'Macro Master',   desc:'Hit all macro targets on 30 days',   u:macroPerfectDays>=30, prog:`${Math.min(macroPerfectDays,30)}/30`},
+    {icon:'🎯',name:'On Point',       desc:'Hit all macro targets on 10 days',    u:macroPerfectDays>=10, prog:`${Math.min(macroPerfectDays,10)}/10`},
+    {icon:'🧬',name:'Macro Master',   desc:'Hit all macro targets on 30 days',    u:macroPerfectDays>=30, prog:`${Math.min(macroPerfectDays,30)}/30`},
     // ── Check-ins ──
-    {icon:'📋',name:'Reflector',      desc:'Complete 5 weight check-ins',        u:totalCheckins>=5,  prog:`${Math.min(totalCheckins,5)}/5`},
-    {icon:'🏆',name:'Dedicated',      desc:'Complete 20 weight check-ins',       u:totalCheckins>=20, prog:`${Math.min(totalCheckins,20)}/20`},
+    {icon:'📋',name:'Reflector',      desc:'Complete 5 weight check-ins',         u:totalCheckins>=5,  prog:`${Math.min(totalCheckins,5)}/5`},
+    {icon:'📊',name:'Data Driven',    desc:'Complete 10 weight check-ins',        u:totalCheckins>=10, prog:`${Math.min(totalCheckins,10)}/10`},
+    {icon:'🏆',name:'Dedicated',      desc:'Complete 20 weight check-ins',        u:totalCheckins>=20, prog:`${Math.min(totalCheckins,20)}/20`},
+    {icon:'🔬',name:'Body Scientist', desc:'Complete 50 weight check-ins',        u:totalCheckins>=50, prog:`${Math.min(totalCheckins,50)}/50`},
   ];
 
   // Detect newly unlocked — show a toast for each
@@ -3390,6 +3442,11 @@ async function loadSettings(){
       }
       if(s.showWeightWidget!==undefined&&document.getElementById('s-show-weight-widget'))
         document.getElementById('s-show-weight-widget').checked=s.showWeightWidget;
+      if(s.displayName!==undefined){
+        _displayName=s.displayName||'';
+        const dnEl=document.getElementById('s-display-name');
+        if(dnEl)dnEl.value=_displayName;
+      }
       if(s.macroOrder&&Array.isArray(s.macroOrder)&&s.macroOrder.length===4)
         macroOrder=s.macroOrder;
       if(s.templateOrder&&Array.isArray(s.templateOrder))
@@ -3701,6 +3758,7 @@ function saveSettings(){
     macroOrder,
     templateOrder:tplOrder,
     streakOrder,
+    displayName:_displayName,
   };
   TGT={protein:s.protein,fat:s.fat,carbs:s.carbs,fiber:s.fiber,kcal:kcalTarget};
   TGT_MIN={protein:s.proteinMin,fat:s.fatMin,carbs:s.carbsMin,fiber:s.fiberMin,kcal:s.kcalMin??null};

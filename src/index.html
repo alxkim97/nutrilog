@@ -855,6 +855,16 @@
           </div>
           <button class="btn btn-ghost" onclick="document.getElementById('authScreen').style.display='flex'">Sign In</button>
         </div>
+        <!-- Display name — always visible, no sign-in required -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div class="srow-label">Display Name</div>
+            <div class="srow-sub">Shown in the sync badge (overrides email)</div>
+          </div>
+          <input id="s-display-name" type="text" maxlength="24" placeholder="e.g. Alex"
+            style="width:140px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:8px;font-size:13px;outline:none;text-align:right;"
+            oninput="saveDisplayName()">
+        </div>
         <div id="account-signed-in" style="display:none;flex-direction:column;gap:0;">
           <!-- Signed in info row -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
