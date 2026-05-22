@@ -65,11 +65,36 @@ function skipAuth(){
   updateAccountSection();
 }
 
+// Before every cloud pull: if nutrilog_v1 has data from a previous day (app was closed
+// before midnight without rolling over), archive it into local history now so the pull's
+// "local wins" strategy can recover it from cloud.
+async function maybeArchiveStaleSession(){
+  const today=todayStr();
+  const d=await Store._localGet('nutrilog_v1');
+  if(!d?.meals?.length)return;
+  const storedDate=d.date||d.savedDate||null;
+  if(!storedDate||storedDate>=today)return;
+  const h=(await Store._localGet('nutrilog_history'))||{};
+  const existing=h[storedDate]||[];
+  const union=[...existing];
+  d.meals.forEach(m=>{
+    if(!union.some(x=>x.name===m.name&&x.time===m.time))union.push(m);
+  });
+  union.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  if(union.length>existing.length){
+    h[storedDate]=union;
+    await Store._localSet('nutrilog_history',h);
+    Object.assign(histIdx,h);
+    console.log('[startup] Archived stale session from',storedDate+':',union.length,'entries (was',existing.length+')');
+  }
+}
+
 async function onSignedIn(){
   document.getElementById('authScreen').style.display='none';
   _syncEnabled=true;
   setSyncBadge('syncing','Syncing…');
   updateAccountSection();
+  await maybeArchiveStaleSession().catch(e=>console.warn('Stale archive failed',e));
   await pullFromSupabase().catch(e=>console.warn('Sync failed on sign-in',e));
   maybeShowCheckin(); // always runs after sync attempt, not buried inside pull
   setSyncBadge('online','Alex Kim');
@@ -392,6 +417,36 @@ async function pullFromSupabase(){
         await sbSet('nutrilog_templates',merged);
       }
     }
+    // Recover past-date meals that exist in sessions table but are missing from history.
+    // This happens when the app closed before midnight and the day never rolled over properly —
+    // the sessions table retains rows for all dates, so we can use it to fill history gaps.
+    try{
+      const {data:pastSess}=await supa.from('nutrilog_sessions')
+        .select('date,meals').eq('user_id',_supaUser.id).lt('date',todayStr());
+      if(pastSess?.length){
+        const localH=(await Store._localGet('nutrilog_history'))||{};
+        let changed=false;
+        pastSess.forEach(row=>{
+          if(!row.meals?.length||_deletedDates.has(row.date))return;
+          const existing=localH[row.date]||[];
+          const union=[...existing];
+          row.meals.forEach(m=>{
+            if(!union.some(x=>x.name===m.name&&x.time===m.time))union.push(m);
+          });
+          if(union.length>existing.length){
+            union.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+            localH[row.date]=union;
+            changed=true;
+            console.log('[pull] Recovered',union.length-existing.length,'missing meal(s) for',row.date);
+          }
+        });
+        if(changed){
+          await Store._localSet('nutrilog_history',localH);
+          Object.assign(histIdx,localH);
+          await sbSetHistory(localH);
+        }
+      }
+    }catch(e){console.warn('Past sessions recovery failed',e);}
     // Pull today's session — merge sessions + history + in-memory → single authoritative source
     const today=todayStr();
     const todayMeals=await sbGetSessions(today);
@@ -400,10 +455,14 @@ async function pullFromSupabase(){
     histToday.forEach(m=>{
       if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
     });
-    // Include current in-memory meals so pull never discards unsynced entries
-    meals.forEach(m=>{
-      if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
-    });
+    // Include current in-memory meals only if the stored session is from today —
+    // avoids injecting yesterday's meals into today during midnight rollover
+    {const sessOnDisk=await Store._localGet('nutrilog_v1');
+    if(sessOnDisk?.date===today&&meals.length){
+      meals.forEach(m=>{
+        if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
+      });
+    }}
     mergedToday.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     if(mergedToday.length){
       await Store._localSet('nutrilog_v1',{date:today,ts:Date.now(),meals:mergedToday});
