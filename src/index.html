@@ -221,7 +221,9 @@
     <div class="rings-row" id="ringsRow"></div>
     <div class="kcal-bar">
       <div class="kcal-left">
-        <div class="kcal-label">Total Calories</div>
+        <div class="kcal-label" style="display:flex;align-items:center;gap:8px;">TOTAL CALORIES
+          <button id="wk-budget-toggle" onclick="toggleWeekBudget()" class="btn btn-ghost" style="height:18px;font-size:9px;padding:0 7px;border-radius:4px;letter-spacing:.3px;" title="Toggle weekly calorie budget">Week</button>
+        </div>
         <div class="kcal-num">
           <span class="kcal-cur" id="kcalCur">0</span>
           <span class="kcal-tgt" id="kcalTgt">/ 2,835 kcal</span>
@@ -247,6 +249,29 @@
       <div class="kcal-right">
         <div class="kcal-rem-lbl">remaining</div>
         <div class="kcal-rem-val" id="kcalRem">2,835</div>
+      </div>
+    </div>
+    <!-- WEEKLY BUDGET PANEL -->
+    <div id="weekBudgetPanel" class="week-budget-panel" style="display:none;">
+      <div class="wb-row">
+        <div class="wb-col">
+          <div class="wb-lbl">WEEKLY BUDGET</div>
+          <div class="wb-val" id="wbBudget">—</div>
+          <div class="wb-sub" id="wbBudgetSub">7 × target</div>
+        </div>
+        <div class="wb-col" style="flex:1;">
+          <div class="wb-range-lbl" id="wbRange">—</div>
+          <div class="wb-bar-wrap"><div class="wb-bar-fill" id="wbBarFill" style="width:0%"></div></div>
+          <div class="wb-bar-nums">
+            <span id="wbConsumed">—</span>
+            <span id="wbRemaining">—</span>
+          </div>
+        </div>
+        <div class="wb-col" style="text-align:right;">
+          <div class="wb-lbl">DAILY AVG</div>
+          <div class="wb-val" id="wbAvg">—</div>
+          <div class="wb-sub" id="wbDaysLeft">— of 7 days</div>
+        </div>
       </div>
     </div>
     <!-- WEEKLY SUMMARY -->

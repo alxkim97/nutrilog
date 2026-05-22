@@ -1001,6 +1001,7 @@ function render(){
   }
   renderTable();
   renderWeeklySummary();
+  renderWeekBudget();
   renderRecentMeals();
   const n=meals.length;
   document.getElementById('entryCount').textContent=n+' entr'+(n===1?'y':'ies');
@@ -1012,7 +1013,7 @@ function render(){
 let _weeklyChartOpts=(()=>{
   try{return JSON.parse(localStorage.getItem('nutrilog_weekly_opts')||'{}');}catch{return{};}
 })();
-_weeklyChartOpts={trendLine:true,gridLines:true,targetLine:true,minMaxZone:true,avgLine:false,macroView:false,..._weeklyChartOpts};
+_weeklyChartOpts={trendLine:true,gridLines:true,targetLine:true,minMaxZone:true,avgLine:false,macroView:false,weekBudget:false,..._weeklyChartOpts};
 
 function saveWeeklyOpts(){localStorage.setItem('nutrilog_weekly_opts',JSON.stringify(_weeklyChartOpts));}
 
@@ -1042,6 +1043,57 @@ function updateWeeklyOptButtons(){
   if(subLbl)subLbl.textContent=macroOn?"This week's macro breakdown":"This week's calorie intake";
   const legend=document.getElementById('weeklyMacroLegend');
   if(legend)legend.style.display=macroOn?'flex':'none';
+}
+
+function toggleWeekBudget(){
+  _weeklyChartOpts.weekBudget=!_weeklyChartOpts.weekBudget;
+  saveWeeklyOpts();
+  renderWeekBudget();
+}
+
+function renderWeekBudget(){
+  const panel=document.getElementById('weekBudgetPanel');
+  if(!panel)return;
+  const on=_weeklyChartOpts.weekBudget;
+  panel.style.display=on?'':'none';
+  const btn=document.getElementById('wk-budget-toggle');
+  if(btn)btn.classList.toggle('active',on);
+  if(!on)return;
+
+  const now=new Date();
+  const today=todayStr();
+  const days=[];
+  for(let i=6;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days.push(d);}
+
+  const liveHistIdx={...histIdx};
+  liveHistIdx[today]=meals.length?meals.map(m=>({...m,date:today})):(histIdx[today]||[]);
+
+  let totalConsumed=0,daysWithData=0;
+  days.forEach(d=>{
+    const ds=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+    const k=Math.round(totals(liveHistIdx[ds]||[]).kcal);
+    if(k>0){totalConsumed+=k;daysWithData++;}
+  });
+
+  const budget=7*TGT.kcal;
+  const remaining=budget-totalConsumed;
+  const over=remaining<0;
+  const pct=Math.min(totalConsumed/budget*100,100);
+  const dailyAvg=daysWithData?Math.round(totalConsumed/daysWithData):0;
+
+  const fmtD=d=>d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('wbBudget').textContent=budget.toLocaleString();
+  document.getElementById('wbBudgetSub').textContent='7 × '+TGT.kcal.toLocaleString()+' kcal';
+  document.getElementById('wbRange').textContent=fmtD(days[0])+' – '+fmtD(days[6]);
+  const fill=document.getElementById('wbBarFill');
+  fill.style.width=pct+'%';
+  fill.style.background=over?'var(--red)':pct>85?'var(--yellow)':'var(--mk)';
+  document.getElementById('wbConsumed').textContent=totalConsumed.toLocaleString()+' consumed';
+  const remEl=document.getElementById('wbRemaining');
+  remEl.textContent=over?(Math.abs(remaining).toLocaleString()+' over'):(remaining.toLocaleString()+' left');
+  remEl.style.color=over?'var(--red)':'var(--green)';
+  document.getElementById('wbAvg').textContent=dailyAvg.toLocaleString();
+  document.getElementById('wbDaysLeft').textContent=daysWithData+' of 7 days logged';
 }
 
 function renderWeeklySummary(){
