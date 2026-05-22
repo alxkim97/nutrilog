@@ -127,10 +127,10 @@ async function signOutFromApp(){
 }
 
 async function forceSyncNow(){
-  if(!_syncEnabled||!_supaUser){toast('Not signed in','err');return;}
+  if(!_syncEnabled||!_supaUser){toast('Not signed in — sync disabled','err');return;}
+  if(_pullInProgress){toast('Sync already in progress…','ok');return;}
   setSyncBadge('syncing','Syncing…');
   await pullFromSupabase();
-  toast('Sync complete ☁️','ok');
 }
 
 let _lastSyncedAt=null; // tracks last successful cloud write
@@ -392,7 +392,7 @@ async function pullFromSupabase(){
         await sbSet('nutrilog_templates',merged);
       }
     }
-    // Pull today's session — merge sessions + history → single authoritative source
+    // Pull today's session — merge sessions + history + in-memory → single authoritative source
     const today=todayStr();
     const todayMeals=await sbGetSessions(today);
     const histToday=histIdx[today]||[];
@@ -400,18 +400,25 @@ async function pullFromSupabase(){
     histToday.forEach(m=>{
       if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
     });
+    // Include current in-memory meals so pull never discards unsynced entries
+    meals.forEach(m=>{
+      if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
+    });
     mergedToday.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     if(mergedToday.length){
       await Store._localSet('nutrilog_v1',{date:today,ts:Date.now(),meals:mergedToday});
-      // Self-heal: push merged result back to BOTH tables so they stay in sync.
-      // This corrects any divergence (e.g. sessions has 14 entries, history has 9).
-      try{
-        const {error:e1}=await supa.from('nutrilog_sessions')
-          .upsert({user_id:_supaUser.id,date:today,meals:mergedToday,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
-        const {error:e2}=await supa.from('nutrilog_history')
-          .upsert([{user_id:_supaUser.id,date:today,meals:mergedToday.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}],{onConflict:'user_id,date'});
-        if(e1||e2)console.warn('Pull self-heal push partial failure',e1,e2);
-      }catch(e){console.warn('Pull self-heal push failed',e);}
+      // Self-heal: only run if sessions fetch succeeded — if sbGetSessions returned null
+      // (network error), pushing mergedToday would overwrite the sessions table with only
+      // history data, permanently losing entries that were in sessions but not history.
+      if(todayMeals!==null){
+        try{
+          const {error:e1}=await supa.from('nutrilog_sessions')
+            .upsert({user_id:_supaUser.id,date:today,meals:mergedToday,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+          const {error:e2}=await supa.from('nutrilog_history')
+            .upsert([{user_id:_supaUser.id,date:today,meals:mergedToday.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}],{onConflict:'user_id,date'});
+          if(e1||e2)console.warn('Pull self-heal push partial failure',e1,e2);
+        }catch(e){console.warn('Pull self-heal push failed',e);}
+      }
     }
     delete histIdx[today]; // v1 is now complete; autoLoad must not re-merge
     setSyncBadge('online','Alex Kim');
@@ -431,7 +438,8 @@ async function pullFromSupabase(){
   }catch(e){
     console.warn('pullFromSupabase error',e);
     appendSyncLog({type:'pull_fail',error:e?.message||String(e),at:new Date().toISOString()});
-    setSyncBadge('online','Alex Kim');
+    setSyncBadge('error','Sync error');
+    toast('⚠️ Sync failed — check connection','err');
   }finally{
     _pullInProgress=false;
   }
