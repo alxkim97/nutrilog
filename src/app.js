@@ -822,15 +822,12 @@ function tick(){
 
 async function handleDayRollover(){
   try{
-    // Pull cloud first so any late-night entries from other sessions are captured before archiving
-    if(_supaUser&&_syncEnabled){
-      await pullFromSupabase().catch(e=>console.warn('Pre-rollover sync failed',e));
-    }
+    const today=_currentDateStr;
+    const prevDate=new Date();prevDate.setDate(prevDate.getDate()-1);
+    const prevStr=prevDate.getFullYear()+'-'+pad2(prevDate.getMonth()+1)+'-'+pad2(prevDate.getDate());
+    // Archive yesterday's meals to local history
     if(meals.length){
-      const prevDate=new Date();prevDate.setDate(prevDate.getDate()-1);
-      const prevStr=prevDate.getFullYear()+'-'+pad2(prevDate.getMonth()+1)+'-'+pad2(prevDate.getDate());
       const h=(await Store.get('nutrilog_history'))||{};
-      // Union merge: preserve any existing history for that date plus current session
       const existing=h[prevStr]||[];
       const union=[...existing];
       meals.forEach(m=>{
@@ -841,14 +838,21 @@ async function handleDayRollover(){
       await Store.set('nutrilog_history',h);
       Object.assign(histIdx,h);
     }
-    // Load any pre-logged meals for the new day
-    const today=_currentDateStr;
-    const preLogged=histIdx[today]||[];
-    meals=preLogged.length?[...preLogged]:[];
-    await Store.set('nutrilog_v1',{ts:Date.now(),date:today,meals});
+    // CRITICAL: clear meals and write to disk BEFORE any cloud ops.
+    // The safety-net fires every 30s — if it runs while meals still holds yesterday's
+    // data but todayStr() already returned the new date, it would write yesterday's
+    // meals into today's cloud session. Clearing first makes the safety-net a no-op.
+    meals=[];
+    await Store.set('nutrilog_v1',{ts:Date.now(),date:today,meals:[]});
     render();
-    if(preLogged.length) toast('New day — loaded '+preLogged.length+' pre-logged meal'+(preLogged.length===1?'':'s')+' 📅','ok');
-    else toast('New day started — yesterday archived 📅','info');
+    toast('New day started — yesterday archived 📅','info');
+    // Cloud ops are now safe: meals is empty so safety-net won't push stale data
+    if(_supaUser&&_syncEnabled){
+      // Overwrite any stale cloud session for new day (handles midnight race survivor)
+      sbSetSession(today,[]).catch(()=>{});
+      // Sync history to cloud in background
+      pullFromSupabase().catch(e=>console.warn('Post-rollover sync failed',e));
+    }
   }catch(e){console.warn('handleDayRollover error',e);}
 }
 
@@ -2173,7 +2177,7 @@ function openEdit(i){
   setTimeout(()=>document.getElementById('f-name').focus(),80);
 }
 function delMeal(i){showConf('Delete entry?','Remove "'+meals[i].name+'" from today\'s log.','Delete',()=>{pushUndo('Delete "'+meals[i].name+'"');meals.splice(i,1);render();toast('Entry removed — Undo available','info');});}
-function confirmClearAll(){showConf('Clear all meals?',"Remove all entries from today's log.",'Clear All',()=>{pushUndo('Clear today');meals=[];render();toast('Log cleared — Undo available','info');});}
+function confirmClearAll(){showConf('Clear all meals?',"Remove all entries from today's log.",'Clear All',async()=>{pushUndo('Clear today');meals=[];render();queueAutoSave();if(_supaUser)sbSetSession(todayStr(),[]).catch(()=>{});toast('Log cleared — Undo available','info');});}
 
 async function clearAllHistory(){
   showConf('Clear ALL history?','This permanently deletes every saved day. Today\'s unsaved log is not affected.','Delete All',async()=>{
