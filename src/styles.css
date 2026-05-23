@@ -138,36 +138,18 @@ body[data-variant="amber"]:not(.light) .btn-accent { background:linear-gradient(
 /* Light mode: sync badge more visible */
 .light .sync-badge { background:var(--bg3); }
 
-/* ── STAT CARD LAYOUT (replaces SVG rings) ── */
-.ring-card { align-items:stretch; gap:0; }
-.ring-wrap,.ring-svg,.ring-footer,.ring-name,.ring-stats { display:none!important; }
-.sc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-.sc-lbl { font-family:var(--fm); font-size:10px; font-weight:700; letter-spacing:.9px; text-transform:uppercase; color:var(--text3); }
-.sc-pct { font-family:var(--fm); font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; }
-.ring-card.p  .sc-pct { background:var(--mp-dim);  color:var(--mp); }
-.ring-card.f  .sc-pct { background:var(--mf-dim);  color:var(--mf); }
-.ring-card.c  .sc-pct { background:var(--mc-dim);  color:var(--mc); }
-.ring-card.fi .sc-pct { background:var(--mfi-dim); color:var(--mfi); }
-.sc-num-row { display:flex; align-items:baseline; gap:5px; margin-bottom:4px; }
-.sc-num { font-family:var(--fm); font-size:42px; font-weight:600; letter-spacing:-2.5px; line-height:1; }
-.ring-card.p  .sc-num { color:var(--mp); }
-.ring-card.f  .sc-num { color:var(--mf); }
-.ring-card.c  .sc-num { color:var(--mc); }
-.ring-card.fi .sc-num { color:var(--mfi); }
-.sc-unit { font-family:var(--fm); font-size:15px; color:var(--text3); padding-bottom:4px; }
-.sc-of { font-size:12px; color:var(--text3); margin-bottom:16px; }
-.sc-track { height:5px; background:var(--bg4); border-radius:5px; overflow:hidden; position:relative; margin-bottom:10px; }
-.sc-fill { height:100%; border-radius:5px; transition:width .7s cubic-bezier(.34,1,.64,1); min-width:2px; }
-.ring-card.p  .sc-fill { background:var(--mp); }
-.ring-card.f  .sc-fill { background:var(--mf); }
-.ring-card.c  .sc-fill { background:var(--mc); }
-.ring-card.fi .sc-fill { background:var(--mfi); }
-.sc-tick { position:absolute; top:0; bottom:0; width:2px; border-radius:1px; background:rgba(255,255,255,.4); pointer-events:none; }
-.sc-tick-max { background:transparent; border:1px solid rgba(255,255,255,.4); }
-.sc-footer { display:flex; align-items:center; justify-content:space-between; font-family:var(--fm); font-size:11px; color:var(--text2); }
-.sc-range { font-family:var(--fm); font-size:10px; color:var(--text3); margin-top:5px; }
-.light .sc-tick { background:rgba(0,0,0,.25); }
-.light .sc-tick-max { background:transparent; border-color:rgba(0,0,0,.25); }
+/* ── BOLD RINGS ── */
+.ring-wrap { width:160px; height:160px; }
+.ring-val { font-size:32px; font-weight:700; letter-spacing:-1.5px; }
+.ring-unit { font-family:var(--fm); font-size:13px; color:var(--text3); margin-top:-2px; }
+.ring-pct { font-size:12px; font-weight:700; margin-top:2px; }
+/* Glow on the progress arc */
+.ring-card.p  .r-prog { filter:drop-shadow(0 0 6px var(--mp)); }
+.ring-card.f  .r-prog { filter:drop-shadow(0 0 6px var(--mf)); }
+.ring-card.c  .r-prog { filter:drop-shadow(0 0 6px var(--mc)); }
+.ring-card.fi .r-prog { filter:drop-shadow(0 0 6px var(--mfi)); }
+/* Slightly more visible track */
+.r-track { stroke-opacity:.35; }
 
 /* ── Sidebar: left-bar active indicator + spacing ── */
 .nav-item.active { box-shadow:inset 3px 0 0 var(--accent); }
@@ -353,13 +335,14 @@ input, select, textarea { font-family:var(--fb); }
 .r-prog { fill:none; stroke-linecap:round; transition:stroke-dashoffset .9s cubic-bezier(.34,1,.64,1); }
 .ring-center {
   position:absolute; inset:0; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; pointer-events:none;
+  align-items:center; justify-content:center; pointer-events:none; gap:1px;
 }
-.ring-val { font-family:var(--fm); font-size:26px; font-weight:500; line-height:1; letter-spacing:-1px; }
-.ring-of { font-family:var(--fm); font-size:11px; color:var(--text3); margin-top:2px; }
-.ring-pct { font-family:var(--fm); font-size:11px; font-weight:500; margin-top:3px; }
+.ring-val { font-family:var(--fm); font-size:26px; font-weight:700; line-height:1; letter-spacing:-1px; }
+.ring-unit { font-family:var(--fm); font-size:12px; color:var(--text3); }
+.ring-of { display:none; }
+.ring-pct { font-family:var(--fm); font-size:11px; font-weight:600; margin-top:1px; }
 .ring-footer { width:100%; }
-.ring-name { font-size:13px; font-weight:600; margin-bottom:4px; }
+.ring-name { font-size:13px; font-weight:700; margin-bottom:4px; }
 .ring-stats { display:flex; justify-content:space-between; font-family:var(--fm); font-size:10px; color:var(--text2); }
 
 /* ── KCAL BAR ── */
