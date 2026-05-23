@@ -872,7 +872,7 @@ function showPage(name,el){
   if(name==='projection'){renderProjection();}
 }
 
-/* ═══ RINGS ═══ */
+/* ═══ MACRO STAT CARDS ═══ */
 function buildRings(){
   const row=document.getElementById('ringsRow');
   row.innerHTML='';
@@ -882,29 +882,25 @@ function buildRings(){
     el.draggable=true;
     el.dataset.key=m.key;
     el.innerHTML=`
-      <div class="ring-wrap">
-        <svg class="ring-svg" viewBox="0 0 150 150">
-          <circle class="r-track" cx="75" cy="75" r="${RR}" stroke="${m.dim}" stroke-width="${RSW}"/>
-          <circle class="r-prog" id="rp_${m.key}" cx="75" cy="75" r="${RR}"
-            stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"/>
-          <!-- Min tick: solid dot; Max tick: outlined dot -->
-          <circle id="rtmin_${m.key}" cx="75" cy="10" r="4" fill="${m.col}" style="display:none;"/>
-          <circle id="rtmax_${m.key}" cx="75" cy="10" r="4" fill="var(--bg2)" stroke="${m.col}" stroke-width="2.5" style="display:none;"/>
-        </svg>
-        <div class="ring-center">
-          <div class="ring-val" id="rv_${m.key}" style="color:${m.col}">0</div>
-          <div class="ring-of" id="rof_${m.key}">/ ${TGT[m.key]}g</div>
-          <div class="ring-pct" id="rpt_${m.key}" style="color:${m.col}">0%</div>
-        </div>
+      <div class="sc-header">
+        <div class="sc-lbl">${m.lbl}</div>
+        <div class="sc-pct" id="rpt_${m.key}">0%</div>
       </div>
-      <div class="ring-footer">
-        <div class="ring-name">${m.lbl}</div>
-        <div class="ring-stats">
-          <span id="rtgt_${m.key}">target ${TGT[m.key]}g</span>
-          <span id="rrem_${m.key}" style="color:${m.col}">—</span>
-        </div>
-        <div class="ring-range" id="rrange_${m.key}" style="font-size:10px;color:var(--text3);font-family:var(--fm);margin-top:2px;"></div>
-      </div>`;
+      <div class="sc-num-row">
+        <span class="sc-num" id="rv_${m.key}">0</span>
+        <span class="sc-unit">g</span>
+      </div>
+      <div class="sc-of" id="rof_${m.key}">of ${TGT[m.key]}g target</div>
+      <div class="sc-track">
+        <div class="sc-fill" id="rp_${m.key}" style="width:0%"></div>
+        <div class="sc-tick sc-tick-min" id="rtmin_${m.key}" style="display:none"></div>
+        <div class="sc-tick sc-tick-max" id="rtmax_${m.key}" style="display:none"></div>
+      </div>
+      <div class="sc-footer">
+        <span id="rtgt_${m.key}" style="color:var(--text3)">target ${TGT[m.key]}g</span>
+        <span id="rrem_${m.key}" style="color:${m.col}">—</span>
+      </div>
+      <div class="sc-range" id="rrange_${m.key}"></div>`;
     // Drag-and-drop handlers
     el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',m.key);el.style.opacity='.5';});
     el.addEventListener('dragend',()=>{el.style.opacity='';document.querySelectorAll('.ring-card').forEach(c=>c.classList.remove('drag-over'));});
@@ -955,33 +951,27 @@ function render(){
   const T=totals();
   MACROS.forEach(m=>{
     const v=T[m.key], pct=Math.min(v/TGT[m.key],1);
-    document.getElementById('rp_'+m.key).style.strokeDashoffset=(CIRC*(1-pct)).toFixed(2);
+    document.getElementById('rp_'+m.key).style.width=Math.min(pct*100,100)+'%';
     document.getElementById('rv_'+m.key).textContent=f1(v);
-    document.getElementById('rof_'+m.key).textContent='/ '+TGT[m.key]+'g';
+    document.getElementById('rof_'+m.key).textContent='of '+TGT[m.key]+'g target';
     document.getElementById('rpt_'+m.key).textContent=Math.round(pct*100)+'%';
     document.getElementById('rtgt_'+m.key).textContent='target '+TGT[m.key]+'g';
     const rem=TGT[m.key]-v;
     document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':'+'+f1(-rem)+'g over';
-    // Range label text
     const rangeLbl=document.getElementById('rrange_'+m.key);
     if(rangeLbl){
       const mn=TGT_MIN[m.key], mx=TGT_MAX[m.key];
       rangeLbl.textContent=(mn!=null||mx!=null)?[mn!=null?mn+'g min':'',mx!=null?mx+'g max':''].filter(Boolean).join(' · '):'';
     }
-    // Tick marks: solid dot = min, outlined dot = max (positioned on the ring)
-    // SVG coord for pct: x=75+RR*cos(pct*2π), y=75+RR*sin(pct*2π)  (SVG rotated -90deg by CSS)
+    // Tick marks: CSS left % on progress bar
     const minTick=document.getElementById('rtmin_'+m.key);
     const maxTick=document.getElementById('rtmax_'+m.key);
     if(minTick&&TGT_MIN[m.key]!=null){
-      const a=Math.min(TGT_MIN[m.key]/TGT[m.key],1)*2*Math.PI;
-      minTick.setAttribute('cx',(75+RR*Math.cos(a)).toFixed(1));
-      minTick.setAttribute('cy',(75+RR*Math.sin(a)).toFixed(1));
+      minTick.style.left=Math.min(TGT_MIN[m.key]/TGT[m.key],1)*100+'%';
       minTick.style.display='';
     } else if(minTick) minTick.style.display='none';
     if(maxTick&&TGT_MAX[m.key]!=null){
-      const a=Math.min(TGT_MAX[m.key]/TGT[m.key],1)*2*Math.PI;
-      maxTick.setAttribute('cx',(75+RR*Math.cos(a)).toFixed(1));
-      maxTick.setAttribute('cy',(75+RR*Math.sin(a)).toFixed(1));
+      maxTick.style.left=Math.min(TGT_MAX[m.key]/TGT[m.key],1)*100+'%';
       maxTick.style.display='';
     } else if(maxTick) maxTick.style.display='none';
     const sp=Math.min(pct*100,100);
