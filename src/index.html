@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NutriLog v2.3.5</title>
+<title>NutriLog v2.4.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap">
@@ -35,11 +35,11 @@
       <div id="exportMenu" style="display:none;position:absolute;top:38px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:190px;box-shadow:var(--sh);z-index:300;">
         <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;padding:4px 8px 2px;">JSON</div>
         <button class="btn btn-ghost" onclick="exportData();toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 Today (JSON)</button>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;padding:6px 8px 2px;margin-top:2px;border-top:1px solid var(--border);">Excel (.xlsx)</div>
-        <button class="btn btn-ghost" onclick="exportExcel('today');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📊 Today</button>
-        <button class="btn btn-ghost" onclick="exportExcel('week');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📊 This Week</button>
-        <button class="btn btn-ghost" onclick="exportExcel('month');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📊 This Month</button>
-        <button class="btn btn-ghost" onclick="exportExcel('all');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📊 All Data</button>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;padding:6px 8px 2px;margin-top:2px;border-top:1px solid var(--border);">CSV</div>
+        <button class="btn btn-ghost" onclick="exportExcel('today');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 Today (CSV)</button>
+        <button class="btn btn-ghost" onclick="exportExcel('week');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 This Week (CSV)</button>
+        <button class="btn btn-ghost" onclick="exportExcel('month');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 This Month (CSV)</button>
+        <button class="btn btn-ghost" onclick="exportExcel('all');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 All Data (CSV)</button>
       </div>
     </div>
     <div style="position:relative;display:inline-flex;" id="moreMenuWrapper">
@@ -600,6 +600,67 @@
   <div class="page" id="page-settings">
     <div class="sec-hdr"><div class="sec-title">Settings</div></div>
     <div class="settings-grid">
+      <!-- Appearance -->
+      <div class="settings-section" style="grid-column:1/-1">
+        <div class="settings-title">Appearance</div>
+        <div style="margin-top:14px;">
+          <div class="srow-label" style="margin-bottom:12px;">UI Variant <span style="font-size:10px;font-weight:400;color:var(--text3);font-family:var(--fm);">— dark mode only, light mode unchanged</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:560px;" id="variantGrid">
+            <!-- Default -->
+            <button class="variant-swatch active" data-v="default" onclick="applyVariant('default')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #2e2e38;">
+                <div style="background:#0f0f11;padding:8px 8px 6px;">
+                  <div style="height:3px;background:#7c6af7;border-radius:2px;width:45%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#2e2e38;border-radius:1px;width:75%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#2e2e38;border-radius:1px;width:55%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#2e2e38;border-radius:1px;width:65%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Default</div>
+              <div style="font-size:9px;opacity:.6;">Purple · current</div>
+            </button>
+            <!-- Onyx -->
+            <button class="variant-swatch" data-v="onyx" onclick="applyVariant('onyx')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #38383a;">
+                <div style="background:#0f0f0f;padding:8px 8px 6px;">
+                  <div style="height:3px;background:#0a84ff;border-radius:2px;width:45%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#38383a;border-radius:1px;width:75%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#38383a;border-radius:1px;width:55%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#38383a;border-radius:1px;width:65%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Onyx</div>
+              <div style="font-size:9px;opacity:.6;">Blue · Apple-like</div>
+            </button>
+            <!-- Linear -->
+            <button class="variant-swatch" data-v="linear" onclick="applyVariant('linear')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #2e2e3a;">
+                <div style="background:#0f0f10;padding:8px 8px 6px;">
+                  <div style="height:3px;background:#5b6cff;border-radius:2px;width:45%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#2e2e3a;border-radius:1px;width:75%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#2e2e3a;border-radius:1px;width:55%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#2e2e3a;border-radius:1px;width:65%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Linear</div>
+              <div style="font-size:9px;opacity:.6;">Indigo · tech</div>
+            </button>
+            <!-- Amber -->
+            <button class="variant-swatch" data-v="amber" onclick="applyVariant('amber')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #28282e;">
+                <div style="background:#080809;padding:8px 8px 6px;">
+                  <div style="height:3px;background:#f0a030;border-radius:2px;width:45%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#28282e;border-radius:1px;width:75%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#28282e;border-radius:1px;width:55%;margin-bottom:3px;"></div>
+                  <div style="height:2px;background:#28282e;border-radius:1px;width:65%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Amber</div>
+              <div style="font-size:9px;opacity:.6;">Gold · minimal</div>
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="settings-section">
         <div class="settings-title-row">
           <div class="settings-title">Personal Info</div>

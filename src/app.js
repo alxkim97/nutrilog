@@ -730,9 +730,11 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   calY=now.getFullYear(); calM=now.getMonth();
   document.getElementById('datePill').textContent=
     now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  // Restore persisted theme before first render to avoid flash
+  // Restore persisted theme + variant before first render to avoid flash
   const _savedTheme=localStorage.getItem('nutrilog_theme');
   if(_savedTheme==='light'){isDark=false;document.body.classList.add('light');}
+  const _savedVariant=localStorage.getItem('nutrilog_variant');
+  if(_savedVariant&&_savedVariant!=='default')document.body.dataset.variant=_savedVariant;
   tick(); setInterval(tick,1000);
   // Daily reminder: check every minute
   let _lastReminderDate='';
@@ -2702,6 +2704,10 @@ function renderHistDetail(ds){
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
           Copy to…
         </button>
+        <button class="btn btn-ghost" style="height:30px;font-size:12px;padding:0 12px;" onclick="saveDayAsTemplate('${ds}')" title="Save this day's meals as a reusable template">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save as Template
+        </button>
         <button class="btn btn-accent" style="height:30px;font-size:12px;padding:0 12px;" onclick="openHistAdd('${ds}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Entry
@@ -2723,6 +2729,26 @@ function renderHistDetail(ds){
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+
+/* Save a history day as a meal prep template */
+async function saveDayAsTemplate(ds){
+  const entries=histIdx[ds];
+  if(!entries||!entries.length){toast('No entries on this date to save','err');return;}
+  const name=window.prompt('Template name:',ds);
+  if(!name||!name.trim())return;
+  const id='tpl_'+Date.now();
+  mealTemplates[id]={
+    name:name.trim(),
+    meals:entries.map(m=>({
+      name:m.name,category:m.category||m.cat||'',
+      kcal:m.kcal,protein:m.protein,fat:m.fat,carbs:m.carbs,fiber:m.fiber||0,
+      serving:m.serving||'',notes:m.notes||''
+    }))
+  };
+  tplOrder.push(id);
+  await saveTemplates();
+  toast('Template "'+name.trim()+'" saved ✓','ok');
 }
 
 /* History entry add / edit / delete */
@@ -4309,6 +4335,17 @@ async function undoTplHistoryApply(){
 
 /* ═══ THEME ═══ */
 function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light',!isDark);document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';localStorage.setItem('nutrilog_theme',isDark?'dark':'light');}
+
+let _uiVariant=localStorage.getItem('nutrilog_variant')||'default';
+function applyVariant(v){
+  _uiVariant=v||'default';
+  if(_uiVariant==='default')delete document.body.dataset.variant;
+  else document.body.dataset.variant=_uiVariant;
+  localStorage.setItem('nutrilog_variant',_uiVariant);
+  document.querySelectorAll('.variant-swatch').forEach(el=>{
+    el.classList.toggle('active',el.dataset.v===_uiVariant);
+  });
+}
 
 /* ═══ TOAST ═══ */
 let ttmr;
