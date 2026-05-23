@@ -624,6 +624,7 @@ let _wHide={recent:false,tpl:false}; // widget visibility, persisted in settings
 function getMACROS(){ return macroOrder.map(k=>MACROS.find(m=>m.key===k)).filter(Boolean); }
 
 const CAT={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snack'};
+const CAT_ICON={breakfast:'☀️',lunch:'🥗',dinner:'🌙',snack:'🍎'};
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const RR=62,RSW=14,CIRC=+(2*Math.PI*RR).toFixed(2);
@@ -877,6 +878,15 @@ function buildRings(){
   const row=document.getElementById('ringsRow');
   row.innerHTML='';
   getMACROS().forEach(m=>{
+    const maxRef=TGT_MAX[m.key]!=null?Math.max(TGT[m.key],TGT_MAX[m.key]):TGT[m.key];
+    const rzStart=TGT_MAX[m.key]!=null?Math.min(TGT[m.key],TGT_MAX[m.key])/maxRef:null;
+    const rzLen=rzStart!=null?+((1-rzStart)*CIRC).toFixed(2):0;
+    const rzOffset=rzStart!=null?+(-rzStart*CIRC).toFixed(2):0;
+    // Green zone: TGT_MIN → min(TGT,TGT_MAX) = the "aim here" range
+    const gzStart=TGT_MIN[m.key]!=null?TGT_MIN[m.key]/maxRef:null;
+    const gzEnd=rzStart!=null?rzStart:TGT[m.key]/maxRef;
+    const gzLen=gzStart!=null?+((gzEnd-gzStart)*CIRC).toFixed(2):0;
+    const gzOffset=gzStart!=null?+(-gzStart*CIRC).toFixed(2):0;
     const el=document.createElement('div');
     el.className='ring-card '+m.cls;
     el.draggable=true;
@@ -885,10 +895,10 @@ function buildRings(){
       <div class="ring-wrap">
         <svg class="ring-svg" viewBox="0 0 150 150">
           <circle class="r-track" cx="75" cy="75" r="${RR}" stroke="${m.dim}" stroke-width="${RSW}"/>
+          ${gzStart!=null&&gzLen>0?`<circle class="r-greenzone" cx="75" cy="75" r="${RR}" stroke-width="${RSW}" stroke-dasharray="${gzLen} ${CIRC}" stroke-dashoffset="${gzOffset}"/>`:''}
+          ${rzStart!=null?`<circle class="r-redzone" cx="75" cy="75" r="${RR}" stroke-width="${RSW}" stroke-dasharray="${rzLen} ${CIRC}" stroke-dashoffset="${rzOffset}"/>`:''}
           <circle class="r-prog ring-prog-${m.cls}" id="rp_${m.key}" cx="75" cy="75" r="${RR}"
             stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"/>
-          <circle id="rtmin_${m.key}" cx="75" cy="10" r="4" fill="${m.col}" style="display:none;"/>
-          <circle id="rtmax_${m.key}" cx="75" cy="10" r="5" fill="var(--bg2)" stroke="${m.col}" stroke-width="2.5" style="display:none;"/>
         </svg>
         <div class="ring-center">
           <div class="ring-val" id="rv_${m.key}" style="color:${m.col}">0</div>
@@ -954,62 +964,69 @@ function render(){
   });
   const T=totals();
   MACROS.forEach(m=>{
-    const v=T[m.key], pct=Math.min(v/TGT[m.key],1);
-    document.getElementById('rp_'+m.key).style.strokeDashoffset=(CIRC*(1-pct)).toFixed(2);
+    const v=T[m.key];
+    const maxRef=TGT_MAX[m.key]!=null?Math.max(TGT[m.key],TGT_MAX[m.key]):TGT[m.key];
+    const ringPct=Math.min(v/maxRef,1);
+    const displayPct=Math.round(v/TGT[m.key]*100);
+    const isRedline=TGT_MAX[m.key]!=null&&v>TGT_MAX[m.key];
+    const isWarn=!isRedline&&v>TGT[m.key];
+    const col=isRedline?'var(--c-redline)':isWarn?'var(--c-warn)':m.col;
+    document.getElementById('rp_'+m.key).style.strokeDashoffset=(CIRC*(1-ringPct)).toFixed(2);
     document.getElementById('rv_'+m.key).textContent=f1(v);
-    document.getElementById('rpt_'+m.key).textContent=Math.round(pct*100)+'%';
+    document.getElementById('rv_'+m.key).style.color=col;
+    document.getElementById('rpt_'+m.key).textContent=displayPct+'%';
+    document.getElementById('rpt_'+m.key).style.color=col;
     document.getElementById('rtgt_'+m.key).textContent='target '+TGT[m.key]+'g';
     const rem=TGT[m.key]-v;
     document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':'+'+f1(-rem)+'g over';
+    document.getElementById('rrem_'+m.key).style.color=col;
+    const card=document.querySelector('.ring-card[data-key="'+m.key+'"]');
+    if(card){card.classList.toggle('state-warn',isWarn);card.classList.toggle('state-redline',isRedline);}
     const rangeLbl=document.getElementById('rrange_'+m.key);
     if(rangeLbl){
       const mn=TGT_MIN[m.key], mx=TGT_MAX[m.key];
       rangeLbl.textContent=(mn!=null||mx!=null)?[mn!=null?mn+'g min':'',mx!=null?mx+'g max':''].filter(Boolean).join(' · '):'';
     }
-    const minTick=document.getElementById('rtmin_'+m.key);
-    const maxTick=document.getElementById('rtmax_'+m.key);
-    if(minTick&&TGT_MIN[m.key]!=null){
-      const a=Math.min(TGT_MIN[m.key]/TGT[m.key],1)*2*Math.PI;
-      minTick.setAttribute('cx',(75+RR*Math.cos(a)).toFixed(1));
-      minTick.setAttribute('cy',(75+RR*Math.sin(a)).toFixed(1));
-      minTick.style.display='';
-    } else if(minTick) minTick.style.display='none';
-    if(maxTick&&TGT_MAX[m.key]!=null){
-      const a=Math.min(TGT_MAX[m.key]/TGT[m.key],1)*2*Math.PI;
-      maxTick.setAttribute('cx',(75+RR*Math.cos(a)).toFixed(1));
-      maxTick.setAttribute('cy',(75+RR*Math.sin(a)).toFixed(1));
-      maxTick.style.display='';
-    } else if(maxTick) maxTick.style.display='none';
-    const sp=Math.min(pct*100,100);
+    const sp=Math.min(ringPct*100,100);
     document.getElementById('msf_'+m.key).style.width=sp+'%';
     document.getElementById('msv_'+m.key).innerHTML='<strong>'+f1(v)+'</strong>/'+TGT[m.key]+'g';
   });
   const kp=Math.min(T.kcal/TGT.kcal*100,100);
+  const kRatio=TGT.kcal>0?T.kcal/TGT.kcal:0;
   document.getElementById('kcalCur').textContent=Math.round(T.kcal).toLocaleString();
   document.getElementById('kcalTgt').textContent='/ '+TGT.kcal.toLocaleString()+' kcal';
-  document.getElementById('kcalFill').style.width=kp+'%';
+  const _kFill=document.getElementById('kcalFill');
+  _kFill.style.width=kp+'%';
+  _kFill.style.background=kRatio>1.1?'var(--c-redline)':kRatio>1.0?'var(--c-warn)':'';
   const kr=TGT.kcal-T.kcal;
   document.getElementById('kcalRem').textContent=kr>=0?Math.round(kr).toLocaleString():'+'+Math.round(-kr).toLocaleString()+' over';
+  document.getElementById('kcalRem').style.color=kRatio>1.1?'var(--c-redline)':kRatio>1.0?'var(--c-warn)':'';
   document.getElementById('sKcal').textContent=Math.round(T.kcal).toLocaleString()+' kcal';
-  // Kcal range zone + tick marks
+  // Kcal zone bands + tick marks
   const _kMin=TGT_MIN.kcal, _kMax=TGT_MAX.kcal;
-  const _rz=document.getElementById('kcalRangeZone');
+  const _gz=document.getElementById('kcalGreenZone');
+  const _rzRed=document.getElementById('kcalRedZone');
   const _tMin=document.getElementById('kcalTickMin'),_tMax=document.getElementById('kcalTickMax');
   const _ri=document.getElementById('kcalRangeInfo');
-  if(_kMin!=null&&TGT.kcal&&_rz){
+  if(_kMin!=null&&TGT.kcal){
     const minPct=Math.min(_kMin/TGT.kcal*100,100);
     const maxPct=_kMax!=null?Math.min(_kMax/TGT.kcal*100,100):100;
-    _rz.style.display='block';_rz.style.left=minPct+'%';_rz.style.width=(maxPct-minPct)+'%';
-    if(_tMin){_tMin.style.display='block';_tMin.style.left=minPct+'%';}
-    if(_tMax&&_kMax!=null){_tMax.style.display='block';_tMax.style.left=Math.min(maxPct,100)+'%';}
+    if(_gz){_gz.style.display='block';_gz.style.left=minPct+'%';_gz.style.width=(maxPct-minPct)+'%';}
+    if(_rzRed){
+      if(_kMax!=null&&maxPct<100){_rzRed.style.display='block';_rzRed.style.left=maxPct+'%';_rzRed.style.width=(100-maxPct)+'%';}
+      else _rzRed.style.display='none';
+    }
+    if(_tMin){_tMin.style.display='block';_tMin.style.left=minPct+'%';_tMin.style.background='var(--green)';}
+    if(_tMax&&_kMax!=null){_tMax.style.display='block';_tMax.style.left=Math.min(maxPct,100)+'%';_tMax.style.background='var(--c-redline)';}
     else if(_tMax)_tMax.style.display='none';
     if(_ri){_ri.style.display='flex';
       const _ml=document.getElementById('kcalMinLabel'),_mxl=document.getElementById('kcalMaxLabel');
       if(_ml)_ml.textContent='min '+_kMin.toLocaleString()+' kcal';
       if(_mxl)_mxl.textContent=_kMax!=null?'max '+_kMax.toLocaleString()+' kcal':'';}
   } else {
-    if(_rz)_rz.style.display='none';if(_tMin)_tMin.style.display='none';
-    if(_tMax)_tMax.style.display='none';if(_ri)_ri.style.display='none';
+    if(_gz)_gz.style.display='none';if(_rzRed)_rzRed.style.display='none';
+    if(_tMin)_tMin.style.display='none';if(_tMax)_tMax.style.display='none';
+    if(_ri)_ri.style.display='none';
   }
   renderTable();
   renderWeeklySummary();
@@ -1726,7 +1743,7 @@ function renderTable(){
   const cf=document.getElementById('filterCat').value;
   let rows=cf?meals.filter(m=>m.cat===cf):meals;
   if(!rows.length){
-    b.innerHTML='<tr><td colspan="12"><div class="empty-row"><div class="ei">No meals logged yet</div><p>Click <strong>+ Add Meal</strong> to start</p></div></td></tr>';
+    b.innerHTML='<tr><td colspan="11"><div class="empty-row"><div class="ei">No meals logged yet</div><p>Click <strong>+ Add Meal</strong> to start</p></div></td></tr>';
     return;
   }
   // Update sort indicators on headers
@@ -1755,20 +1772,25 @@ function renderTable(){
   // update header checkbox visibility
   const chkHead=document.getElementById('logChkHead');
   if(chkHead)chkHead.style.display=showChk?'':'none';
-  b.innerHTML=indexed.map(({m,ri},i)=>{
+  const catCls=c=>['breakfast','lunch','dinner','snack'].includes(c)?c:'snack';
+  b.innerHTML=indexed.map(({m,ri})=>{
     const sel=logMultiSel.has(ri);
-    return `<tr data-ri="${ri}" class="${sel?'row-selected':''}">
+    const cc=catCls(m.cat);
+    const pBar=(v,t,col)=>`<div class="macro-bar-mini" style="width:${Math.min((+v||0)/(t||1)*100,100).toFixed(1)}%;background:${col}"></div>`;
+    return `<tr data-ri="${ri}" data-cat="${cc}" class="${sel?'row-selected':''}">
       ${showChk?`<td class="chk"><input type="checkbox" ${sel?'checked':''} onchange="logToggle(${ri},this.checked)" style="cursor:pointer;accent-color:var(--accent)"></td>`:''}
-      <td class="rn">${i+1}</td>
+      <td class="cat-strip ${cc}"></td>
       <td class="tc">${m.time||'—'}</td>
-      <td><span class="badge ${['breakfast','lunch','dinner','snack'].includes(m.cat)?m.cat:'snack'}">${CAT[m.cat]||m.cat||'—'}</span></td>
-      <td><div class="food-name">${esc(m.name)}</div>${m.notes?'<div class="sub">'+esc(m.notes)+'</div>':''}</td>
-      <td><div class="sub">${m.serving} ${esc(m.unit)}</div></td>
-      <td class="nr ck">${f1(m.kcal)}</td>
-      <td class="nr cp">${f1(m.protein)}g</td>
-      <td class="nr cf">${f1(m.fat)}g</td>
-      <td class="nr cc">${f1(m.carbs)}g</td>
-      <td class="nr cfi">${f1(m.fiber)}g</td>
+      <td><span class="badge ${cc}">${CAT_ICON[m.cat]||'🍽️'} ${CAT[m.cat]||m.cat||'—'}</span></td>
+      <td>
+        <div class="food-name">${esc(m.name)}</div>
+        <div class="sub">${m.serving} ${esc(m.unit)}${m.notes?' · '+esc(m.notes):''}</div>
+      </td>
+      <td class="nr ck meal-kcal-cell">${f1(m.kcal)}${pBar(m.kcal,TGT.kcal,'var(--mk)')}</td>
+      <td class="nr cp">${f1(m.protein)}g${pBar(m.protein,TGT.protein,'var(--mp)')}</td>
+      <td class="nr cf">${f1(m.fat)}g${pBar(m.fat,TGT.fat,'var(--mf)')}</td>
+      <td class="nr cc">${f1(m.carbs)}g${pBar(m.carbs,TGT.carbs,'var(--mc)')}</td>
+      <td class="nr cfi">${f1(m.fiber)}g${pBar(m.fiber,TGT.fiber,'var(--mfi)')}</td>
       <td class="ac"><div class="row-acts">
         <button class="act-btn" onclick="openEdit(${ri})">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2669,18 +2691,19 @@ function renderHistDetail(ds){
     const at=a.e.time||'00:00', bt=b.e.time||'00:00';
     return at<bt?-1:at>bt?1:0;
   });
+  const _hPBar=(v,t,col)=>`<div class="macro-bar-mini" style="width:${Math.min((+v||0)/(t||1)*100,100).toFixed(1)}%;background:${col}"></div>`;
+  const _hCC=c=>['breakfast','lunch','dinner','snack'].includes(c)?c:'snack';
   const rows=sorted.length
-    ? sorted.map(({e,i},rowNum)=>`<tr>
-        <td class="rn">${rowNum+1}</td>
+    ? sorted.map(({e,i})=>{const cc=_hCC(e.cat);return`<tr data-cat="${cc}">
+        <td class="cat-strip ${cc}"></td>
         <td class="tc">${e.time||'—'}</td>
-        <td><span class="badge ${['breakfast','lunch','dinner','snack'].includes(e.cat)?e.cat:'snack'}">${CAT[e.cat]||e.cat||'—'}</span></td>
-        <td><div class="food-name">${esc(e.name)}</div>${e.notes?'<div class="sub">'+esc(e.notes)+'</div>':''}</td>
-        <td><div class="sub">${e.serving} ${esc(e.unit)}</div></td>
-        <td class="nr ck">${f1(e.kcal)}</td>
-        <td class="nr cp">${f1(e.protein)}g</td>
-        <td class="nr cf">${f1(e.fat)}g</td>
-        <td class="nr cc">${f1(e.carbs)}g</td>
-        <td class="nr cfi">${f1(e.fiber)}g</td>
+        <td><span class="badge ${cc}">${CAT_ICON[e.cat]||'🍽️'} ${CAT[e.cat]||e.cat||'—'}</span></td>
+        <td><div class="food-name">${esc(e.name)}</div><div class="sub">${e.serving} ${esc(e.unit)}${e.notes?' · '+esc(e.notes):''}</div></td>
+        <td class="nr ck meal-kcal-cell">${f1(e.kcal)}${_hPBar(e.kcal,TGT.kcal,'var(--mk)')}</td>
+        <td class="nr cp">${f1(e.protein)}g${_hPBar(e.protein,TGT.protein,'var(--mp)')}</td>
+        <td class="nr cf">${f1(e.fat)}g${_hPBar(e.fat,TGT.fat,'var(--mf)')}</td>
+        <td class="nr cc">${f1(e.carbs)}g${_hPBar(e.carbs,TGT.carbs,'var(--mc)')}</td>
+        <td class="nr cfi">${f1(e.fiber)}g${_hPBar(e.fiber,TGT.fiber,'var(--mfi)')}</td>
         <td class="ac"><div class="row-acts">
           <button class="act-btn" onclick="openHistEdit('${ds}',${i})" title="Edit entry">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2689,8 +2712,8 @@ function renderHistDetail(ds){
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
           </button>
         </div></td>
-      </tr>`).join('')
-    : `<tr><td colspan="11"><div class="empty-row" style="padding:28px"><p>No entries for this date</p></div></td></tr>`;
+      </tr>`;}).join('')
+    : `<tr><td colspan="10"><div class="empty-row" style="padding:28px"><p>No entries for this date</p></div></td></tr>`;
 
   document.getElementById('histDetail').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
@@ -2721,7 +2744,7 @@ function renderHistDetail(ds){
     <div class="tcard">
       <div class="tcard-toolbar"><div class="tcard-title">${entries.length} entries · ${label}${isToday?' (Today)':''}</div></div>
       <table>
-        <thead><tr><th style="width:34px">#</th><th style="width:58px">Time</th><th>Category</th><th>Food Item</th><th>Serving</th><th class="nr ck">kcal</th><th class="nr cp">Protein</th><th class="nr cf">Fat</th><th class="nr cc">Carbs</th><th class="nr cfi">Fiber</th><th class="ac"></th></tr></thead>
+        <thead><tr><th class="cat-strip-head"></th><th style="width:58px">Time</th><th>Category</th><th>Food Item</th><th class="nr ck">kcal</th><th class="nr cp">Protein</th><th class="nr cf">Fat</th><th class="nr cc">Carbs</th><th class="nr cfi">Fiber</th><th class="ac"></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;

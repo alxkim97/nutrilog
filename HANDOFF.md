@@ -1,7 +1,7 @@
 # NutriLog — Session Handoff
 
-**Last updated:** 2026-05-20 (Work PC)
-**Current version:** v2.3.5
+**Last updated:** 2026-05-23 (Condo PC)
+**Current version:** v2.5.0
 **Branch:** main
 **Supabase project:** lifelog (renamed from nutrilog — dashboard only, no code change)
 
@@ -12,7 +12,7 @@
 NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vanilla HTML/CSS/JS, no framework. Data stored locally as JSON + optional Supabase cloud sync.
 
 **Key files:**
-- `src/app.js` — 4,400+ line renderer (all UI + logic)
+- `src/app.js` — 4,500+ line renderer (all UI + logic)
 - `src/styles.css` — dark/light theme via CSS custom properties
 - `src/index.html` — HTML shell
 - `main.js` — Electron main process (IPC, file ops, HEIC photos)
@@ -24,7 +24,7 @@ NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vani
 
 ---
 
-## What was done this session (2026-05-20, Work PC)
+## What was done this session (2026-05-23, Condo PC)
 
 ### UI polish + weekly macro breakdown (v2.3.5)
 

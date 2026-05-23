@@ -14,6 +14,7 @@
   --mc:#4ade80; --mc-dim:rgba(74,222,128,.13);
   --mfi:#c084fc; --mfi-dim:rgba(192,132,252,.13);
   --mk:#fb923c; --mk-dim:rgba(251,146,60,.13);
+  --c-warn:#fb923c; --c-redline:#f87171;
   --fd:'DM Serif Display',serif;
   --fb:'Outfit',sans-serif;
   --fm:'DM Mono',monospace;
@@ -36,7 +37,8 @@
   --mc-dim:rgba(22,163,74,.10); --mfi-dim:rgba(124,58,237,.10); --mk-dim:rgba(234,88,12,.10);
   --sh:0 2px 12px rgba(99,102,241,.08),0 1px 3px rgba(0,0,0,.04);
 }
-/* ── UI VARIANTS (dark mode only — light mode unchanged) ── */
+/* ── UI VARIANTS ── */
+/* Dark variants */
 body[data-variant="onyx"]:not(.light) {
   --bg:#0f0f0f; --bg2:#1c1c1e; --bg3:#2c2c2e; --bg4:#3a3a3c;
   --border:#38383a; --border2:#48484a;
@@ -57,6 +59,28 @@ body[data-variant="amber"]:not(.light) {
   --text:#f0eeee; --text2:#888080; --text3:#484040;
   --accent:#f0a030; --accent-dim:#3a2800; --accent-glow:rgba(240,160,48,.15);
   --r:6px; --rl:10px; --sh:0 4px 20px rgba(0,0,0,.65);
+}
+/* Light variants */
+body[data-variant="onyx"].light {
+  --bg:#f5f5f7; --bg2:#ffffff; --bg3:#f0f0f2; --bg4:#e8e8ea;
+  --border:#d8d8dc; --border2:#c0c0c8;
+  --text:#1d1d1f; --text2:#515154; --text3:#8e8e93;
+  --accent:#0071e3; --accent-dim:#e0f0ff; --accent-glow:rgba(0,113,227,.1);
+  --r:14px; --rl:22px;
+}
+body[data-variant="linear"].light {
+  --bg:#f5f7ff; --bg2:#ffffff; --bg3:#eef0fc; --bg4:#e4e8f8;
+  --border:#d4d8f4; --border2:#c0c8ee;
+  --text:#0d0f28; --text2:#404470; --text3:#8088b8;
+  --accent:#4c5bff; --accent-dim:#eaebff; --accent-glow:rgba(76,91,255,.1);
+  --r:8px; --rl:12px;
+}
+body[data-variant="amber"].light {
+  --bg:#fdf8ee; --bg2:#fffdf5; --bg3:#f8f0da; --bg4:#f0e4c0;
+  --border:#e8d8a8; --border2:#d8c080;
+  --text:#2a1e06; --text2:#6b4e18; --text3:#a07830;
+  --accent:#c17800; --accent-dim:#fef3c7; --accent-glow:rgba(193,120,0,.12);
+  --r:6px; --rl:10px;
 }
 /* Variant swatch cards in Settings */
 .variant-swatch {
@@ -150,6 +174,13 @@ body[data-variant="amber"]:not(.light) .btn-accent { background:linear-gradient(
 .ring-card.fi .r-prog { filter:drop-shadow(0 0 6px var(--mfi)); }
 /* Slightly more visible track */
 .r-track { stroke-opacity:.35; }
+/* ── ZONE ARCS (tachometer-style dial sections) ── */
+.r-greenzone { fill:none; stroke:#22c55e; stroke-opacity:.32; }
+.r-redzone   { fill:none; stroke:#ef4444; stroke-opacity:.30; }
+.ring-card.state-warn .r-prog { stroke:var(--c-warn); filter:drop-shadow(0 0 8px var(--c-warn)); }
+.ring-card.state-redline .r-prog { stroke:var(--c-redline); filter:drop-shadow(0 0 10px var(--c-redline)); animation:rl-pulse 1.4s ease-in-out infinite; }
+.ring-card.state-redline { border-color:var(--c-redline) !important; box-shadow:0 0 0 1px var(--c-redline),0 4px 28px rgba(239,68,68,.22) !important; }
+@keyframes rl-pulse { 0%,100%{filter:drop-shadow(0 0 6px var(--c-redline));}50%{filter:drop-shadow(0 0 18px var(--c-redline));} }
 
 /* ── Sidebar: left-bar active indicator + spacing ── */
 .nav-item.active { box-shadow:inset 3px 0 0 var(--accent); }
@@ -361,10 +392,11 @@ input, select, textarea { font-family:var(--fb); }
 .kcal-bar-labels { display:flex; justify-content:space-between;
   font-family:var(--fm); font-size:10px; color:var(--text3); margin-bottom:4px; }
 .kcal-track-wrap { position:relative; }
-.kcal-track { height:8px; background:var(--bg4); border-radius:8px; overflow:hidden; position:relative; }
-.kcal-fill { height:100%; border-radius:8px; background:var(--mk); transition:width .7s ease; position:relative; z-index:1; }
-#kcalRangeZone { position:absolute;top:0;height:100%;background:rgba(62,207,142,.22);pointer-events:none;display:none; }
-.kcal-tick { position:absolute;top:-3px;width:2px;height:14px;border-radius:1px;pointer-events:none;display:none;z-index:4;transform:translateX(-50%); }
+.kcal-track { height:14px; background:var(--bg4); border-radius:8px; overflow:hidden; position:relative; box-shadow:inset 0 1px 3px rgba(0,0,0,.25); }
+.kcal-fill { height:100%; border-radius:8px; background:var(--mk); transition:width .7s ease, background .35s; position:relative; z-index:2; }
+.kcal-zone-green { position:absolute;top:0;height:100%;background:rgba(34,197,94,.20);pointer-events:none;display:none;z-index:1; }
+.kcal-zone-red   { position:absolute;top:0;height:100%;background:rgba(239,68,68,.18);pointer-events:none;display:none;z-index:1; }
+.kcal-tick { position:absolute;top:-4px;width:2px;height:22px;border-radius:1px;pointer-events:none;display:none;z-index:4;transform:translateX(-50%); }
 #kcalTickMin { background:var(--green); }
 #kcalTickMax { background:var(--red); }
 .kcal-range-info { display:none;justify-content:flex-end;gap:12px;font-family:var(--fm);font-size:9px;color:var(--text3);margin-top:3px; }
@@ -383,7 +415,7 @@ input, select, textarea { font-family:var(--fb); }
 .wb-val { font-size:22px; font-weight:700; color:var(--text); font-family:var(--fm); }
 .wb-sub { font-size:11px; color:var(--text3); }
 .wb-range-lbl { font-size:11px; color:var(--text3); margin-bottom:5px; font-family:var(--fm); }
-.wb-bar-wrap { height:6px; background:var(--bg3); border-radius:3px; overflow:hidden; }
+.wb-bar-wrap { height:10px; background:var(--bg3); border-radius:6px; overflow:hidden; box-shadow:inset 0 1px 2px rgba(0,0,0,.2); }
 .wb-bar-fill { height:100%; border-radius:3px; transition:width .4s ease, background .3s; }
 .wb-bar-nums { display:flex; justify-content:space-between; margin-top:5px; font-size:11px; color:var(--text2); font-family:var(--fm); }
 .weekly-summary {
@@ -437,20 +469,32 @@ tbody tr { border-bottom:1px solid var(--border); transition:background var(--tr
 tbody tr:last-child { border-bottom:none; }
 tbody tr:hover { background:var(--bg3); }
 tbody tr.row-selected { background:var(--accent-glow); }
-td { padding:9px 12px; font-size:13px; vertical-align:middle; }
+td { padding:10px 12px; font-size:13px; vertical-align:middle; }
 td.nr { font-family:var(--fm); font-size:12px; color:var(--text2); }
 td.tc { font-family:var(--fm); font-size:11px; color:var(--text3); }
 td.rn { font-family:var(--fm); font-size:10px; color:var(--text3); }
-.food-name { font-weight:500; }
+.food-name { font-weight:600; font-size:13px; }
 .sub { font-family:var(--fm); font-size:10px; color:var(--text3); margin-top:1px; }
+/* Category strip column */
+th.cat-strip-head { width:3px; padding:0; }
+td.cat-strip { width:3px; padding:0; }
+td.cat-strip.breakfast { background:var(--orange); }
+td.cat-strip.lunch     { background:var(--green); }
+td.cat-strip.dinner    { background:var(--blue); }
+td.cat-strip.snack     { background:var(--yellow); }
+/* Improved badge */
 .badge {
-  display:inline-flex; align-items:center; padding:2px 7px; border-radius:5px;
-  font-size:11px; font-weight:500; font-family:var(--fm);
+  display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px;
+  font-size:11px; font-weight:600; white-space:nowrap;
 }
 .badge.breakfast { background:var(--orange-dim); color:var(--orange); }
 .badge.lunch     { background:var(--green-dim);  color:var(--green); }
 .badge.dinner    { background:var(--blue-dim);   color:var(--blue); }
 .badge.snack     { background:var(--yellow-dim); color:var(--yellow); }
+/* Kcal cell emphasis */
+.meal-kcal-cell { font-weight:700; font-size:13px; }
+/* Per-row macro contribution bar */
+.macro-bar-mini { height:2px; border-radius:1px; margin-top:3px; min-width:2px; opacity:.55; }
 .cp{color:var(--mp)} .cf{color:var(--mf)} .cc{color:var(--mc)} .cfi{color:var(--mfi)} .ck{color:var(--mk)}
 .row-acts { display:flex; gap:4px; opacity:0; transition:opacity var(--tr); }
 tbody tr:hover .row-acts { opacity:1; }
