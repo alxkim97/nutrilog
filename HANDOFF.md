@@ -1,7 +1,7 @@
 # NutriLog — Session Handoff
 
-**Last updated:** 2026-05-23 (Condo PC)
-**Current version:** v2.5.0
+**Last updated:** 2026-05-24 (Condo PC)
+**Current version:** v2.5.1
 **Branch:** main
 **Supabase project:** lifelog (renamed from nutrilog — dashboard only, no code change)
 
@@ -21,6 +21,26 @@ NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vani
 
 **Run:** `npm start` | **Build:** `npm run build:win`
 **Data dir (Windows):** `%APPDATA%\NutriLog\NutriLogData\`
+
+---
+
+## What was done this session (2026-05-24, Condo PC)
+
+### Bug fix + branding (v2.5.1)
+
+**Midnight rollover race condition (duplication fix):**
+- Root cause: 30s safety-net fires between the date flip (todayStr() → new date) and `meals=[]` clearing in the rollover. It pushed yesterday's meals to today's cloud slot, which `pullFromSupabase()` then restored as today's meals.
+- Fix 1: `_rolloverInProgress` flag blocks safety-net for the entire rollover window
+- Fix 2: `await Promise.all([sbSetSession(today,[]), sbDeleteDate(today)])` runs before `pullFromSupabase()` — wipes any stale cloud data written during the race before the pull can see it
+
+**Branding updates:**
+- Sidebar + auth screen subtitle: `MACRO TRACKER` → `CALORIE TRACKER`
+- In-app version label added to sidebar footer (reads `v2.5.1` via `electronAPI.getVersion()`)
+- Window title: `NutriLog v2.5.1` → `NutriLog — Calorie Tracker` (version only shown inside app)
+- Meal table mini macro bars: height 2px→3px, opacity 0.55→0.85, rounded, min-width 4px
+
+**Current stale data on your machine:**
+- If May 24 shows May 23 meals, use Clear All to reset today — the race fix prevents this from happening again
 
 ---
 
@@ -122,13 +142,12 @@ If `time` or `serving` strings differed even slightly between the two tables, de
 
 ## What to continue next session
 
-1. **Run dedup** — Settings → "🧹 Remove Duplicate Meals from History" if first run on condo PC
-2. **Test sync** — add a meal, wait 30s without pressing Ctrl+S, verify Supabase `updated_at` refreshes
-3. **Pending items:**
+1. **If May 24 shows May 23 meals** — use Clear All in today's log; the race fix prevents recurrence
+2. **Pending items:**
    - Streak row padding review (still pending)
    - Body composition trend chart (weight + body fat % overlaid on Projection page)
    - Meal timing analysis improvements (avg gap per day in Analysis)
-4. **Next features (priority order):**
+3. **Next features (priority order):**
    - Body recomp progress: overlay weight trend + body fat estimate on Projection
    - Quick-add from barcode scan (stretch goal)
    - Export to CSV (easy, useful)

@@ -495,7 +495,7 @@ td.cat-strip.snack     { background:var(--yellow); }
 /* Kcal cell emphasis */
 .meal-kcal-cell { font-weight:700; font-size:13px; }
 /* Per-row macro contribution bar */
-.macro-bar-mini { height:2px; border-radius:1px; margin-top:3px; min-width:2px; opacity:.55; }
+.macro-bar-mini { height:3px; border-radius:2px; margin-top:4px; min-width:4px; opacity:.85; }
 .cp{color:var(--mp)} .cf{color:var(--mf)} .cc{color:var(--mc)} .cfi{color:var(--mfi)} .ck{color:var(--mk)}
 .row-acts { display:flex; gap:4px; opacity:0; transition:opacity var(--tr); }
 tbody tr:hover .row-acts { opacity:1; }
