@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.5.0",
-  "description": "NutriLog v2.5.0 — redline macro zones, ring zone arcs, meal list redesign, kcal bar, light theme variants",
+  "version": "2.5.1",
+  "description": "NutriLog v2.5.1 — midnight rollover race fix, calorie tracker branding, version label",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

@@ -315,6 +315,7 @@ input, select, textarea { font-family:var(--fb); }
   background:var(--accent-dim); border-color:var(--accent-dim); color:var(--accent);
 }
 .sidebar-footer { padding:10px; border-top:1px solid var(--border); flex-shrink:0; }
+.app-version { font-family:var(--fm); font-size:10px; color:var(--text3); letter-spacing:.4px; padding:0 4px 8px; opacity:.6; }
 .ms-box { background:var(--bg3); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
 .ms-head { display:flex; align-items:center; justify-content:space-between; padding:8px 12px 6px; }
 .ms-label { font-size:10px; color:var(--text3); font-family:var(--fm); text-transform:uppercase; letter-spacing:.5px; }

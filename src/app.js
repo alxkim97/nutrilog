@@ -732,6 +732,13 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   calY=now.getFullYear(); calM=now.getMonth();
   document.getElementById('datePill').textContent=
     now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  // Version label in sidebar footer
+  if(IS_ELECTRON&&window.electronAPI?.getVersion){
+    window.electronAPI.getVersion().then(v=>{
+      const el=document.getElementById('appVersionLabel');
+      if(el)el.textContent='v'+v;
+    }).catch(()=>{});
+  }
   // Restore persisted theme + variant before first render to avoid flash
   const _savedTheme=localStorage.getItem('nutrilog_theme');
   if(_savedTheme==='light'){isDark=false;document.body.classList.add('light');}
