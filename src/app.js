@@ -161,6 +161,7 @@ async function forceSyncNow(){
 let _lastSyncedAt=null; // tracks last successful cloud write
 let _periodicSyncRunning=false;
 let _pullInProgress=false;
+let _rolloverInProgress=false;
 
 let _displayName=''; // persisted in settings, overrides email in sync badge
 function syncName(){ return _displayName||_supaUser?.user_metadata?.name||_supaUser?.email?.split('@')[0]||'Synced'; }
@@ -644,7 +645,7 @@ let _cloudDirty=false; // true when local meals are ahead of cloud
 // Runs unconditionally — does NOT rely on _cloudDirty or _syncEnabled flags so it
 // cannot be silenced by a failed-but-resolved Promise clearing the flag prematurely.
 setInterval(async()=>{
-  if(!meals.length||!_supaUser)return;
+  if(!meals.length||!_supaUser||_rolloverInProgress)return;
   const today=todayStr();
   try{
     const snap=[...meals]; // snapshot so concurrent adds don't mutate mid-push
@@ -824,6 +825,7 @@ function tick(){
 }
 
 async function handleDayRollover(){
+  _rolloverInProgress=true;
   try{
     const today=_currentDateStr;
     const prevDate=new Date();prevDate.setDate(prevDate.getDate()-1);
@@ -841,22 +843,22 @@ async function handleDayRollover(){
       await Store.set('nutrilog_history',h);
       Object.assign(histIdx,h);
     }
-    // CRITICAL: clear meals and write to disk BEFORE any cloud ops.
-    // The safety-net fires every 30s — if it runs while meals still holds yesterday's
-    // data but todayStr() already returned the new date, it would write yesterday's
-    // meals into today's cloud session. Clearing first makes the safety-net a no-op.
     meals=[];
     await Store.set('nutrilog_v1',{ts:Date.now(),date:today,meals:[]});
     render();
     toast('New day started — yesterday archived 📅','info');
-    // Cloud ops are now safe: meals is empty so safety-net won't push stale data
     if(_supaUser&&_syncEnabled){
-      // Overwrite any stale cloud session for new day (handles midnight race survivor)
-      sbSetSession(today,[]).catch(()=>{});
-      // Sync history to cloud in background
+      // Await both cleanup ops before pulling — prevents stale midnight race data
+      // (safety-net may have pushed yesterday's meals to today's cloud slot between
+      // the date flip and meals being cleared above) from surfacing in the pull.
+      await Promise.all([
+        sbSetSession(today,[]).catch(()=>{}),
+        sbDeleteDate(today).catch(()=>{})
+      ]);
       pullFromSupabase().catch(e=>console.warn('Post-rollover sync failed',e));
     }
   }catch(e){console.warn('handleDayRollover error',e);}
+  finally{_rolloverInProgress=false;}
 }
 
 /* ═══ NAV ═══ */
