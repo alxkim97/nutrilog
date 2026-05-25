@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.5.1",
-  "description": "NutriLog v2.5.1 — midnight rollover race fix, calorie tracker branding, version label",
+  "version": "2.5.2",
+  "description": "NutriLog v2.5.2 — Enter key confirms in all modals",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
