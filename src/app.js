@@ -773,6 +773,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   buildSidebarRows();
   await indexHistory();
   render();
+  renderStatsDashboard();
   await autoLoad();
   updateCalc();
   updateMacroCalc();
@@ -880,6 +881,7 @@ function showPage(name,el){
   if(name==='foods'){renderFoodDb();}
   if(name==='analysis'){renderAnalysis();}
   if(name==='projection'){renderProjection();}
+  if(name==='settings'){renderStatsDashboard();}
 }
 
 /* ═══ RINGS ═══ */
@@ -923,7 +925,8 @@ function buildRings(){
         </div>
         <div class="ring-range" id="rrange_${m.key}" style="font-size:10px;color:var(--text3);font-family:var(--fm);margin-top:2px;"></div>
       </div>
-      <div style="display:none" id="rof_${m.key}"></div>`;
+      <div style="display:none" id="rof_${m.key}"></div>
+      <canvas class="spark-line" id="spark_${m.key}" width="84" height="14"></canvas>`;
     // Drag-and-drop handlers
     el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',m.key);el.style.opacity='.5';});
     el.addEventListener('dragend',()=>{el.style.opacity='';document.querySelectorAll('.ring-card').forEach(c=>c.classList.remove('drag-over'));});
@@ -1041,6 +1044,8 @@ function render(){
   renderWeeklySummary();
   renderWeekBudget();
   renderRecentMeals();
+  renderDailySummary();
+  renderSparklines();
   const n=meals.length;
   document.getElementById('entryCount').textContent=n+' entr'+(n===1?'y':'ies');
   document.getElementById('todayBadge').textContent=n;
@@ -2298,9 +2303,27 @@ document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))acHide();
 
 /* ═══ FOOD DATABASE PAGE ═══ */
 let dbFilteredCache=[];
+function clearDbFilters(){
+  ['dbFltMinProt','dbFltMaxKcal','dbFltMaxCarbs','dbFltMaxFat','dbFltMinFiber'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  renderFoodDb();
+}
 function renderFoodDb(){
   const q=(document.getElementById('dbSearch')?.value||'').toLowerCase();
-  dbFilteredCache=foodLib.filter(f=>f.name.toLowerCase().includes(q));
+  const minProt=parseFloat(document.getElementById('dbFltMinProt')?.value)||0;
+  const maxKcal=parseFloat(document.getElementById('dbFltMaxKcal')?.value)||Infinity;
+  const maxCarbs=parseFloat(document.getElementById('dbFltMaxCarbs')?.value)||Infinity;
+  const maxFat=parseFloat(document.getElementById('dbFltMaxFat')?.value)||Infinity;
+  const minFiber=parseFloat(document.getElementById('dbFltMinFiber')?.value)||0;
+  dbFilteredCache=foodLib.filter(f=>
+    f.name.toLowerCase().includes(q)&&
+    (+f.protein||0)>=minProt&&
+    (+f.kcal||0)<=maxKcal&&
+    (+f.carbs||0)<=maxCarbs&&
+    (+f.fat||0)<=maxFat&&
+    (+f.fiber||0)>=minFiber
+  );
   document.getElementById('dbCount').textContent=dbFilteredCache.length+' item'+(dbFilteredCache.length!==1?'s':'');
   const b=document.getElementById('dbBody');
   if(!dbFilteredCache.length){b.innerHTML='<tr><td colspan="11"><div class="empty-row"><div class="ei">No items found</div></div></td></tr>';return;}
@@ -3095,9 +3118,13 @@ function renderAnalysis(){
 
   // ── Meal Timing ──
   renderMealTiming(activeDays);
+  // ── 12-month chart ──
+  render12MonthChart();
   // ── Heatmap + Achievements (use full history, not just period) ──
   renderHeatmap();
   renderAchievements();
+  // ── Best Day Records ──
+  renderBestDayRecords();
 }
 
 /* ── Achievements ── */
@@ -4381,6 +4408,225 @@ function toast(msg,type='info'){
   const el=document.getElementById('toast');
   el.textContent=msg;el.className='toast '+type+' show';
   clearTimeout(ttmr);ttmr=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+/* ═══ DAILY SUMMARY CARD ═══ */
+let _dailySummaryOpen=false;
+function toggleDailySummary(){
+  _dailySummaryOpen=!_dailySummaryOpen;
+  const el=document.getElementById('dailySummaryCard');
+  if(el)el.style.display=_dailySummaryOpen?'':'none';
+  const btn=document.getElementById('ds-toggle');
+  if(btn)btn.classList.toggle('active',_dailySummaryOpen);
+  if(_dailySummaryOpen)renderDailySummary();
+}
+function renderDailySummary(){
+  if(!_dailySummaryOpen)return;
+  const el=document.getElementById('dailySummaryBody');
+  if(!el)return;
+  const T=totals();
+  const now=new Date();
+  const minOfDay=now.getHours()*60+now.getMinutes();
+  const projected=minOfDay>90?Math.round(T.kcal/(minOfDay/1440)):null;
+  const cssV=getComputedStyle(document.documentElement);
+  const green=cssV.getPropertyValue('--green').trim()||'#3ecf8e';
+  const macros=[
+    {lbl:'Calories',val:Math.round(T.kcal),tgt:TGT.kcal,unit:'kcal',col:cssV.getPropertyValue('--accent').trim()||'#7c6af7',hit:Math.round(T.kcal)>=TGT.kcal},
+    {lbl:'Protein', val:f1(T.protein), tgt:TGT.protein, unit:'g', col:cssV.getPropertyValue('--mp').trim()||'#6ab4f7', hit:T.protein>=TGT.protein},
+    {lbl:'Fat',     val:f1(T.fat),     tgt:TGT.fat,     unit:'g', col:cssV.getPropertyValue('--mf').trim()||'#f7c76a', hit:T.fat>=TGT.fat},
+    {lbl:'Carbs',   val:f1(T.carbs),   tgt:TGT.carbs,   unit:'g', col:cssV.getPropertyValue('--mc').trim()||'#3ecf8e', hit:T.carbs>=TGT.carbs},
+    {lbl:'Fiber',   val:f1(T.fiber),   tgt:TGT.fiber,   unit:'g', col:cssV.getPropertyValue('--mfi').trim()||'#a78bfa', hit:T.fiber>=TGT.fiber},
+  ];
+  const items=macros.map(m=>`<div class="ds-item">
+    <div class="ds-icon" style="color:${m.hit?green:'var(--text3)'}">${m.hit?'✓':'✗'}</div>
+    <div class="ds-lbl">${m.lbl}</div>
+    <div class="ds-val" style="color:${m.col}">${m.val}<span class="ds-unit"> ${m.unit}</span></div>
+    <div class="ds-tgt">/ ${m.tgt}</div>
+  </div>`).join('');
+  let proj='';
+  if(projected){
+    const over=projected>TGT.kcal;
+    proj=`<div class="ds-projected">At this pace → <strong>~${projected.toLocaleString()} kcal</strong> by end of day <span style="color:${over?'var(--red)':'var(--green)'}">${over?'⚠️ over target':'✓ on track'}</span></div>`;
+  }
+  el.innerHTML=`<div class="ds-row">${items}</div>${proj}`;
+}
+
+/* ═══ MACRO SPARKLINES ═══ */
+function renderSparklines(){
+  const today=todayStr();
+  const liveHist={...histIdx};
+  if(meals.length)liveHist[today]=meals;
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const ds=d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+    days.push({ds,T:totals(liveHist[ds]||[])});
+  }
+  const cssV=getComputedStyle(document.documentElement);
+  const colMap={'--mp':'#6ab4f7','--mf':'#f7c76a','--mc':'#3ecf8e','--mfi':'#a78bfa'};
+  getMACROS().forEach(m=>{
+    const canvas=document.getElementById('spark_'+m.key);
+    if(!canvas)return;
+    const ctx=canvas.getContext('2d');
+    const W=canvas.offsetWidth||canvas.width;canvas.width=W;
+    const H=canvas.height||14;
+    ctx.clearRect(0,0,W,H);
+    const vals=days.map(d=>d.T[m.key]);
+    const max=Math.max(TGT[m.key]*1.3,...vals,1);
+    const col=cssV.getPropertyValue(m.col.replace('var(','').replace(')','').trim()).trim()||colMap[m.col.replace('var(','').replace(')','').trim()]||'#7c6af7';
+    const tgtY=H-Math.round(Math.min(TGT[m.key],max)/max*H);
+    ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;ctx.setLineDash([2,2]);
+    ctx.beginPath();ctx.moveTo(0,tgtY);ctx.lineTo(W,tgtY);ctx.stroke();ctx.setLineDash([]);
+    ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();
+    vals.forEach((v,i)=>{
+      const x=i===vals.length-1?W-1:Math.round(i/(vals.length-1)*(W-2));
+      const y=H-Math.round(Math.min(v,max)/max*(H-1));
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    const lastY=H-Math.round(Math.min(vals[vals.length-1],max)/max*(H-1));
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(W-1,lastY,2.5,0,Math.PI*2);ctx.fill();
+  });
+}
+
+/* ═══ 12-MONTH KCAL CHART ═══ */
+function render12MonthChart(){
+  const canvas=document.getElementById('monthlyKcalChart');
+  if(!canvas)return;
+  if(chartInstances.monthlyKcal)chartInstances.monthlyKcal.destroy();
+  const cssV=getComputedStyle(document.documentElement);
+  const accent=cssV.getPropertyValue('--accent').trim()||'#7c6af7';
+  const text3=cssV.getPropertyValue('--text3').trim()||'#5a5a70';
+  const border=cssV.getPropertyValue('--border').trim()||'#2e2e38';
+  const now=new Date();
+  const labels=[],avgs=[],counts=[];
+  for(let i=11;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const prefix=d.getFullYear()+'-'+pad2(d.getMonth()+1);
+    const days=Object.keys(histIdx).filter(k=>k.startsWith(prefix));
+    const kcals=days.map(k=>totals(histIdx[k]).kcal);
+    avgs.push(kcals.length?Math.round(kcals.reduce((a,b)=>a+b,0)/kcals.length):0);
+    counts.push(kcals.length);
+    labels.push(MONTHS[d.getMonth()].slice(0,3)+' '+(d.getFullYear()+'').slice(2));
+  }
+  chartInstances.monthlyKcal=new Chart(canvas.getContext('2d'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Avg Daily kcal',data:avgs,backgroundColor:accent+'88',borderRadius:5,borderWidth:0,yAxisID:'y'},
+        {label:'Days logged',data:counts,type:'line',borderColor:text3,borderDash:[4,4],borderWidth:1.5,pointRadius:3,pointBackgroundColor:text3,fill:false,yAxisID:'y2'},
+        {label:'Target',data:labels.map(()=>TGT.kcal),type:'line',borderColor:accent+'66',borderDash:[5,5],borderWidth:1,pointRadius:0,fill:false,yAxisID:'y'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{
+        if(ctx.dataset.label==='Days logged')return 'Days: '+ctx.parsed.y;
+        return ctx.dataset.label+': '+ctx.parsed.y.toLocaleString()+' kcal';
+      }}}},
+      scales:{
+        x:{ticks:{color:text3,font:{size:10}},grid:{display:false}},
+        y:{ticks:{color:text3,font:{size:10},callback:v=>v.toLocaleString()},grid:{color:border},title:{display:true,text:'kcal',color:text3,font:{size:9}}},
+        y2:{position:'right',ticks:{color:text3,font:{size:10}},grid:{display:false},title:{display:true,text:'days',color:text3,font:{size:9}}}
+      }
+    }
+  });
+}
+
+/* ═══ BEST DAY RECORDS ═══ */
+function renderBestDayRecords(){
+  const el=document.getElementById('bestDayRecords');
+  if(!el)return;
+  const liveHist={...histIdx};
+  const today=todayStr();
+  if(meals.length)liveHist[today]=meals;
+  const loggedDates=Object.keys(liveHist).filter(d=>(liveHist[d]||[]).length>0);
+  if(!loggedDates.length){el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0">No history yet — start logging to set records!</div>';return;}
+  let bestKcal={v:0,d:''},bestProt={v:0,d:''},bestFiber={v:0,d:''},mostEnt={v:0,d:''},mostVar={v:0,d:''};
+  loggedDates.forEach(ds=>{
+    const ents=liveHist[ds]||[];
+    const T=totals(ents);
+    if(T.kcal>bestKcal.v)bestKcal={v:Math.round(T.kcal),d:ds};
+    if(T.protein>bestProt.v)bestProt={v:f1(T.protein),d:ds};
+    if(T.fiber>bestFiber.v)bestFiber={v:f1(T.fiber),d:ds};
+    if(ents.length>mostEnt.v)mostEnt={v:ents.length,d:ds};
+    const variety=new Set(ents.map(e=>e.name)).size;
+    if(variety>mostVar.v)mostVar={v:variety,d:ds};
+  });
+  const fmtD=ds=>{const d=new Date(ds+'T00:00:00');return MONTHS[d.getMonth()].slice(0,3)+' '+d.getDate()+', '+d.getFullYear();};
+  const recs=[
+    {icon:'🔥',lbl:'Best Calorie Day',val:bestKcal.v.toLocaleString()+' kcal',d:bestKcal.d},
+    {icon:'💪',lbl:'Best Protein Day',val:bestProt.v+'g protein',d:bestProt.d},
+    {icon:'🌾',lbl:'Best Fiber Day',val:bestFiber.v+'g fiber',d:bestFiber.d},
+    {icon:'📝',lbl:'Most Entries',val:mostEnt.v+' entries',d:mostEnt.d},
+    {icon:'🥗',lbl:'Most Variety',val:mostVar.v+' unique foods',d:mostVar.d},
+  ];
+  el.innerHTML=recs.map(r=>`<div class="record-card">
+    <div class="record-icon">${r.icon}</div>
+    <div class="record-val">${r.val}</div>
+    <div class="record-lbl">${r.lbl}</div>
+    <div class="record-date">${r.d?fmtD(r.d):''}</div>
+  </div>`).join('');
+}
+
+/* ═══ STATS DASHBOARD ═══ */
+function renderStatsDashboard(){
+  const cardsEl=document.getElementById('statsDashCards');
+  if(!cardsEl)return;
+  const liveHist={...histIdx};
+  const today=todayStr();
+  if(meals.length)liveHist[today]=meals;
+  const loggedDates=Object.keys(liveHist).filter(d=>(liveHist[d]||[]).length>0).sort();
+  const totalDays=loggedDates.length;
+  const totalEntries=Object.values(liveHist).reduce((a,e)=>a+(e?.length||0),0);
+  const uniqueFoods=new Set(Object.values(liveHist).flat().map(e=>e.name)).size;
+  const dayTotals=loggedDates.map(d=>totals(liveHist[d]||[]));
+  const avgKcal=dayTotals.length?Math.round(dayTotals.reduce((a,t)=>a+t.kcal,0)/dayTotals.length):0;
+  const avgProt=dayTotals.length?(dayTotals.reduce((a,t)=>a+t.protein,0)/dayTotals.length).toFixed(1):0;
+  let best=0,cur=0,prevD=null;
+  loggedDates.forEach(d=>{
+    const dt=new Date(d+'T00:00:00');
+    if(prevD){cur=Math.round((dt-prevD)/86400000)===1?cur+1:1;}else cur=1;
+    if(cur>best)best=cur;prevD=dt;
+  });
+  const statData=[
+    {icon:'📅',val:totalDays,lbl:'Days Logged'},
+    {icon:'🍽️',val:totalEntries.toLocaleString(),lbl:'Total Entries'},
+    {icon:'🔥',val:best,lbl:'Best Streak'},
+    {icon:'⚡',val:avgKcal.toLocaleString(),lbl:'Avg Daily kcal'},
+    {icon:'💪',val:avgProt+'g',lbl:'Avg Protein'},
+    {icon:'🥗',val:uniqueFoods,lbl:'Unique Foods'},
+  ];
+  cardsEl.innerHTML=statData.map(c=>`<div class="stat-card">
+    <div class="stat-icon">${c.icon}</div>
+    <div class="stat-val">${c.val}</div>
+    <div class="stat-lbl">${c.lbl}</div>
+  </div>`).join('');
+  // Top 10 foods by frequency
+  const foodCount={};
+  Object.values(liveHist).flat().forEach(e=>{foodCount[e.name]=(foodCount[e.name]||0)+1;});
+  const topFoods=Object.entries(foodCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const maxCnt=topFoods[0]?.[1]||1;
+  const topEl=document.getElementById('statsTopFoods');
+  if(topEl)topEl.innerHTML=topFoods.length?topFoods.map(([name,cnt])=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+      <div style="font-size:11px;color:var(--text2);width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(name)}">${esc(name)}</div>
+      <div style="flex:1;background:var(--bg4,var(--bg3));border-radius:3px;height:6px;overflow:hidden;"><div style="width:${(cnt/maxCnt*100).toFixed(1)}%;height:100%;background:var(--accent);border-radius:3px;"></div></div>
+      <div style="font-size:10px;color:var(--text3);width:28px;text-align:right;">×${cnt}</div>
+    </div>`).join(''):'<div style="color:var(--text3);font-size:12px">No data yet</div>';
+  // Day-of-week activity
+  const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const dowC=[0,0,0,0,0,0,0];
+  loggedDates.forEach(d=>{dowC[new Date(d+'T00:00:00').getDay()]++;});
+  const maxDow=Math.max(...dowC,1);
+  const dowEl=document.getElementById('statsDayOfWeek');
+  if(dowEl)dowEl.innerHTML=`<div style="display:flex;gap:4px;align-items:flex-end;height:64px;">
+    ${dowC.map((c,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+      <div style="font-size:9px;color:var(--text3);font-family:var(--fm);">${c>0?c:''}</div>
+      <div style="background:var(--accent);width:100%;border-radius:3px 3px 0 0;height:${Math.round(c/maxDow*42)}px;min-height:${c>0?2:0}px;opacity:.8;"></div>
+      <div style="font-size:9px;color:var(--text3);">${DOW[i]}</div>
+    </div>`).join('')}
+  </div>`;
 }
 
 /* ═══ KEYBOARD ═══ */

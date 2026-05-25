@@ -220,10 +220,12 @@
   <!-- TODAY -->
   <div class="page active" id="page-today">
     <div class="rings-row" id="ringsRow"></div>
+    <div id="sparklinesRow" style="display:flex;gap:0;margin:-4px 0 6px;justify-content:stretch;"></div>
     <div class="kcal-bar">
       <div class="kcal-left">
-        <div class="kcal-label" style="display:flex;align-items:center;gap:8px;">TOTAL CALORIES
+        <div class="kcal-label" style="display:flex;align-items:center;gap:6px;">TOTAL CALORIES
           <button id="wk-budget-toggle" onclick="toggleWeekBudget()" class="btn btn-ghost" style="height:18px;font-size:9px;padding:0 7px;border-radius:4px;letter-spacing:.3px;" title="Toggle weekly calorie budget">Week</button>
+          <button id="ds-toggle" onclick="toggleDailySummary()" class="btn btn-ghost" style="height:18px;font-size:9px;padding:0 7px;border-radius:4px;letter-spacing:.3px;" title="Toggle daily macro summary">Summary</button>
         </div>
         <div class="kcal-num">
           <span class="kcal-cur" id="kcalCur">0</span>
@@ -275,6 +277,10 @@
           <div class="wb-sub" id="wbDaysLeft">— of 7 days</div>
         </div>
       </div>
+    </div>
+    <!-- DAILY SUMMARY CARD -->
+    <div id="dailySummaryCard" class="daily-summary-card" style="display:none;">
+      <div id="dailySummaryBody"></div>
     </div>
     <!-- WEEKLY SUMMARY -->
     <div class="weekly-summary">
@@ -495,6 +501,11 @@
         <div id="mealTimingBody" style="margin-top:12px;"></div>
       </div>
       <div class="analysis-card full">
+        <div class="analysis-card-title">12-Month Calorie Overview</div>
+        <div class="analysis-card-sub">Average daily calories per month vs your target</div>
+        <div class="chart-wrap" style="height:180px;margin-top:10px;"><canvas id="monthlyKcalChart"></canvas></div>
+      </div>
+      <div class="analysis-card full">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
             <div class="analysis-card-title">Food Log Heatmap</div>
@@ -519,6 +530,11 @@
         </div>
         <div class="achievement-grid" id="achievement-grid"></div>
       </div>
+      <div class="analysis-card full">
+        <div class="analysis-card-title">🏆 Personal Records</div>
+        <div class="analysis-card-sub">Your best single-day nutrition stats across all history</div>
+        <div id="bestDayRecords" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;"></div>
+      </div>
     </div>
   </div>
 
@@ -536,6 +552,16 @@
 
     <!-- FOOD LIBRARY TAB -->
     <div id="fdPanel-library">
+      <!-- Macro filter bar -->
+      <div class="db-macro-filter">
+        <span style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Filter:</span>
+        <div class="db-flt-group"><label>Protein ≥</label><input id="dbFltMinProt" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
+        <div class="db-flt-group"><label>Kcal ≤</label><input id="dbFltMaxKcal" type="number" min="0" placeholder="kcal" oninput="renderFoodDb()"></div>
+        <div class="db-flt-group"><label>Carbs ≤</label><input id="dbFltMaxCarbs" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
+        <div class="db-flt-group"><label>Fat ≤</label><input id="dbFltMaxFat" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
+        <div class="db-flt-group"><label>Fiber ≥</label><input id="dbFltMinFiber" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
+        <button class="btn btn-ghost" onclick="clearDbFilters()" style="height:24px;font-size:10px;padding:0 8px;margin-left:auto;">Clear</button>
+      </div>
       <div class="db-toolbar">
         <input class="db-search" id="dbSearch" type="text" placeholder="Search food items…" oninput="renderFoodDb()">
         <button class="btn btn-ghost" onclick="importFoodDb()">
@@ -601,6 +627,21 @@
   <div class="page" id="page-settings">
     <div class="sec-hdr"><div class="sec-title">Settings</div></div>
     <div class="settings-grid">
+      <!-- Stats Dashboard -->
+      <div class="settings-section" style="grid-column:1/-1;" id="statsDashSection">
+        <div class="settings-title">Overview</div>
+        <div class="stats-dash-cards" id="statsDashCards"></div>
+        <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;">Top 10 Foods (by frequency)</div>
+            <div id="statsTopFoods"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;">Most Active Day of Week</div>
+            <div id="statsDayOfWeek"></div>
+          </div>
+        </div>
+      </div>
       <!-- Appearance -->
       <div class="settings-section" style="grid-column:1/-1">
         <div class="settings-title">Appearance</div>

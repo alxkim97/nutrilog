@@ -1058,4 +1058,39 @@ tbody tr:hover .row-acts { opacity:1; }
 .achievement-icon{font-size:1.75rem;margin-bottom:6px;line-height:1;}
 .achievement-name{font-size:.72rem;font-weight:600;color:var(--text);margin-bottom:3px;}
 .achievement-desc{font-size:.62rem;color:var(--text3);line-height:1.35;}
+
+/* ── Daily Summary Card ── */
+.daily-summary-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 18px;margin-bottom:8px;}
+.ds-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.ds-item{display:flex;align-items:center;gap:5px;background:var(--bg3);border-radius:8px;padding:5px 10px;flex:1;min-width:100px;}
+.ds-icon{font-size:13px;font-weight:700;width:14px;flex-shrink:0;}
+.ds-lbl{font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;}
+.ds-val{font-size:13px;font-weight:700;font-family:var(--fm);margin-left:auto;}
+.ds-unit{font-size:10px;font-weight:400;color:var(--text3);}
+.ds-tgt{font-size:10px;color:var(--text3);flex-shrink:0;}
+.ds-projected{font-size:11px;color:var(--text2);font-family:var(--fm);padding-top:4px;border-top:1px solid var(--border);}
+
+/* ── Macro Sparklines ── */
+.spark-line{display:block;width:100%;height:14px;margin-top:4px;border-radius:2px;}
+
+/* ── Stats Dashboard ── */
+.stats-dash-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;}
+.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px 12px;text-align:center;}
+.stat-icon{font-size:1.4rem;margin-bottom:4px;}
+.stat-val{font-size:1.4rem;font-weight:700;font-family:var(--fm);color:var(--accent);line-height:1.1;}
+.stat-lbl{font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+
+/* ── Best Day Records ── */
+.record-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px 12px;text-align:center;}
+.record-icon{font-size:1.5rem;margin-bottom:4px;}
+.record-val{font-size:.95rem;font-weight:700;color:var(--accent);margin-bottom:2px;}
+.record-lbl{font-size:.68rem;color:var(--text2);font-weight:600;margin-bottom:3px;}
+.record-date{font-size:.6rem;color:var(--text3);font-family:var(--fm);}
+
+/* ── Food Macro Filter ── */
+.db-macro-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);margin-bottom:12px;}
+.db-macro-filter label{font-size:11px;color:var(--text2);white-space:nowrap;}
+.db-macro-filter input{width:58px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--fm);font-size:11px;padding:3px 6px;outline:none;}
+.db-macro-filter input:focus{border-color:var(--accent);}
+.db-flt-group{display:flex;align-items:center;gap:4px;}
 .achievement-progress{margin-top:5px;font-size:.6rem;color:var(--accent);font-family:var(--fm);}
