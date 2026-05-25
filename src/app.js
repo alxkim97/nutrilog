@@ -4405,8 +4405,8 @@ document.addEventListener('keydown',e=>{
   // Undo / Redo keyboard shortcuts (only when no modal is open)
   const anyModal=document.querySelector('.overlay.open,.conf-overlay.open');
   if(!anyModal){
-    if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key==='z'){e.preventDefault();undoLast();}
-    if((e.ctrlKey||e.metaKey)&&(e.shiftKey&&e.key==='z'||e.key==='y')){e.preventDefault();redoLast();}
+    if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key.toLowerCase()==='z'){e.preventDefault();undoLast();}
+    if((e.ctrlKey||e.metaKey)&&(e.shiftKey&&e.key.toLowerCase()==='z'||e.key.toLowerCase()==='y')){e.preventDefault();redoLast();}
   }
 });
 document.getElementById('mealOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
