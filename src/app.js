@@ -3115,7 +3115,7 @@ function renderAchievements(){
   const loggedDates=Object.keys(liveHist).filter(d=>(liveHist[d]||[]).length>0).sort();
   const totalDays=loggedDates.length;
   const totalEntries=Object.values(liveHist).reduce((a,e)=>a+(e?.length||0),0);
-  const totalCheckins=(typeof checkins!=='undefined'?checkins:[]).length;
+  const totalCheckins=getCheckins().length;
   const totalFoods=(typeof foodLib!=='undefined'?foodLib:[]).length;
 
   // Best logging streak
@@ -3707,7 +3707,7 @@ async function deduplicateHistory(showToast=true){
     if(!Array.isArray(entries)){cleaned[date]=entries;return;}
     const seen=new Set();
     const deduped=entries.filter(m=>{
-      const key=`${m.name}|${m.cat||''}|${String(m.serving||'')}`;
+      const key=`${m.name}|${m.cat||''}|${String(m.serving||'')}|${m.time||''}`;
       if(seen.has(key)){totalRemoved++;return false;}
       seen.add(key);
       return true;
@@ -3718,7 +3718,7 @@ async function deduplicateHistory(showToast=true){
   if(meals.length){
     const seen=new Set();
     meals=meals.filter(m=>{
-      const key=`${m.name}|${m.cat||''}|${String(m.serving||'')}`;
+      const key=`${m.name}|${m.cat||''}|${String(m.serving||'')}|${m.time||''}`;
       if(seen.has(key)){totalRemoved++;return false;}
       seen.add(key);
       return true;
@@ -4328,7 +4328,7 @@ async function applyTplToDate(dateStr,overrides={},skipHistUndo=false){
   const newMeals=t.meals.map(m=>({
     ...m,
     date:dateStr,
-    cat:overrides.cat||m.cat||'breakfast',
+    cat:overrides.cat||m.cat||m.category||'breakfast',
     time:overrides.time||m.time||nowTime(),
   }));
   if(dateStr===today){
