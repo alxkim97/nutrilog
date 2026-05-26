@@ -4425,11 +4425,34 @@ function renderDailySummary(){
   const el=document.getElementById('dailySummaryBody');
   if(!el)return;
   const T=totals();
-  const now=new Date();
-  const minOfDay=now.getHours()*60+now.getMinutes();
-  const projected=minOfDay>90?Math.round(T.kcal/(minOfDay/1440)):null;
   const cssV=getComputedStyle(document.documentElement);
   const green=cssV.getPropertyValue('--green').trim()||'#3ecf8e';
+  // Projection: today's total + historical avg for each unlogged meal category
+  const CATS=['breakfast','lunch','dinner','snack'];
+  const loggedCats=new Set(meals.map(m=>m.cat||'breakfast'));
+  const catKcalArr={breakfast:[],lunch:[],dinner:[],snack:[]};
+  Object.values(histIdx).forEach(dayMeals=>{
+    const byCat={};
+    dayMeals.forEach(m=>{const c=m.cat||'breakfast';byCat[c]=(byCat[c]||0)+(+m.kcal||0);});
+    CATS.forEach(c=>{if(byCat[c])catKcalArr[c].push(byCat[c]);});
+  });
+  const estimatedCats=[];
+  let projKcal=T.kcal;
+  CATS.forEach(c=>{
+    if(catKcalArr[c].length===0)return;
+    const avg=catKcalArr[c].reduce((a,b)=>a+b,0)/catKcalArr[c].length;
+    if(!loggedCats.has(c)){
+      // Category not logged at all today — add full historical average
+      projKcal+=avg;
+      estimatedCats.push(c);
+    } else if(c==='snack'){
+      // Snacks repeat throughout the day — add the gap if today's snack total is below avg
+      const todaySnackKcal=totals(meals.filter(m=>(m.cat||'breakfast')==='snack')).kcal;
+      const gap=avg-todaySnackKcal;
+      if(gap>30){projKcal+=gap;estimatedCats.push('more snacks');}
+    }
+  });
+  const projected=meals.length>0?Math.round(projKcal):null;
   const macros=[
     {lbl:'Calories',val:Math.round(T.kcal),tgt:TGT.kcal,unit:'kcal',col:cssV.getPropertyValue('--accent').trim()||'#7c6af7',hit:Math.round(T.kcal)>=TGT.kcal},
     {lbl:'Protein', val:f1(T.protein), tgt:TGT.protein, unit:'g', col:cssV.getPropertyValue('--mp').trim()||'#6ab4f7', hit:T.protein>=TGT.protein},
@@ -4446,7 +4469,8 @@ function renderDailySummary(){
   let proj='';
   if(projected){
     const over=projected>TGT.kcal;
-    proj=`<div class="ds-projected">At this pace → <strong>~${projected.toLocaleString()} kcal</strong> by end of day <span style="color:${over?'var(--red)':'var(--green)'}">${over?'⚠️ over target':'✓ on track'}</span></div>`;
+    const estNote=estimatedCats.length?`<span style="font-size:11px;color:var(--text3)"> (+ avg ${estimatedCats.join(', ')})</span>`:'';
+    proj=`<div class="ds-projected">Projected end of day → <strong>~${projected.toLocaleString()} kcal</strong>${estNote} <span style="color:${over?'var(--red)':'var(--green)'}">${over?'⚠️ over target':'✓ on track'}</span></div>`;
   }
   el.innerHTML=`<div class="ds-row">${items}</div>${proj}`;
 }
