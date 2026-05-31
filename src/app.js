@@ -11,6 +11,9 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const supa = (typeof supabase !== 'undefined') ? supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let _supaUser = null;
 let _syncEnabled = false;
+let _profiles = [{ id: 'alex', name: 'Alex' }];
+let _activeProfile = 'alex';
+let _activeProfileName = 'Alex';
 
 /* ── Auth helpers ── */
 let _authMode = 'signin'; // 'signin' | 'signup'
@@ -165,6 +168,147 @@ let _rolloverInProgress=false;
 
 let _displayName=''; // persisted in settings, overrides email in sync badge
 function syncName(){ return _displayName||_supaUser?.user_metadata?.name||_supaUser?.email?.split('@')[0]||'Synced'; }
+
+/* ── Profile system ── */
+function slugifyProfileName(name){
+  return name.toLowerCase().trim().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,20)||'profile';
+}
+function makeProfileId(name){
+  let base=slugifyProfileName(name);
+  let id=base; let n=1;
+  while(_profiles.some(p=>p.id===id)) id=base+'_'+(n++);
+  return id;
+}
+
+function updateProfileToggle(){
+  const container=document.getElementById('profileToggle');
+  if(container){
+    container.innerHTML=_profiles.map(p=>
+      `<button class="profile-btn${p.id===_activeProfile?' active':''}" onclick="switchProfile('${p.id}')">${p.name}</button>`
+    ).join('');
+  }
+  // Topbar profile pill — only show when there are multiple profiles
+  const pill=document.getElementById('activeProfilePill');
+  const pillName=document.getElementById('activeProfilePillName');
+  if(pill){
+    const multi=_profiles.length>1;
+    pill.style.display=multi?'flex':'none';
+    if(pillName)pillName.textContent=_activeProfileName;
+  }
+  renderProfileSettings();
+}
+
+function renderProfileSettings(){
+  const el=document.getElementById('profile-settings-list');
+  if(!el)return;
+  el.innerHTML=_profiles.map(p=>`
+    <div class="srow" style="gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;">
+        <div class="srow-label">${p.name}${p.id===_activeProfile?' <span style="color:var(--accent);font-size:10px;font-family:var(--fm);">● active</span>':''}</div>
+        <div class="srow-sub" style="font-family:var(--fm);">id: ${p.id}</div>
+      </div>
+      <input type="text" value="${p.name}" maxlength="20"
+        style="width:110px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:8px;font-size:12px;outline:none;text-align:right;"
+        onchange="renameProfile('${p.id}',this.value)">
+      ${_profiles.length>1?`<button class="btn btn-ghost danger" onclick="deleteProfile('${p.id}')" style="padding:5px 10px;font-size:12px;" title="Delete profile">✕</button>`:''}
+    </div>`
+  ).join('');
+}
+
+/* ── First-run setup ── */
+function maybeShowFirstRun(){
+  // Only show if this is a truly fresh install — one profile named 'alex' with no customisation
+  if(_profiles.length!==1||_profiles[0].id!=='alex')return;
+  // If history/settings exist, not a fresh install
+  const overlay=document.getElementById('firstRunScreen');
+  if(overlay)overlay.style.display='flex';
+}
+async function submitFirstRun(){
+  const name=(document.getElementById('firstRunName')?.value||'').trim()||'Me';
+  const id=makeProfileId(name);
+  // Update the default profile
+  const oldId=_profiles[0].id;
+  _profiles[0]={id,name};
+  _activeProfile=id;
+  _activeProfileName=name;
+  if(IS_ELECTRON){
+    await window.electronAPI.updateProfileName(oldId,name).catch(()=>{});
+    await window.electronAPI.setActiveProfile(id).catch(()=>{});
+  }
+  document.getElementById('firstRunScreen').style.display='none';
+  updateProfileToggle();
+  toast('Welcome, '+name+'! 👋','ok');
+}
+
+async function switchProfile(id){
+  if(id===_activeProfile)return;
+  const name=_profiles.find(p=>p.id===id)?.name||id;
+  // Show blocking overlay so stale data is never visible mid-switch
+  const overlay=document.getElementById('profileSwitchOverlay');
+  const label=document.getElementById('profileSwitchLabel');
+  if(overlay){overlay.style.display='flex';if(label)label.textContent='Switching to '+name+'…';}
+  try{
+    await saveSession().catch(()=>{});
+    if(IS_ELECTRON) await window.electronAPI.setActiveProfile(id).catch(()=>{});
+    _activeProfile=id;
+    _activeProfileName=name;
+    updateProfileToggle();
+    meals=[];histIdx={};
+    await loadSettings();
+    await initFoodLib();
+    await initTemplates();
+    try{dayNotes=(await Store.get('nutrilog_daynotes'))||{};}catch{dayNotes={};}
+    await indexHistory();
+    await autoLoad();
+    // Always land on Today so no page shows mixed data
+    const todayNav=document.getElementById('nav-today');
+    if(todayNav)showPage('today',todayNav);
+    buildRings();buildSidebarRows();render();
+    updateCalc();updateMacroCalc();
+    renderStatsDashboard();
+    renderQuickTemplates();renderRecentMeals();
+    toast('Switched to '+name,'ok');
+  }finally{
+    if(overlay)overlay.style.display='none';
+  }
+}
+
+async function renameProfile(id,name){
+  name=(name||'').trim();
+  if(!name)return;
+  const p=_profiles.find(p=>p.id===id);
+  if(!p)return;
+  p.name=name;
+  if(IS_ELECTRON) await window.electronAPI.updateProfileName(id,name).catch(()=>{});
+  if(id===_activeProfile)_activeProfileName=name;
+  updateProfileToggle();
+  toast('Profile renamed','ok');
+}
+
+async function addProfileFromInput(){
+  const input=document.getElementById('s-new-profile-name');
+  const name=(input?.value||'').trim();
+  if(!name){toast('Enter a name first','err');return;}
+  const id=makeProfileId(name);
+  const newProfile={id,name};
+  _profiles.push(newProfile);
+  if(IS_ELECTRON) await window.electronAPI.addProfile(newProfile).catch(()=>{});
+  if(input)input.value='';
+  updateProfileToggle();
+  toast(`Profile "${name}" added — switch to it to start tracking`,'ok');
+}
+
+async function deleteProfile(id){
+  if(_profiles.length<=1){toast('Cannot delete the only profile','err');return;}
+  if(id===_activeProfile){toast('Switch to another profile before deleting this one','err');return;}
+  const p=_profiles.find(p=>p.id===id);
+  showConf(`Delete "${p?.name||id}"?`,'Removes this profile from the sidebar. Cloud data is kept — you can restore it by adding the same profile name again.','Delete',async()=>{
+    _profiles=_profiles.filter(p=>p.id!==id);
+    if(IS_ELECTRON) await window.electronAPI.deleteProfile(id).catch(()=>{});
+    updateProfileToggle();
+    toast('Profile removed','ok');
+  });
+}
 function saveDisplayName(){
   _displayName=(document.getElementById('s-display-name')?.value||'').trim();
   // Persist immediately alongside settings without a full saveSettings() call
@@ -226,9 +370,9 @@ async function forcePushToCloud(){
     // Settings
     const sett=await Store._localGet('nutrilog_settings');
     if(sett&&!await sbSet('nutrilog_settings',sett))failures++;
-    // Food library
+    // Food library — shared across profiles
     const fl=await Store._localGet('nutrilog_foodlib');
-    if(fl&&!await sbSet('nutrilog_food_library',fl))failures++;
+    if(fl&&!await sbSetShared('nutrilog_food_library',fl))failures++;
     // Templates
     const tmpl=await Store._localGet('nutrilog_templates');
     if(tmpl&&!await sbSet('nutrilog_templates',tmpl))failures++;
@@ -279,7 +423,7 @@ function showSyncMenu(){
 async function sbGet(table){
   if(!_syncEnabled||!_supaUser)return null;
   try{
-    const {data,error}=await supa.from(table).select('data').eq('user_id',_supaUser.id).single();
+    const {data,error}=await supa.from(table).select('data').eq('user_id',_supaUser.id).eq('profile_id',_activeProfile).single();
     if(error&&error.code!=='PGRST116')throw error; // PGRST116 = no rows
     return data?.data||null;
   }catch(e){console.warn('sbGet',table,e);return null;}
@@ -288,7 +432,7 @@ async function sbGet(table){
 async function sbSet(table,value){
   if(!_syncEnabled||!_supaUser)return false;
   try{
-    await supa.from(table).upsert({user_id:_supaUser.id,data:value,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+    await supa.from(table).upsert({user_id:_supaUser.id,profile_id:_activeProfile,data:value,updated_at:new Date().toISOString()},{onConflict:'user_id,profile_id'});
     return true;
   }catch(e){
     console.warn('sbSet',table,e);
@@ -297,10 +441,31 @@ async function sbSet(table,value){
   }
 }
 
+// Shared (profile-independent) cloud get/set — used for food library
+async function sbGetShared(table){
+  if(!_syncEnabled||!_supaUser)return null;
+  try{
+    const {data,error}=await supa.from(table).select('data').eq('user_id',_supaUser.id).eq('profile_id','shared').single();
+    if(error&&error.code!=='PGRST116')throw error;
+    return data?.data||null;
+  }catch(e){console.warn('sbGetShared',table,e);return null;}
+}
+async function sbSetShared(table,value){
+  if(!_syncEnabled||!_supaUser)return false;
+  try{
+    await supa.from(table).upsert({user_id:_supaUser.id,profile_id:'shared',data:value,updated_at:new Date().toISOString()},{onConflict:'user_id,profile_id'});
+    return true;
+  }catch(e){
+    console.warn('sbSetShared',table,e);
+    appendSyncLog({type:'push_fail',table,error:e?.message||String(e),at:new Date().toISOString()});
+    return false;
+  }
+}
+
 async function sbGetSessions(date){
   if(!_syncEnabled||!_supaUser)return null;
   try{
-    const {data,error}=await supa.from('nutrilog_sessions').select('meals').eq('user_id',_supaUser.id).eq('date',date).single();
+    const {data,error}=await supa.from('nutrilog_sessions').select('meals').eq('user_id',_supaUser.id).eq('profile_id',_activeProfile).eq('date',date).single();
     if(error&&error.code!=='PGRST116')throw error;
     return data?.meals||null;
   }catch(e){return null;}
@@ -309,7 +474,7 @@ async function sbGetSessions(date){
 async function sbSetSession(date,mealsArr){
   if(!_syncEnabled||!_supaUser)return false;
   try{
-    const {error}=await supa.from('nutrilog_sessions').upsert({user_id:_supaUser.id,date,meals:mealsArr,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+    const {error}=await supa.from('nutrilog_sessions').upsert({user_id:_supaUser.id,profile_id:_activeProfile,date,meals:mealsArr,updated_at:new Date().toISOString()},{onConflict:'user_id,profile_id,date'});
     if(error)throw error;
     return true;
   }catch(e){
@@ -322,7 +487,7 @@ async function sbSetSession(date,mealsArr){
 async function sbGetHistory(){
   if(!_syncEnabled||!_supaUser)return null;
   try{
-    const {data,error}=await supa.from('nutrilog_history').select('date,meals').eq('user_id',_supaUser.id);
+    const {data,error}=await supa.from('nutrilog_history').select('date,meals').eq('user_id',_supaUser.id).eq('profile_id',_activeProfile);
     if(error)throw error;
     if(!data?.length)return null;
     const h={};data.forEach(r=>{h[r.date]=r.meals;});
@@ -333,9 +498,9 @@ async function sbGetHistory(){
 async function sbSetHistory(histObj){
   if(!_syncEnabled||!_supaUser)return false;
   try{
-    const rows=Object.entries(histObj).map(([date,meals])=>({user_id:_supaUser.id,date,meals,updated_at:new Date().toISOString()}));
+    const rows=Object.entries(histObj).map(([date,meals])=>({user_id:_supaUser.id,profile_id:_activeProfile,date,meals,updated_at:new Date().toISOString()}));
     if(!rows.length)return true;
-    const {error}=await supa.from("nutrilog_history").upsert(rows,{onConflict:"user_id,date"});
+    const {error}=await supa.from("nutrilog_history").upsert(rows,{onConflict:"user_id,profile_id,date"});
     if(error)throw error;
     return true;
   }catch(e){
@@ -348,14 +513,14 @@ async function sbSetHistory(histObj){
 async function sbDeleteDate(date){
   if(!_syncEnabled||!_supaUser)return;
   try{
-    await supa.from("nutrilog_history").delete().eq("user_id",_supaUser.id).eq("date",date);
+    await supa.from("nutrilog_history").delete().eq("user_id",_supaUser.id).eq("profile_id",_activeProfile).eq("date",date);
   }catch(e){console.warn("sbDeleteDate",e);}
 }
 
 async function sbDeleteSession(date){
   if(!_syncEnabled||!_supaUser)return;
   try{
-    await supa.from("nutrilog_sessions").delete().eq("user_id",_supaUser.id).eq("date",date);
+    await supa.from("nutrilog_sessions").delete().eq("user_id",_supaUser.id).eq("profile_id",_activeProfile).eq("date",date);
   }catch(e){console.warn("sbDeleteSession",e);}
 }
 
@@ -364,7 +529,7 @@ async function pullFromSupabase(){
   _pullInProgress=true;
   try{
     const [remSettings,remFoodLib,remHistory,remCheckins,remTemplates]=await Promise.all([
-      sbGet('nutrilog_settings'),sbGet('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates')
+      sbGet('nutrilog_settings'),sbGetShared('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates')
     ]);
     if(remSettings){await Store._localSet('nutrilog_settings',remSettings);}
     if(remFoodLib) {await Store._localSet('nutrilog_foodlib',remFoodLib);}
@@ -434,7 +599,7 @@ async function pullFromSupabase(){
     // the sessions table retains rows for all dates, so we can use it to fill history gaps.
     try{
       const {data:pastSess}=await supa.from('nutrilog_sessions')
-        .select('date,meals').eq('user_id',_supaUser.id).lt('date',todayStr());
+        .select('date,meals').eq('user_id',_supaUser.id).eq('profile_id',_activeProfile).lt('date',todayStr());
       if(pastSess?.length){
         const localH=(await Store._localGet('nutrilog_history'))||{};
         let changed=false;
@@ -484,9 +649,9 @@ async function pullFromSupabase(){
       if(todayMeals!==null){
         try{
           const {error:e1}=await supa.from('nutrilog_sessions')
-            .upsert({user_id:_supaUser.id,date:today,meals:mergedToday,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
+            .upsert({user_id:_supaUser.id,profile_id:_activeProfile,date:today,meals:mergedToday,updated_at:new Date().toISOString()},{onConflict:'user_id,profile_id,date'});
           const {error:e2}=await supa.from('nutrilog_history')
-            .upsert([{user_id:_supaUser.id,date:today,meals:mergedToday.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}],{onConflict:'user_id,date'});
+            .upsert([{user_id:_supaUser.id,profile_id:_activeProfile,date:today,meals:mergedToday.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}],{onConflict:'user_id,profile_id,date'});
           if(e1||e2)console.warn('Pull self-heal push partial failure',e1,e2);
         }catch(e){console.warn('Pull self-heal push failed',e);}
       }
@@ -545,7 +710,7 @@ const Store = {
       let ok=false;
       try{
         if(key==='nutrilog_settings')       ok=await sbSet('nutrilog_settings',value);
-        else if(key==='nutrilog_foodlib')   ok=await sbSet('nutrilog_food_library',value);
+        else if(key==='nutrilog_foodlib')   ok=await sbSetShared('nutrilog_food_library',value);
         else if(key==='nutrilog_history')   ok=await sbSetHistory(value);
         else if(key==='nutrilog_checkins')  ok=await sbSet('nutrilog_checkins',value);
         else if(key==='nutrilog_templates') ok=await sbSet('nutrilog_templates',value);
@@ -650,9 +815,9 @@ setInterval(async()=>{
   try{
     const snap=[...meals]; // snapshot so concurrent adds don't mutate mid-push
     const {error:e1}=await supa.from('nutrilog_sessions')
-      .upsert({user_id:_supaUser.id,date:today,meals:snap,updated_at:new Date().toISOString()},{onConflict:'user_id,date'});
-    const rows=[{user_id:_supaUser.id,date:today,meals:snap.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}];
-    const {error:e2}=await supa.from('nutrilog_history').upsert(rows,{onConflict:'user_id,date'});
+      .upsert({user_id:_supaUser.id,profile_id:_activeProfile,date:today,meals:snap,updated_at:new Date().toISOString()},{onConflict:'user_id,profile_id,date'});
+    const rows=[{user_id:_supaUser.id,profile_id:_activeProfile,date:today,meals:snap.map(m=>({...m,date:today})),updated_at:new Date().toISOString()}];
+    const {error:e2}=await supa.from('nutrilog_history').upsert(rows,{onConflict:'user_id,profile_id,date'});
     if(!e1&&!e2){
       _cloudDirty=false;
       setSyncBadge('online',syncName());
@@ -765,6 +930,19 @@ document.addEventListener('DOMContentLoaded',async ()=>{
       }
     }
   },60*1000);
+  // Load profiles first so the toggle and file routing are correct before any data loads
+  if(IS_ELECTRON&&window.electronAPI.getProfiles){
+    try{
+      const {profiles,active}=await window.electronAPI.getProfiles();
+      if(profiles?.length)_profiles=profiles;
+      if(active)_activeProfile=active;
+      _activeProfileName=_profiles.find(p=>p.id===_activeProfile)?.name||_activeProfile;
+    }catch(e){console.warn('Could not load profiles',e);}
+    updateProfileToggle();
+    // Show first-run name prompt if profiles.json was just created (fresh install)
+    const existingSettings=await Store._localGet('nutrilog_settings').catch(()=>null);
+    if(!existingSettings) maybeShowFirstRun();
+  }
   await loadSettings();
   await initFoodLib();
   await initTemplates();
@@ -2600,13 +2778,14 @@ function submitImport(){
 
 /* ═══ HISTORY ═══ */
 async function indexHistory(){
-  // Load seed data only for dates that have no stored history yet
-  LOG_SEED.forEach(e=>{
-    if(!histIdx[e.date]) histIdx[e.date]=[];
-    // Only push seed entry if no stored entry with same name+time exists
-    const dup=histIdx[e.date].some(x=>x.name===e.name&&x.time===e.time);
-    if(!dup) histIdx[e.date].push(e);
-  });
+  // Seed data is Alex's personal historical logs — only apply to his profile
+  if(_activeProfile==='alex'){
+    LOG_SEED.forEach(e=>{
+      if(!histIdx[e.date]) histIdx[e.date]=[];
+      const dup=histIdx[e.date].some(x=>x.name===e.name&&x.time===e.time);
+      if(!dup) histIdx[e.date].push(e);
+    });
+  }
   try{
     const h=(await Store.get('nutrilog_history'))||{};
     // Stored history always wins — overwrite seed entries for that date entirely
@@ -3540,6 +3719,28 @@ async function loadSettings(){
         streakOrder=s.streakOrder;
       if(s.widgetHide&&typeof s.widgetHide==='object')
         _wHide={recent:!!s.widgetHide.recent,tpl:!!s.widgetHide.tpl};
+      if(s.cholesterolManagement!==undefined){
+        const el=document.getElementById('s-cholesterol-mgmt');
+        if(el)el.checked=!!s.cholesterolManagement;
+        updateFatHint(!!s.cholesterolManagement);
+      }
+      // Apply theme + variant for this profile
+      if(s.theme){
+        isDark=s.theme!=='light';
+        document.body.classList.toggle('light',!isDark);
+        localStorage.setItem('nutrilog_theme',s.theme);
+        const btn=document.getElementById('themeBtn');
+        if(btn)btn.textContent=isDark?'🌙':'☀️';
+      }
+      if(s.variant!==undefined){
+        _uiVariant=s.variant||'default';
+        if(_uiVariant==='default')delete document.body.dataset.variant;
+        else document.body.dataset.variant=_uiVariant;
+        localStorage.setItem('nutrilog_variant',_uiVariant);
+        document.querySelectorAll('.variant-swatch').forEach(el=>{
+          el.classList.toggle('active',el.dataset.v===_uiVariant);
+        });
+      }
     }
     // Fields just loaded from storage — not unsaved changes
     setTimeout(()=>{if(typeof clearDirty==='function')clearDirty();},0);
@@ -3617,13 +3818,20 @@ function updateCalc(){
   } else { warn.style.display='none'; }
   // Auto-recalculate macros when PI changes (only if not custom-edited)
   if(!_macroCustomized){
-    const autoP=Math.round(lbm*2.4);  // High-protein recomp + high cholesterol: 2.4 g/kg LBM
-    const autoF=Math.round(target*0.20/9); // 20% fat (lower for cholesterol management)
+    const cholMgmt=document.getElementById('s-cholesterol-mgmt')?.checked;
+    const autoP=Math.round(lbm*2.4);
+    // Fat: 20% of calories when managing cholesterol, 30% standard
+    const autoF=Math.round(target*(cholMgmt?0.20:0.30)/9);
     const remainKcal=target-autoP*4-autoF*9;
     const autoC=Math.max(0,Math.round(remainKcal/4));
     document.getElementById('s-protein').value=autoP;
     document.getElementById('s-fat').value=autoF;
     document.getElementById('s-carbs').value=autoC;
+    // Auto-set fat min/max based on mode
+    const fatMinEl=document.getElementById('s-fat-min');
+    const fatMaxEl=document.getElementById('s-fat-max');
+    if(fatMinEl)fatMinEl.value=cholMgmt?45:Math.round(target*0.20/9);
+    if(fatMaxEl)fatMaxEl.value=cholMgmt?65:Math.round(target*0.35/9);
     markMTDirty();
     updateMacroCalc();
   }
@@ -3644,6 +3852,23 @@ function markMTDirty(){
 function clearDirty(){
   _piDirty=false;_mtDirty=false;
   ['pi-dot','pi-label','mt-dot','mt-label'].forEach(id=>{document.getElementById(id).style.display='none';});
+}
+function updateFatHint(cholMgmt){
+  const hint=document.getElementById('fat-hint');
+  const infoBtn=document.getElementById('fat-info-btn');
+  if(hint)hint.textContent=cholMgmt
+    ?'Streak: Min ≤ fat ≤ Max  |  AHA cholesterol management: ~20% kcal, max 65g'
+    :'Streak: Min ≤ fat ≤ Max  |  Standard: 25–35% of calories';
+  if(infoBtn)infoBtn.dataset.tip=cholMgmt
+    ?'Cholesterol management mode: Fat limited to ~20% of calories (AHA 2021 guidelines). Max 65g/day. Fat is not overridden when recalculating from weight.'
+    :'Standard mode: Fat set to 30% of calories. Auto-recalculates with weight changes. Range: 20–35% of calories.';
+}
+function onCholesterolToggle(){
+  const on=document.getElementById('s-cholesterol-mgmt')?.checked;
+  updateFatHint(on);
+  // Trigger macro recalc with new fat mode
+  if(!_macroCustomized)updateCalc();
+  markMTDirty();
 }
 function onMacroManualEdit(){
   _macroCustomized=true;
@@ -3675,11 +3900,21 @@ async function getAvgWeight(){
 async function recalcMacrosFromWeight(kg){
   if(!kg||kg<30||kg>300){toast('Invalid weight for macro recalc','err');return;}
   const kcal=+(document.getElementById('s-kcal-display')?.value||0)||TGT.kcal||2552;
-  // Keep fat exactly as currently set — medically informed, don't override
-  const fat=+(document.getElementById('s-fat')?.value||0)||TGT.fat||57;
-  // Protein: 2.0 g/kg target, 1.8 g/kg min, no upper cap (recomp consensus, Helms et al.)
+  const cholMgmt=document.getElementById('s-cholesterol-mgmt')?.checked;
+  // Protein: 2.0 g/kg target, 1.8 g/kg min (recomp consensus, Helms et al.)
   const protein=Math.round(kg*2.0);
   const proteinMin=Math.round(kg*1.8);
+  // Fat: keep current if cholesterol-managed; recalc at 30% if standard
+  let fat,fatMin,fatMax;
+  if(cholMgmt){
+    fat=+(document.getElementById('s-fat')?.value||0)||TGT.fat||57;
+    fatMin=+(document.getElementById('s-fat-min')?.value||0)||45;
+    fatMax=+(document.getElementById('s-fat-max')?.value||0)||65;
+  }else{
+    fat=Math.round(kcal*0.30/9);
+    fatMin=Math.round(kcal*0.20/9);
+    fatMax=Math.round(kcal*0.35/9);
+  }
   // Carbs: remaining kcal after protein + fat
   const carbKcal=Math.max(0,kcal-(protein*4)-(fat*9));
   const carbs=Math.round(carbKcal/4);
@@ -3692,21 +3927,15 @@ async function recalcMacrosFromWeight(kg){
   // Apply to settings form
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
   set('s-weight',kg);
-  set('s-protein',protein);
-  set('s-protein-min',proteinMin);
-  const pmEl=document.getElementById('s-protein-max');
-  if(pmEl)pmEl.value=''; // no upper cap
-  set('s-carbs',carbs);
-  set('s-carbs-min',carbsMin);
-  set('s-carbs-max',carbsMax);
-  set('s-fiber',fiber);
-  set('s-fiber-min',fiberMin);
-  set('s-fiber-max',fiberMax);
+  set('s-protein',protein);set('s-protein-min',proteinMin);
+  const pmEl=document.getElementById('s-protein-max');if(pmEl)pmEl.value='';
+  set('s-fat',fat);set('s-fat-min',fatMin);set('s-fat-max',fatMax);
+  set('s-carbs',carbs);set('s-carbs-min',carbsMin);set('s-carbs-max',carbsMax);
+  set('s-fiber',fiber);set('s-fiber-min',fiberMin);set('s-fiber-max',fiberMax);
   setMacroCustomized(true);
-  updateCalc();
-  updateMacroCalc();
-  saveSettings();
-  toast(`Macros recalculated for ${kg}kg — protein ${protein}g · carbs ${carbs}g · fiber ${fiber}g ✓`,'ok');
+  updateCalc();updateMacroCalc();saveSettings();
+  const fatNote=cholMgmt?'fat kept (cholesterol managed)':'fat '+fat+'g';
+  toast(`Macros recalculated for ${kg}kg — protein ${protein}g · carbs ${carbs}g · ${fatNote} ✓`,'ok');
 }
 
 async function recalcFromLatestWeight(){
@@ -3844,6 +4073,9 @@ function saveSettings(){
     templateOrder:tplOrder,
     streakOrder,
     displayName:_displayName,
+    theme:isDark?'dark':'light',
+    variant:_uiVariant||'default',
+    cholesterolManagement:document.getElementById('s-cholesterol-mgmt')?.checked??false,
   };
   TGT={protein:s.protein,fat:s.fat,carbs:s.carbs,fiber:s.fiber,kcal:kcalTarget};
   TGT_MIN={protein:s.proteinMin,fat:s.fatMin,carbs:s.carbsMin,fiber:s.fiberMin,kcal:s.kcalMin??null};
@@ -4389,7 +4621,14 @@ async function undoTplHistoryApply(){
 }
 
 /* ═══ THEME ═══ */
-function toggleTheme(){isDark=!isDark;document.body.classList.toggle('light',!isDark);document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';localStorage.setItem('nutrilog_theme',isDark?'dark':'light');}
+function toggleTheme(){
+  isDark=!isDark;
+  document.body.classList.toggle('light',!isDark);
+  document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';
+  const t=isDark?'dark':'light';
+  localStorage.setItem('nutrilog_theme',t);
+  Store.get('nutrilog_settings').then(s=>Store.set('nutrilog_settings',{...(s||{}),theme:t,savedAt:new Date().toISOString()})).catch(()=>{});
+}
 
 let _uiVariant=localStorage.getItem('nutrilog_variant')||'default';
 function applyVariant(v){
@@ -4400,6 +4639,7 @@ function applyVariant(v){
   document.querySelectorAll('.variant-swatch').forEach(el=>{
     el.classList.toggle('active',el.dataset.v===_uiVariant);
   });
+  Store.get('nutrilog_settings').then(s=>Store.set('nutrilog_settings',{...(s||{}),variant:_uiVariant,savedAt:new Date().toISOString()})).catch(()=>{});
 }
 
 /* ═══ TOAST ═══ */

@@ -27,6 +27,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVersion:    ()       => ipcRenderer.invoke('app:get-version'),
   getDataDir:    ()       => ipcRenderer.invoke('app:get-data-dir'),
 
+  // ── Profile management ──
+  getProfiles:       ()              => ipcRenderer.invoke('profile:get-all'),
+  setActiveProfile:  (id)            => ipcRenderer.invoke('profile:set-active', id),
+  updateProfileName: (id, name)      => ipcRenderer.invoke('profile:update-name', id, name),
+  addProfile:        (profile)       => ipcRenderer.invoke('profile:add', profile),
+  deleteProfile:     (id)            => ipcRenderer.invoke('profile:delete', id),
+
   // ── Easter egg image management ──
   listEggImages:  ()      => ipcRenderer.invoke('egg:list'),
   readEggImage:   (name)  => ipcRenderer.invoke('egg:read', name),

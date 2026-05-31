@@ -9,15 +9,78 @@ const isDev = process.argv.includes('--dev');
 
 // ── Data directory: use userData so it survives app updates ──
 const DATA_DIR = path.join(app.getPath('userData'), 'NutriLogData');
-const DATA_FILE = path.join(DATA_DIR, 'sessions.json');
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
-const FOODLIB_FILE = path.join(DATA_DIR, 'foodlib.json');
-const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
-const CHECKINS_FILE = path.join(DATA_DIR, 'checkins.json');
-const TEMPLATES_FILE = path.join(DATA_DIR, 'templates.json');
-const DAYNOTES_FILE = path.join(DATA_DIR, 'daynotes.json');
-const SYNCLOG_FILE = path.join(DATA_DIR, 'synclog.json');
-const EGGS_DIR = path.join(DATA_DIR, 'eggs');
+const PROFILES_FILE = path.join(DATA_DIR, 'profiles.json');
+const SHARED_FOODLIB_FILE = path.join(DATA_DIR, 'foodlib.json'); // shared across all profiles
+const EGGS_DIR = path.join(DATA_DIR, 'eggs'); // shared across profiles
+
+// ── Profile state (loaded synchronously before any IPC) ──
+let _profiles = [
+  { id: 'alex', name: 'Alex' },
+];
+let _activeProfileId = 'alex';
+
+function loadProfilesSync() {
+  try {
+    if (fs.existsSync(PROFILES_FILE)) {
+      const p = JSON.parse(fs.readFileSync(PROFILES_FILE, 'utf8'));
+      if (Array.isArray(p.profiles) && p.profiles.length) _profiles = p.profiles;
+      if (p.active) _activeProfileId = p.active;
+    }
+  } catch(e) { /* use defaults */ }
+}
+
+function saveProfilesSync() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(PROFILES_FILE, JSON.stringify({ profiles: _profiles, active: _activeProfileId }, null, 2), 'utf8');
+  } catch(e) { console.error('saveProfiles error', e); }
+}
+
+function profileDir() {
+  return path.join(DATA_DIR, 'profiles', _activeProfileId);
+}
+
+function profileDataFile(name) {
+  return path.join(profileDir(), name + '.json');
+}
+
+// ── One-time migration: copy old flat files → profiles/{firstProfile}/ ──
+function migrateOldDataIfNeeded() {
+  const firstId = _profiles[0]?.id || 'alex';
+  const firstDir = path.join(DATA_DIR, 'profiles', firstId);
+  if (fs.existsSync(firstDir)) return; // already done
+  const oldSession = path.join(DATA_DIR, 'sessions.json');
+  if (!fs.existsSync(oldSession)) return; // no old data to migrate
+  try {
+    fs.mkdirSync(firstDir, { recursive: true });
+    ['sessions','settings','foodlib','history','checkins','templates','daynotes','synclog'].forEach(f => {
+      const src = path.join(DATA_DIR, f + '.json');
+      const dst = path.join(firstDir, f + '.json');
+      if (fs.existsSync(src) && !fs.existsSync(dst)) fs.copyFileSync(src, dst);
+    });
+    console.log(`Migrated old NutriLog data to profiles/${firstId}/`);
+  } catch(e) { console.error('Migration error', e); }
+}
+
+// Migrate food library to shared location — copies the largest profile foodlib
+function migrateFoodLibToShared() {
+  if (fs.existsSync(SHARED_FOODLIB_FILE)) return; // already shared
+  let bestData = null;
+  let bestCount = -1;
+  _profiles.forEach(p => {
+    const f = path.join(DATA_DIR, 'profiles', p.id, 'foodlib.json');
+    if (!fs.existsSync(f)) return;
+    try {
+      const raw = JSON.parse(fs.readFileSync(f, 'utf8'));
+      const items = raw?.nutrilog_foodlib || raw || [];
+      const count = Array.isArray(items) ? items.length : 0;
+      if (count > bestCount) { bestCount = count; bestData = raw; }
+    } catch(e) {}
+  });
+  if (bestData) {
+    try { fs.writeFileSync(SHARED_FOODLIB_FILE, JSON.stringify(bestData, null, 2), 'utf8'); } catch(e) {}
+  }
+}
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -200,7 +263,8 @@ function readJSON(filePath, fallback = null) {
 
 function writeJSON(filePath, data) {
   try {
-    ensureDataDir();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
     return true;
   } catch (e) {
@@ -210,35 +274,64 @@ function writeJSON(filePath, data) {
 }
 
 // Sessions (today's meals)
-ipcMain.handle('storage:get-session', () => readJSON(DATA_FILE));
-ipcMain.handle('storage:set-session', (_, data) => writeJSON(DATA_FILE, data));
+ipcMain.handle('storage:get-session', () => readJSON(profileDataFile('sessions')));
+ipcMain.handle('storage:set-session', (_, data) => writeJSON(profileDataFile('sessions'), data));
 
 // Settings
-ipcMain.handle('storage:get-settings', () => readJSON(SETTINGS_FILE));
-ipcMain.handle('storage:set-settings', (_, data) => writeJSON(SETTINGS_FILE, data));
+ipcMain.handle('storage:get-settings', () => readJSON(profileDataFile('settings')));
+ipcMain.handle('storage:set-settings', (_, data) => writeJSON(profileDataFile('settings'), data));
 
-// Food library
-ipcMain.handle('storage:get-foodlib', () => readJSON(FOODLIB_FILE));
-ipcMain.handle('storage:set-foodlib', (_, data) => writeJSON(FOODLIB_FILE, data));
+// Food library — shared across all profiles
+ipcMain.handle('storage:get-foodlib', () => readJSON(SHARED_FOODLIB_FILE));
+ipcMain.handle('storage:set-foodlib', (_, data) => writeJSON(SHARED_FOODLIB_FILE, data));
 
 // History (all past days)
-ipcMain.handle('storage:get-history', () => readJSON(HISTORY_FILE, {}));
-ipcMain.handle('storage:set-history', (_, data) => writeJSON(HISTORY_FILE, data));
+ipcMain.handle('storage:get-history', () => readJSON(profileDataFile('history'), {}));
+ipcMain.handle('storage:set-history', (_, data) => writeJSON(profileDataFile('history'), data));
 
 // Check-ins (weekly progress)
-ipcMain.handle('storage:get-checkins', () => readJSON(CHECKINS_FILE, []));
-ipcMain.handle('storage:set-checkins', (_, data) => writeJSON(CHECKINS_FILE, data));
+ipcMain.handle('storage:get-checkins', () => readJSON(profileDataFile('checkins'), []));
+ipcMain.handle('storage:set-checkins', (_, data) => writeJSON(profileDataFile('checkins'), data));
 
 // Meal prep templates
-ipcMain.handle('storage:get-templates', () => readJSON(TEMPLATES_FILE, {}));
-ipcMain.handle('storage:set-templates', (_, data) => writeJSON(TEMPLATES_FILE, data));
+ipcMain.handle('storage:get-templates', () => readJSON(profileDataFile('templates'), {}));
+ipcMain.handle('storage:set-templates', (_, data) => writeJSON(profileDataFile('templates'), data));
 
 // Day notes (per-date context notes)
-ipcMain.handle('storage:get-daynotes', () => readJSON(DAYNOTES_FILE, {}));
-ipcMain.handle('storage:set-daynotes', (_, data) => writeJSON(DAYNOTES_FILE, data));
+ipcMain.handle('storage:get-daynotes', () => readJSON(profileDataFile('daynotes'), {}));
+ipcMain.handle('storage:set-daynotes', (_, data) => writeJSON(profileDataFile('daynotes'), data));
 
-ipcMain.handle('storage:get-synclog', () => readJSON(SYNCLOG_FILE, []));
-ipcMain.handle('storage:set-synclog', (_, data) => writeJSON(SYNCLOG_FILE, data));
+ipcMain.handle('storage:get-synclog', () => readJSON(profileDataFile('synclog'), []));
+ipcMain.handle('storage:set-synclog', (_, data) => writeJSON(profileDataFile('synclog'), data));
+
+// ── Profile management ──
+ipcMain.handle('profile:get-all', () => ({ profiles: _profiles, active: _activeProfileId }));
+ipcMain.handle('profile:set-active', (_, id) => {
+  if (!_profiles.find(p => p.id === id)) return false;
+  _activeProfileId = id;
+  saveProfilesSync();
+  return true;
+});
+ipcMain.handle('profile:update-name', (_, id, name) => {
+  const p = _profiles.find(p => p.id === id);
+  if (!p) return false;
+  p.name = name.trim() || p.name;
+  saveProfilesSync();
+  return true;
+});
+ipcMain.handle('profile:add', (_, profile) => {
+  if (!profile?.id || _profiles.find(p => p.id === profile.id)) return false;
+  _profiles.push({ id: profile.id, name: profile.name || profile.id });
+  saveProfilesSync();
+  return true;
+});
+ipcMain.handle('profile:delete', (_, id) => {
+  if (_profiles.length <= 1) return false;
+  _profiles = _profiles.filter(p => p.id !== id);
+  if (_activeProfileId === id) _activeProfileId = _profiles[0].id;
+  saveProfilesSync();
+  return true;
+});
 
 // Export handler
 ipcMain.handle('storage:export', (_, filePath, data) => {
@@ -356,6 +449,9 @@ ipcMain.handle('egg:delete', (_, name) => {
 // ── App lifecycle ──
 app.whenReady().then(() => {
   ensureDataDir();
+  loadProfilesSync();
+  migrateOldDataIfNeeded();
+  migrateFoodLibToShared();
   buildMenu();
   createWindow();
 
