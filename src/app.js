@@ -268,6 +268,10 @@ async function switchProfile(id){
     renderStatsDashboard();
     renderQuickTemplates();renderRecentMeals();
     toast('Switched to '+name,'ok');
+    // Pull cloud data for the new profile — local files are empty on first switch
+    if(_supaUser&&_syncEnabled){
+      pullFromSupabase().catch(e=>console.warn('Profile switch sync failed',e));
+    }
   }finally{
     if(overlay)overlay.style.display='none';
   }
@@ -665,6 +669,8 @@ async function pullFromSupabase(){
     toast('Data synced from cloud ☁️','ok');
     // Re-init UI with new data — build rows FIRST so render() has elements to fill
     buildSidebarRows(); await autoLoad(); render();
+    // Refresh calendar if user is on History page (profile switch + pull lands here)
+    if(document.getElementById('page-history')?.classList.contains('active'))renderCalendar();
     // Silent dedup pass — cleans up any sync artifacts accumulated before the fix
     deduplicateHistory(false).catch(()=>{});
     // Explicitly refresh widgets that derive from synced data

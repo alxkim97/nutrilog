@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.0",
-  "description": "NutriLog v2.6.0 — Multi-profile system, per-profile themes, shared food library",
+  "version": "2.6.1",
+  "description": "NutriLog v2.6.1 — profile switch pulls cloud data, history calendar refreshes after sync",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
