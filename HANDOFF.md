@@ -1,7 +1,7 @@
 # NutriLog — Session Handoff
 
-**Last updated:** 2026-05-31 (CNX / Parents' PC)
-**Current version:** v2.6.0
+**Last updated:** 2026-06-01 (Condo PC)
+**Current version:** v2.6.2
 **Branch:** main
 **Supabase project:** lifelog
 
@@ -21,6 +21,40 @@ NutriLog is a personal macro nutrition tracker — Electron 31 desktop app, vani
 
 **Run:** `npm start` | **Build:** `npm run build:win`
 **Data dir (Windows):** `%APPDATA%\NutriLog\NutriLogData\`
+
+---
+
+## What was done this session (2026-06-01, Condo PC)
+
+### v2.6.1 — Profile switch cloud pull fix
+- `switchProfile()` now calls `pullFromSupabase()` after switching — local profile files are empty on first switch, this restores cloud data automatically
+- `pullFromSupabase()` calls `renderCalendar()` if History page is active after a pull
+- **To recover existing profiles:** just switch to them — data pulls from Supabase automatically. If profile was deleted, re-add with same name (same ID = same cloud data)
+
+### v2.6.2 — Simple mode, recipe builder, UX polish
+**Simple Mode** (Settings → Appearance):
+- Toggle hides Analysis + Projection from sidebar — designed for parents/new users
+- State persisted per-profile in settings
+
+**Recipe Builder** (Food Database → Recipes tab):
+- Create recipes from food library ingredients with amounts
+- Per-serving macro calculation (total ÷ servings)
+- "+ Log" button pre-fills the meal form in one click
+- Recipes show in meal form autocomplete with 🍳 tag
+
+**Goal/settings improvements:**
+- Goal Weight optional — leave blank → maintenance (0 deficit)
+- "Gentle Loss (−200 kcal)" goal added, recommended for users 60+
+- Goal Weight + Timeline fields auto-hide for non-recomp goals
+- Profile pill removed from topbar — sidebar toggle is sufficient
+
+**Claude Code settings (this PC):**
+- `~/.claude/settings.json` updated with `permissions.defaultMode: "auto"`
+- Auto mode only applies to CLI (`claude` in terminal), not VS Code extension
+
+**Answered questions:**
+- **Goal weight for no-weight-goal users:** Leave blank → maintenance mode
+- **Elderly deficit (-500):** Too aggressive for 60s. Use "Gentle Loss (−200 kcal)" goal. Aim for -200 to -300 kcal/day. Protein 1.6–2.0 g/kg critical to prevent sarcopenia.
 
 ---
 
