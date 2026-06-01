@@ -1110,3 +1110,16 @@ tbody tr:hover .row-acts { opacity:1; }
 .db-macro-filter input:focus{border-color:var(--accent);}
 .db-flt-group{display:flex;align-items:center;gap:4px;}
 .achievement-progress{margin-top:5px;font-size:.6rem;color:var(--accent);font-family:var(--fm);}
+
+/* ── Simple Mode ── */
+.simple-mode #nav-analysis,
+.simple-mode #nav-projection { display:none; }
+.simple-mode #page-analysis,
+.simple-mode #page-projection { display:none !important; }
+
+/* ── Recipe Builder ── */
+.recipe-row { display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border); }
+.recipe-row:last-child { border-bottom:none; }
+.recipe-info { flex:1;min-width:0; }
+.recipe-name { font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px; }
+.recipe-meta { font-size:11px;color:var(--text3);font-family:var(--fm); }

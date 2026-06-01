@@ -14,6 +14,8 @@ let _syncEnabled = false;
 let _profiles = [{ id: 'alex', name: 'Alex' }];
 let _activeProfile = 'alex';
 let _activeProfileName = 'Alex';
+let _simpleMode = false;
+let _recipes = {};
 
 /* ── Auth helpers ── */
 let _authMode = 'signin'; // 'signin' | 'signup'
@@ -187,14 +189,7 @@ function updateProfileToggle(){
       `<button class="profile-btn${p.id===_activeProfile?' active':''}" onclick="switchProfile('${p.id}')">${p.name}</button>`
     ).join('');
   }
-  // Topbar profile pill — only show when there are multiple profiles
-  const pill=document.getElementById('activeProfilePill');
-  const pillName=document.getElementById('activeProfilePillName');
-  if(pill){
-    const multi=_profiles.length>1;
-    pill.style.display=multi?'flex':'none';
-    if(pillName)pillName.textContent=_activeProfileName;
-  }
+  // Topbar pill removed — sidebar toggle is sufficient
   renderProfileSettings();
 }
 
@@ -313,6 +308,28 @@ async function deleteProfile(id){
     toast('Profile removed','ok');
   });
 }
+/* ── Simple Mode ── */
+function applySimpleMode(on){
+  _simpleMode=on;
+  document.body.classList.toggle('simple-mode',on);
+  const btn=document.getElementById('simpleModeToggle');
+  if(btn)btn.textContent=on?'On':'Off';
+  // If on a hidden page, redirect to Today
+  if(on){
+    const hidden=['page-analysis','page-projection'];
+    if(hidden.some(id=>document.getElementById(id)?.classList.contains('active'))){
+      const todayNav=document.getElementById('nav-today');
+      if(todayNav)showPage('today',todayNav);
+    }
+  }
+}
+function toggleSimpleMode(){
+  applySimpleMode(!_simpleMode);
+  Store.get('nutrilog_settings').then(s=>{
+    Store.set('nutrilog_settings',{...(s||{}),simpleMode:_simpleMode,savedAt:new Date().toISOString()});
+  }).catch(()=>{});
+}
+
 function saveDisplayName(){
   _displayName=(document.getElementById('s-display-name')?.value||'').trim();
   // Persist immediately alongside settings without a full saveSettings() call
@@ -961,6 +978,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   await autoLoad();
   updateCalc();
   updateMacroCalc();
+  updateGoalFields();
   // Check for existing Supabase session.
   // Timeout after 3s — if network is dead, auto-skip to local-only mode.
   if(supa){
@@ -2424,6 +2442,160 @@ async function initFoodLib(){
   try{foodLib=(await Store.get('nutrilog_foodlib'))||[];}catch{foodLib=[];}
   if(!foodLib.length){foodLib=FOOD_DB_SEED.map(f=>({...f}));saveFoodLib();}
   else{const b=document.getElementById('dbBadge');if(b)b.textContent=foodLib.length;}
+  try{_recipes=(await Store.get('nutrilog_recipes'))||{};}catch{_recipes={};}
+}
+
+/* ═══ RECIPE BUILDER ═══ */
+let _editingRecipeId=null;
+let _recipeDraftIngredients=[];
+
+function saveRecipes(){
+  Store.set('nutrilog_recipes',_recipes).catch(()=>{});
+}
+
+function renderRecipes(){
+  const el=document.getElementById('recipeList');
+  if(!el)return;
+  const list=Object.values(_recipes);
+  if(!list.length){
+    el.innerHTML='<div style="text-align:center;padding:32px 0;color:var(--text3);font-size:13px;">No recipes yet — create one above</div>';
+    return;
+  }
+  el.innerHTML=list.map(r=>{
+    const tot=recipeTotal(r);
+    return `<div class="recipe-row">
+      <div class="recipe-info">
+        <div class="recipe-name">${esc(r.name)}</div>
+        <div class="recipe-meta">${r.ingredients.length} ingredients · ${r.servings} serving${r.servings!==1?'s':''}
+          &nbsp;·&nbsp;${Math.round(tot.kcal/r.servings)} kcal&nbsp;·&nbsp;P${(tot.protein/r.servings).toFixed(1)}g F${(tot.fat/r.servings).toFixed(1)}g C${(tot.carbs/r.servings).toFixed(1)}g
+          <span style="font-size:10px;color:var(--text3)"> per serving</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn btn-ghost" onclick="logRecipePrompt('${r.id}')" style="font-size:11px;height:26px;padding:0 10px;">+ Log</button>
+        <button class="btn btn-ghost" onclick="openRecipeEditor('${r.id}')" style="font-size:11px;height:26px;padding:0 10px;">Edit</button>
+        <button class="btn btn-ghost danger" onclick="deleteRecipe('${r.id}')" style="font-size:11px;height:26px;padding:0 8px;">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function recipeTotal(r){
+  return r.ingredients.reduce((acc,ing)=>{
+    acc.kcal+=ing.kcal||0;acc.protein+=ing.protein||0;
+    acc.fat+=ing.fat||0;acc.carbs+=ing.carbs||0;acc.fiber+=ing.fiber||0;
+    return acc;
+  },{kcal:0,protein:0,fat:0,carbs:0,fiber:0});
+}
+
+function openRecipeEditor(id){
+  _editingRecipeId=id||null;
+  const r=id?_recipes[id]:null;
+  _recipeDraftIngredients=r?r.ingredients.map(i=>({...i})):[];
+  document.getElementById('recipeName').value=r?r.name:'';
+  document.getElementById('recipeServings').value=r?r.servings:1;
+  renderRecipeDraftIngredients();
+  document.getElementById('recipeModal').classList.add('open');
+}
+function closeRecipeModal(){
+  document.getElementById('recipeModal').classList.remove('open');
+  _editingRecipeId=null;_recipeDraftIngredients=[];
+}
+function renderRecipeDraftIngredients(){
+  const el=document.getElementById('recipeDraftIngredients');
+  if(!el)return;
+  if(!_recipeDraftIngredients.length){
+    el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:8px 0;">No ingredients yet</div>';
+    updateRecipeTotals();return;
+  }
+  el.innerHTML=_recipeDraftIngredients.map((ing,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(ing.name)}</div>
+        <div style="font-size:11px;color:var(--text3);">${ing.amount}${ing.unit} · ${ing.kcal} kcal · P${ing.protein}g F${ing.fat}g C${ing.carbs}g</div>
+      </div>
+      <button class="btn btn-ghost danger" onclick="removeRecipeIngredient(${i})" style="height:24px;padding:0 8px;font-size:11px;flex-shrink:0;">✕</button>
+    </div>`).join('');
+  updateRecipeTotals();
+}
+function updateRecipeTotals(){
+  const tot=_recipeDraftIngredients.reduce((a,i)=>({
+    kcal:a.kcal+(i.kcal||0),protein:a.protein+(i.protein||0),
+    fat:a.fat+(i.fat||0),carbs:a.carbs+(i.carbs||0),fiber:a.fiber+(i.fiber||0)
+  }),{kcal:0,protein:0,fat:0,carbs:0,fiber:0});
+  const srv=Math.max(1,+document.getElementById('recipeServings')?.value||1);
+  const el=document.getElementById('recipeTotals');
+  if(el)el.textContent=`Total: ${Math.round(tot.kcal)} kcal · P${tot.protein.toFixed(1)}g F${tot.fat.toFixed(1)}g C${tot.carbs.toFixed(1)}g — Per serving (÷${srv}): ${Math.round(tot.kcal/srv)} kcal · P${(tot.protein/srv).toFixed(1)}g`;
+}
+function addRecipeIngredientFromSearch(){
+  const q=document.getElementById('recipeIngSearch').value.trim();
+  if(!q){toast('Enter a food name first','err');return;}
+  const ql=q.toLowerCase();
+  const match=foodLib.find(f=>f.name.toLowerCase().startsWith(ql))||foodLib.find(f=>f.name.toLowerCase().includes(ql));
+  if(!match){toast('Not found in food database — add it there first','err');return;}
+  const amt=+document.getElementById('recipeIngAmount').value||1;
+  const ratio=amt/(match.serving||1);
+  _recipeDraftIngredients.push({
+    name:match.name,amount:amt,unit:match.unit||'',
+    kcal:Math.round(match.kcal*ratio*10)/10,
+    protein:Math.round(match.protein*ratio*100)/100,
+    fat:Math.round(match.fat*ratio*100)/100,
+    carbs:Math.round(match.carbs*ratio*100)/100,
+    fiber:Math.round(match.fiber*ratio*100)/100,
+  });
+  document.getElementById('recipeIngSearch').value='';
+  document.getElementById('recipeIngAmount').value='';
+  renderRecipeDraftIngredients();
+}
+function removeRecipeIngredient(i){
+  _recipeDraftIngredients.splice(i,1);
+  renderRecipeDraftIngredients();
+}
+function saveRecipe(){
+  const name=document.getElementById('recipeName').value.trim();
+  if(!name){toast('Recipe needs a name','err');return;}
+  if(!_recipeDraftIngredients.length){toast('Add at least one ingredient','err');return;}
+  const servings=Math.max(1,+document.getElementById('recipeServings').value||1);
+  const id=_editingRecipeId||'r_'+Date.now();
+  _recipes[id]={id,name,servings,ingredients:[..._recipeDraftIngredients],updatedAt:new Date().toISOString()};
+  saveRecipes();
+  closeRecipeModal();
+  renderRecipes();
+  toast(`Recipe "${name}" saved`,'ok');
+}
+function deleteRecipe(id){
+  const r=_recipes[id];
+  if(!r)return;
+  showConf(`Delete "${r.name}"?`,'This removes the recipe. Previously logged meals are kept.','Delete',()=>{
+    delete _recipes[id];saveRecipes();renderRecipes();toast('Recipe deleted','ok');
+  });
+}
+function logRecipePrompt(id){
+  const r=_recipes[id];if(!r)return;
+  const tot=recipeTotal(r);
+  const perSrv=srv=>({
+    kcal:Math.round(tot.kcal/r.servings*srv*10)/10,
+    protein:Math.round(tot.protein/r.servings*srv*100)/100,
+    fat:Math.round(tot.fat/r.servings*srv*100)/100,
+    carbs:Math.round(tot.carbs/r.servings*srv*100)/100,
+    fiber:Math.round(tot.fiber/r.servings*srv*100)/100,
+  });
+  // Pre-fill meal form with recipe as a single composite entry
+  const m=perSrv(1);
+  document.getElementById('f-name').value=r.name;
+  document.getElementById('f-kcal').value=m.kcal;
+  document.getElementById('f-protein').value=m.protein;
+  document.getElementById('f-fat').value=m.fat;
+  document.getElementById('f-carbs').value=m.carbs;
+  document.getElementById('f-fiber').value=m.fiber;
+  document.getElementById('f-serving').value=1;
+  document.getElementById('f-unit').value='serving';
+  document.getElementById('f-time').value=nowTime();
+  // Switch to Today and open meal form
+  const todayNav=document.getElementById('nav-today');
+  if(todayNav)showPage('today',todayNav);
+  document.getElementById('mealModal').classList.add('open');
+  toast(`Recipe pre-filled — adjust servings in the form`,'ok');
 }
 function saveFoodLib(){
   Store.set('nutrilog_foodlib', foodLib).catch(e=>{console.error('Food library save failed',e);toast('Save failed — check disk space','err');});
@@ -2441,7 +2613,16 @@ function acSearch(q){
   const all=foodLib.filter(f=>f.name.toLowerCase().includes(ql));
   const startsWith=all.filter(f=>f.name.toLowerCase().startsWith(ql));
   const contains=all.filter(f=>!f.name.toLowerCase().startsWith(ql));
-  const matches=[...startsWith,...contains].slice(0,8);
+  const foodMatches=[...startsWith,...contains].slice(0,6);
+  // Include matching recipes (marked with _isRecipe)
+  const recipeMatches=Object.values(_recipes)
+    .filter(r=>r.name.toLowerCase().includes(ql))
+    .slice(0,2)
+    .map(r=>{const tot=recipeTotal(r);const ps=1/r.servings;
+      return {name:r.name+'  🍳',kcal:Math.round(tot.kcal*ps),protein:+(tot.protein*ps).toFixed(1),
+        fat:+(tot.fat*ps).toFixed(1),carbs:+(tot.carbs*ps).toFixed(1),fiber:+(tot.fiber*ps).toFixed(1),
+        serving:1,unit:'serving',_isRecipe:true,_recipeId:r.id};});
+  const matches=[...foodMatches,...recipeMatches];
   if(!matches.length){acHide();return;}
   list.innerHTML=matches.map((f,i)=>`<div class="ac-item" onmousedown="acPick(${i})"><span class="ac-name">${esc(f.name)}</span><span class="ac-info">${f.kcal} kcal · P${f.protein}g F${f.fat}g C${f.carbs}g</span></div>`).join('');
   list._m=matches;list.classList.add('open');
@@ -3747,6 +3928,7 @@ async function loadSettings(){
           el.classList.toggle('active',el.dataset.v===_uiVariant);
         });
       }
+      if(s.simpleMode!==undefined) applySimpleMode(!!s.simpleMode);
     }
     // Fields just loaded from storage — not unsaved changes
     setTimeout(()=>{if(typeof clearDirty==='function')clearDirty();},0);
@@ -3761,13 +3943,29 @@ function calcBMR(){
   // Harris-Benedict revised
   return g==='M'?88.362+13.397*w+4.799*h-5.677*age:447.593+9.247*w+3.098*h-4.330*age;
 }
+function updateGoalFields(){
+  const goal=document.getElementById('s-goal')?.value||'recomp';
+  const isRecomp=goal==='recomp';
+  const isMaint=goal==='0';
+  // Show goal weight + timeline only for recomp (they drive the auto-deficit calc)
+  ['goalwtRow','s-weeks','s-planstart'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){
+      const row=id==='goalwtRow'?el:el.closest('.srow');
+      if(row)row.style.display=(isRecomp)?'flex':'none';
+    }
+  });
+}
 function calcRecompDeficit(){
   const lifetime=document.getElementById('s-lifetime')?.checked;
   if(lifetime) return -100;
   const goal=document.getElementById('s-goal')?.value||'recomp';
   if(goal==='recomp'){
     const w=+document.getElementById('s-weight').value||77;
-    const goalWt=+document.getElementById('s-goalwt')?.value||74;
+    const goalWtRaw=document.getElementById('s-goalwt')?.value;
+    // Empty goal weight = no weight goal → maintenance (0 deficit)
+    if(!goalWtRaw||goalWtRaw==='') return 0;
+    const goalWt=+goalWtRaw;
     const weeks=Math.max(4,+document.getElementById('s-weeks')?.value||20);
     const bf=+document.getElementById('s-bodyfat')?.value||16;
     const lbm=w*(1-bf/100);
@@ -4277,13 +4475,16 @@ async function saveTemplates(){
 }
 
 function switchFdTab(tab){
-  ['library','templates'].forEach(t=>{
-    document.getElementById('fdPanel-'+t).style.display=t===tab?'block':'none';
+  ['library','templates','recipes'].forEach(t=>{
+    const panel=document.getElementById('fdPanel-'+t);
+    if(panel)panel.style.display=t===tab?'block':'none';
     const btn=document.getElementById('fdTab-'+t);
+    if(!btn)return;
     if(t===tab){btn.style.background='var(--accent)';btn.style.color='#fff';btn.style.fontWeight='600';}
     else{btn.style.background='transparent';btn.style.color='var(--text2)';btn.style.fontWeight='500';}
   });
   if(tab==='templates')renderTplList();
+  if(tab==='recipes')renderRecipes();
 }
 
 function renderTplList(){

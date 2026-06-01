@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.1",
-  "description": "NutriLog v2.6.1 — profile switch pulls cloud data, history calendar refreshes after sync",
+  "version": "2.6.2",
+  "description": "NutriLog v2.6.2 — simple mode, recipe builder, profile pill removed, goal weight optional",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

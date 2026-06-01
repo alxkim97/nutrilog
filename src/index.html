@@ -68,12 +68,7 @@
         </button>
       </div>
     </div>
-    <!-- Active profile indicator -->
-    <div id="activeProfilePill" onclick="document.getElementById('nav-settings')&&showPage('settings',document.getElementById('nav-settings'))" title="Active profile — click to go to Settings"
-      style="display:none;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:11px;font-family:var(--fm);font-weight:600;color:var(--text2);letter-spacing:.3px;text-transform:uppercase;">
-      <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>
-      <span id="activeProfilePillName">Alex</span>
-    </div>
+    <!-- Profile pill removed — sidebar toggle is sufficient -->
     <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleTheme()">🌙</button>
     <!-- Local save status -->
     <div id="savePill" title="Local save status">
@@ -575,7 +570,8 @@
     <!-- Tab bar -->
     <div style="display:flex;gap:2px;margin:14px 0 16px;background:var(--bg3);border-radius:10px;padding:3px;border:1px solid var(--border);">
       <button id="fdTab-library" onclick="switchFdTab('library')" style="flex:1;height:30px;border:none;border-radius:8px;font-family:var(--fb);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--accent);color:#fff;">📦 Food Library</button>
-      <button id="fdTab-templates" onclick="switchFdTab('templates')" style="flex:1;height:30px;border:none;border-radius:8px;font-family:var(--fb);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);">🍱 Meal Prep Templates</button>
+      <button id="fdTab-templates" onclick="switchFdTab('templates')" style="flex:1;height:30px;border:none;border-radius:8px;font-family:var(--fb);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);">🍱 Meal Templates</button>
+      <button id="fdTab-recipes" onclick="switchFdTab('recipes')" style="flex:1;height:30px;border:none;border-radius:8px;font-family:var(--fb);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);">🧪 Recipes</button>
     </div>
 
     <!-- FOOD LIBRARY TAB -->
@@ -648,6 +644,15 @@
         </div>
       </div>
       <div id="tplList"></div>
+    </div>
+
+    <!-- RECIPES TAB -->
+    <div id="fdPanel-recipes" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:12px;color:var(--text3);">Build recipes from food library items. Same ingredients, different amounts — scale per serving when logging.</div>
+        <button class="btn btn-accent" onclick="openRecipeEditor(null)" style="height:32px;font-size:12px;padding:0 14px;">+ New Recipe</button>
+      </div>
+      <div id="recipeList"></div>
     </div>
   </div>
 
@@ -742,6 +747,10 @@
             </button>
           </div>
         </div>
+        <div class="srow" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+          <div><div class="srow-label">Simple Mode</div><div class="srow-sub">hides advanced views — best for parents &amp; new users</div></div>
+          <button id="simpleModeToggle" class="btn btn-ghost" onclick="toggleSimpleMode()" style="min-width:52px;height:28px;font-size:12px;font-family:var(--fm);">Off</button>
+        </div>
       </div>
       <!-- Profiles -->
       <div class="settings-section">
@@ -782,16 +791,17 @@
             <option value="1.9">2x / day</option>
           </select></div>
         <div class="srow"><div><div class="srow-label">Goal</div></div>
-          <select class="sselect" id="s-goal" onchange="markPIDirty();updateCalc()">
+          <select class="sselect" id="s-goal" onchange="markPIDirty();updateCalc();updateGoalFields()">
             <option value="recomp" selected>Body Recomposition ⭐</option>
+            <option value="-200">Gentle Loss (−200 kcal) 👴👵</option>
             <option value="-500">Fat Loss (−500 kcal)</option>
             <option value="0">Maintenance</option>
             <option value="300">Lean Bulk (+300 kcal)</option>
           </select></div>
         <div class="srow"><div><div class="srow-label">Body Fat %</div><div class="srow-sub">estimate; 16% default</div></div>
           <input class="sinput" id="s-bodyfat" type="number" min="5" max="45" step="0.5" value="16" oninput="markPIDirty();updateCalc()"></div>
-        <div class="srow"><div><div class="srow-label">Goal Weight</div><div class="srow-sub">kg target</div></div>
-          <input class="sinput" id="s-goalwt" type="number" min="40" max="200" step="0.5" value="74" oninput="markPIDirty();updateCalc()"></div>
+        <div class="srow" id="goalwtRow"><div><div class="srow-label">Goal Weight</div><div class="srow-sub">kg target — leave blank for maintenance</div></div>
+          <input class="sinput" id="s-goalwt" type="number" min="40" max="200" step="0.5" placeholder="—" oninput="markPIDirty();updateCalc()"></div>
         <div class="srow"><div><div class="srow-label">Plan Start Date</div><div class="srow-sub">for progress tracking</div></div>
           <input type="date" id="s-planstart" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:12px;border-radius:6px;padding:5px 8px;outline:none;" oninput="markPIDirty()"></div>
         <div class="srow"><div><div class="srow-label">Timeline</div><div class="srow-sub">weeks</div></div>
@@ -1669,6 +1679,42 @@
     <div id="tplMealPickList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;max-height:320px;"></div>
     <div class="conf-btns" style="margin-top:12px;">
       <button class="btn-cc" onclick="closeTplMealPick()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE BUILDER MODAL -->
+<div class="overlay" id="recipeModal">
+  <div class="modal" style="max-width:580px;width:96%;">
+    <div class="modal-hdr">
+      <div class="modal-title">Recipe Builder</div>
+      <button class="modal-close" onclick="closeRecipeModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Recipe Name</label>
+          <input type="text" id="recipeName" placeholder="e.g. Chicken Rice Bowl" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;">
+        </div>
+        <div style="width:90px;">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Servings</label>
+          <input type="number" id="recipeServings" min="1" max="20" step="1" value="1" oninput="updateRecipeTotals()" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:8px;font-size:13px;outline:none;text-align:center;box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:8px;">Ingredients</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <input type="text" id="recipeIngSearch" placeholder="Food name (from library)…" style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;">
+          <input type="number" id="recipeIngAmount" placeholder="Amount" min="0" step="any" style="width:90px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;text-align:center;">
+          <button class="btn btn-accent" onclick="addRecipeIngredientFromSearch()" style="height:34px;padding:0 14px;font-size:12px;">Add</button>
+        </div>
+        <div id="recipeDraftIngredients"></div>
+      </div>
+      <div id="recipeTotals" style="font-size:12px;color:var(--text3);font-family:var(--fm);padding:8px;background:var(--bg3);border-radius:8px;"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closeRecipeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveRecipe()">Save Recipe</button>
     </div>
   </div>
 </div>
