@@ -329,6 +329,12 @@ function toggleSimpleMode(){
     Store.set('nutrilog_settings',{...(s||{}),simpleMode:_simpleMode,savedAt:new Date().toISOString()});
   }).catch(()=>{});
 }
+let _goalSetupOpen=false;
+function toggleGoalSetup(){
+  _goalSetupOpen=!_goalSetupOpen;
+  document.getElementById('goalSetupBody')?.classList.toggle('open',_goalSetupOpen);
+  document.getElementById('goalSetupChevron')?.classList.toggle('open',_goalSetupOpen);
+}
 
 function saveDisplayName(){
   _displayName=(document.getElementById('s-display-name')?.value||'').trim();
@@ -3856,6 +3862,8 @@ async function loadSettings(){
       if(s.goal!==undefined)document.getElementById('s-goal').value=s.goal;
       if(s.bodyfat&&document.getElementById('s-bodyfat'))document.getElementById('s-bodyfat').value=s.bodyfat;
       if(s.goalwt&&document.getElementById('s-goalwt'))document.getElementById('s-goalwt').value=s.goalwt;
+      // Auto-open goal setup panel if the user has goal data already saved
+      if((s.goalwt||s.planStartDate||s.bodyfat)&&!_goalSetupOpen)toggleGoalSetup();
       if(s.planStartDate&&document.getElementById('s-planstart'))document.getElementById('s-planstart').value=s.planStartDate;
       if(s.weeks&&document.getElementById('s-weeks'))document.getElementById('s-weeks').value=s.weeks;
       if(s.lifetime&&document.getElementById('s-lifetime'))document.getElementById('s-lifetime').checked=s.lifetime;

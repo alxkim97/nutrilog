@@ -1116,6 +1116,19 @@ tbody tr:hover .row-acts { opacity:1; }
 .simple-mode #nav-projection { display:none; }
 .simple-mode #page-analysis,
 .simple-mode #page-projection { display:none !important; }
+.simple-mode .adv { display:none !important; }
+.simple-mode #statsDashSection { display:none !important; }
+.simple-mode .macro-section { display:none !important; }
+.simple-mode .danger-section { display:none !important; }
+.simple-mode #account-section .adv { display:none !important; }
+
+/* ── Goal Setup collapsible ── */
+.goal-setup-toggle { display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);margin-top:10px;user-select:none; }
+.goal-setup-toggle:hover { border-color:var(--accent); }
+.goal-setup-chevron { font-size:11px;color:var(--text3);transition:transform .2s; }
+.goal-setup-chevron.open { transform:rotate(90deg); }
+.goal-setup-body { overflow:hidden;max-height:0;transition:max-height .3s ease; }
+.goal-setup-body.open { max-height:600px; }
 
 /* ── Recipe Builder ── */
 .recipe-row { display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border); }

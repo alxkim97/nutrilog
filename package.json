@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.2",
-  "description": "NutriLog v2.6.2 — simple mode, recipe builder, profile pill removed, goal weight optional",
+  "version": "2.6.3",
+  "description": "NutriLog v2.6.3 — settings cleanup, expanded simple mode, collapsible goal setup",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

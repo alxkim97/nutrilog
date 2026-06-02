@@ -798,25 +798,48 @@
             <option value="0">Maintenance</option>
             <option value="300">Lean Bulk (+300 kcal)</option>
           </select></div>
-        <div class="srow"><div><div class="srow-label">Body Fat %</div><div class="srow-sub">estimate; 16% default</div></div>
-          <input class="sinput" id="s-bodyfat" type="number" min="5" max="45" step="0.5" value="16" oninput="markPIDirty();updateCalc()"></div>
-        <div class="srow" id="goalwtRow"><div><div class="srow-label">Goal Weight</div><div class="srow-sub">kg target — leave blank for maintenance</div></div>
-          <input class="sinput" id="s-goalwt" type="number" min="40" max="200" step="0.5" placeholder="—" oninput="markPIDirty();updateCalc()"></div>
-        <div class="srow"><div><div class="srow-label">Plan Start Date</div><div class="srow-sub">for progress tracking</div></div>
-          <input type="date" id="s-planstart" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:12px;border-radius:6px;padding:5px 8px;outline:none;" oninput="markPIDirty()"></div>
-        <div class="srow"><div><div class="srow-label">Timeline</div><div class="srow-sub">weeks</div></div>
-          <input class="sinput" id="s-weeks" type="number" min="4" max="104" step="1" value="20" oninput="markPIDirty();updateCalc()"></div>
-        <div class="srow"><div><div class="srow-label">Lifetime Mode</div><div class="srow-sub">tiny deficit, forever</div></div>
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-            <input type="checkbox" id="s-lifetime" onchange="markPIDirty();updateCalc()" style="width:16px;height:16px;accent-color:var(--accent);">
-            <span style="font-size:12px;color:var(--text2)">Gentle recomp (−100 kcal)</span>
-          </label></div>
-        <div class="srow"><div><div class="srow-label">Daily Log Reminder</div><div class="srow-sub">notify if no meals logged by this time</div></div>
+        <!-- Goal Planning — collapsible, hidden in simple mode -->
+        <div class="adv">
+          <div class="goal-setup-toggle" onclick="toggleGoalSetup()" id="goalSetupToggle">
+            <div>
+              <div class="srow-label" style="margin:0;">Goal Planning</div>
+              <div class="srow-sub" style="margin:2px 0 0;">body fat %, target weight, timeline</div>
+            </div>
+            <span class="goal-setup-chevron" id="goalSetupChevron">▶</span>
+          </div>
+          <div class="goal-setup-body" id="goalSetupBody">
+            <div class="srow" style="margin-top:10px;"><div><div class="srow-label">Body Fat %</div><div class="srow-sub">estimate; 16% default</div></div>
+              <input class="sinput" id="s-bodyfat" type="number" min="5" max="45" step="0.5" value="16" oninput="markPIDirty();updateCalc()"></div>
+            <div class="srow" id="goalwtRow"><div><div class="srow-label">Goal Weight</div><div class="srow-sub">kg target — leave blank for maintenance</div></div>
+              <input class="sinput" id="s-goalwt" type="number" min="40" max="200" step="0.5" placeholder="—" oninput="markPIDirty();updateCalc()"></div>
+            <div class="srow"><div><div class="srow-label">Plan Start Date</div><div class="srow-sub">for progress tracking</div></div>
+              <input type="date" id="s-planstart" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:12px;border-radius:6px;padding:5px 8px;outline:none;" oninput="markPIDirty()"></div>
+            <div class="srow"><div><div class="srow-label">Timeline</div><div class="srow-sub">weeks</div></div>
+              <input class="sinput" id="s-weeks" type="number" min="4" max="104" step="1" value="20" oninput="markPIDirty();updateCalc()"></div>
+            <div class="srow"><div><div class="srow-label">Lifetime Mode</div><div class="srow-sub">tiny deficit, forever</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="s-lifetime" onchange="markPIDirty();updateCalc()" style="width:16px;height:16px;accent-color:var(--accent);">
+                <span style="font-size:12px;color:var(--text2)">Gentle recomp (−100 kcal)</span>
+              </label></div>
+            <div class="calc-box" style="margin-top:10px;">
+              <div class="calc-row"><span class="calc-lbl">BMI</span><span class="calc-val" id="c-bmi">—</span></div>
+              <div class="calc-row"><span class="calc-lbl">BMR</span><span class="calc-val" id="c-bmr">—</span></div>
+              <div class="calc-row"><span class="calc-lbl">TDEE</span><span class="calc-val" id="c-tdee">—</span></div>
+              <div class="calc-row"><span class="calc-lbl">Calorie Target</span><span class="calc-val accent" id="c-target">—</span></div>
+              <div class="calc-row"><span class="calc-lbl">Lean Body Mass</span><span class="calc-val" id="c-lbm" style="color:var(--blue)">—</span></div>
+              <div class="calc-row"><span class="calc-lbl">Fat to Lose</span><span class="calc-val" id="c-fatloss" style="color:var(--red)">—</span></div>
+              <div class="calc-row"><span class="calc-lbl">Required Deficit</span><span class="calc-val" id="c-deficit" style="color:var(--orange)">—</span></div>
+              <div class="calc-row"><span class="calc-lbl">Safe Timeline</span><span class="calc-val" id="c-safeweeks" style="color:var(--green)">—</span></div>
+              <div id="c-recomp-warn" style="margin-top:8px;padding:8px;border-radius:6px;font-size:11px;line-height:1.5;display:none;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="srow" style="margin-top:8px;"><div><div class="srow-label">Daily Log Reminder</div><div class="srow-sub">notify if no meals logged by this time</div></div>
           <div style="display:flex;align-items:center;gap:8px;">
             <input type="checkbox" id="s-reminder-enabled" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="saveSettings()">
             <input type="time" id="s-reminder-time" value="20:00" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-family:var(--fm);font-size:12px;outline:none;width:90px;" onchange="saveSettings()">
           </div></div>
-        <div class="srow"><div><div class="srow-label">Check-in Frequency</div><div class="srow-sub">how often to prompt weekly check-in</div></div>
+        <div class="srow adv"><div><div class="srow-label">Check-in Frequency</div><div class="srow-sub">how often to prompt weekly check-in</div></div>
           <select id="s-checkin-freq" class="sselect" onchange="markPIDirty()" style="width:160px;">
             <option value="3">Every 3 days</option>
             <option value="7" selected>Every 7 days</option>
@@ -824,7 +847,7 @@
             <option value="30">Every 30 days</option>
             <option value="9999">Never</option>
           </select></div>
-        <div class="srow"><div><div class="srow-label">Streak Macros</div><div class="srow-sub">which macros show a streak on Today</div></div>
+        <div class="srow adv"><div><div class="srow-label">Streak Macros</div><div class="srow-sub">which macros show a streak on Today</div></div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
             <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="s-streak-protein" checked style="accent-color:var(--mp);" onchange="renderStreaks()"> Protein</label>
             <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="s-streak-carbs" style="accent-color:var(--mc);" onchange="renderStreaks()"> Carbs</label>
@@ -833,19 +856,8 @@
           </div></div>
         <div class="srow"><div><div class="srow-label">Body Weight Widget</div><div class="srow-sub">show last weigh-in on Today page</div></div>
           <input type="checkbox" id="s-show-weight-widget" checked style="width:16px;height:16px;accent-color:var(--accent);" onchange="applyWidgetSettings()"></div>
-        <div class="calc-box">
-          <div class="calc-row"><span class="calc-lbl">BMI</span><span class="calc-val" id="c-bmi">—</span></div>
-          <div class="calc-row"><span class="calc-lbl">BMR</span><span class="calc-val" id="c-bmr">—</span></div>
-          <div class="calc-row"><span class="calc-lbl">TDEE</span><span class="calc-val" id="c-tdee">—</span></div>
-          <div class="calc-row"><span class="calc-lbl">Calorie Target</span><span class="calc-val accent" id="c-target">—</span></div>
-          <div class="calc-row"><span class="calc-lbl">Lean Body Mass</span><span class="calc-val" id="c-lbm" style="color:var(--blue)">—</span></div>
-          <div class="calc-row"><span class="calc-lbl">Fat to Lose</span><span class="calc-val" id="c-fatloss" style="color:var(--red)">—</span></div>
-          <div class="calc-row"><span class="calc-lbl">Required Deficit</span><span class="calc-val" id="c-deficit" style="color:var(--orange)">—</span></div>
-          <div class="calc-row"><span class="calc-lbl">Safe Timeline</span><span class="calc-val" id="c-safeweeks" style="color:var(--green)">—</span></div>
-          <div id="c-recomp-warn" style="margin-top:8px;padding:8px;border-radius:6px;font-size:11px;line-height:1.5;display:none;"></div>
-        </div>
       </div>
-      <div class="settings-section">
+      <div class="settings-section macro-section">
         <div class="settings-title-row">
           <div class="settings-title">Daily Macro Targets</div>
           <div class="unsaved-dot" id="mt-dot"></div>
@@ -1094,7 +1106,7 @@
           </div>
         </div>
       </div>
-      <div class="settings-section" style="grid-column:1/-1;border:1.5px solid var(--red);">
+      <div class="settings-section danger-section" style="grid-column:1/-1;border:1.5px solid var(--red);">
         <div class="settings-title" style="color:var(--red)">Danger Zone</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
