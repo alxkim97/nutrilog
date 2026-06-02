@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.8",
-  "description": "NutriLog v2.6.8 — Lumen contrast fix, calc info tooltips + color coding, DOW bars taller",
+  "version": "2.6.9",
+  "description": "NutriLog v2.6.9 — 8 appearance variants, popup from top bar + sidebar",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

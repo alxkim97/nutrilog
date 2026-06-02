@@ -69,40 +69,10 @@
       </div>
     </div>
     <!-- Profile pill removed — sidebar toggle is sufficient -->
-    <div id="themePickerWrap">
-      <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleThemePicker()" title="Choose theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
-      </button>
-      <div id="themePopup">
-        <h6>Choose Theme</h6>
-        <div class="theme-grid">
-          <div class="tswatch" id="tsw-void" onclick="applyTheme('void')">
-            <div class="tswatch-prev" style="background:#0d0b1a;"><div class="tswatch-dot" style="background:#8b82ff;"></div></div>
-            <div class="tswatch-name">Void</div>
-          </div>
-          <div class="tswatch" id="tsw-lumen" onclick="applyTheme('lumen')">
-            <div class="tswatch-prev" style="background:#f4f3ff;border:1px solid #e2dcf8;"><div class="tswatch-dot" style="background:#6366f1;"></div></div>
-            <div class="tswatch-name">Lumen</div>
-          </div>
-          <div class="tswatch" id="tsw-nord" onclick="applyTheme('nord')">
-            <div class="tswatch-prev" style="background:#2e3440;"><div class="tswatch-dot" style="background:#88c0d0;"></div></div>
-            <div class="tswatch-name">Nord</div>
-          </div>
-          <div class="tswatch" id="tsw-forest" onclick="applyTheme('forest')">
-            <div class="tswatch-prev" style="background:#091a0d;"><div class="tswatch-dot" style="background:#4ade80;"></div></div>
-            <div class="tswatch-name">Forest</div>
-          </div>
-          <div class="tswatch" id="tsw-rose" onclick="applyTheme('rose')">
-            <div class="tswatch-prev" style="background:#1a0d14;"><div class="tswatch-dot" style="background:#f472b6;"></div></div>
-            <div class="tswatch-name">Rose</div>
-          </div>
-          <div class="tswatch" id="tsw-mocha" onclick="applyTheme('mocha')">
-            <div class="tswatch-prev" style="background:#1a1208;"><div class="tswatch-dot" style="background:#f59e0b;"></div></div>
-            <div class="tswatch-name">Mocha</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleTheme()" title="Dark / Light">🌙</button>
+    <button class="btn btn-ghost icon-only" id="appearBtn" onclick="toggleAppearPopup(event)" title="Appearance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+    </button>
     <!-- Local save status -->
     <div id="savePill" title="Local save status">
       <div class="sp-dot"></div>
@@ -262,6 +232,13 @@
       Settings
     </div>
   </nav>
+  <div class="sidebar-appear-btn" onclick="toggleAppearPopup(event)" title="Change appearance">
+    <div style="display:flex;align-items:center;gap:7px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="13" height="13"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+      <span style="font-size:12px;">Appearance</span>
+    </div>
+    <span class="sidebar-appear-name" id="sidebarAppearName">Aura</span>
+  </div>
   <div class="sidebar-simple-toggle" id="sidebarSimpleToggle" onclick="toggleSimpleMode()" title="Hide advanced views for simpler experience">
     <div style="display:flex;align-items:center;gap:7px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="13" height="13"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
@@ -747,7 +724,7 @@
         <div class="settings-title">Appearance</div>
         <div style="margin-top:14px;">
           <div class="srow-label" style="margin-bottom:12px;">UI Variant <span style="font-size:10px;font-weight:400;color:var(--text3);font-family:var(--fm);">— applies to both dark &amp; light mode</span></div>
-          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:560px;" id="variantGrid">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;" id="variantGrid">
             <!-- Default / Aura -->
             <button class="variant-swatch active" data-v="default" onclick="applyVariant('default')">
               <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #2e2550;display:flex;height:46px;">
@@ -811,6 +788,70 @@
               </div>
               <div style="font-size:11px;font-weight:600;">Amber</div>
               <div style="font-size:9px;opacity:.6;">Gold · warm</div>
+            </button>
+            <!-- Rose -->
+            <button class="variant-swatch" data-v="rose" onclick="applyVariant('rose')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #4a2040;display:flex;height:46px;">
+                <div style="flex:1;background:#140a0f;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#e879a8;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#4a2040;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#d8a0c4;"></div>
+                <div style="flex:1;background:#fce8f4;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#c01870;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#d8a0c4;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Rose</div>
+              <div style="font-size:9px;opacity:.6;">Pink · dark</div>
+            </button>
+            <!-- Nord -->
+            <button class="variant-swatch" data-v="nord" onclick="applyVariant('nord')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #4c566a;display:flex;height:46px;">
+                <div style="flex:1;background:#232731;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#88c0d0;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#4c566a;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#b0c4d8;"></div>
+                <div style="flex:1;background:#d8e4ef;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#4a8cb4;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#b0c4d8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Nord</div>
+              <div style="font-size:9px;opacity:.6;">Arctic · blue</div>
+            </button>
+            <!-- Forest -->
+            <button class="variant-swatch" data-v="forest" onclick="applyVariant('forest')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #244830;display:flex;height:46px;">
+                <div style="flex:1;background:#071209;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#4ade80;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#244830;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#a0d4ac;"></div>
+                <div style="flex:1;background:#d4eeda;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#16a34a;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#a0d4ac;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Forest</div>
+              <div style="font-size:9px;opacity:.6;">Green · dark</div>
+            </button>
+            <!-- Teal -->
+            <button class="variant-swatch" data-v="teal" onclick="applyVariant('teal')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #224c52;display:flex;height:46px;">
+                <div style="flex:1;background:#060f10;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#2dd4bf;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#224c52;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#98d4d8;"></div>
+                <div style="flex:1;background:#cceef0;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#0d9488;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#98d4d8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Teal</div>
+              <div style="font-size:9px;opacity:.6;">Cyan · dark</div>
             </button>
           </div>
         </div>
@@ -2075,6 +2116,93 @@
   </div>
 </div>
 
+
+<!-- APPEARANCE PICKER POPUP (shared between top bar and sidebar triggers) -->
+<div id="appearPopup">
+  <h6>Appearance</h6>
+  <div class="appear-grid">
+    <!-- Aura -->
+    <button class="variant-swatch" data-v="default" onclick="applyVariant('default')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #2e2550;display:flex;height:40px;">
+        <div style="flex:1;background:#0d0b1a;padding:6px;"><div style="height:3px;background:#8b82ff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#2e2550;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#2e2550;"></div>
+        <div style="flex:1;background:#e6e3f8;padding:6px;"><div style="height:3px;background:#4f52e8;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#b8b0e0;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Aura</div>
+      <div style="font-size:9px;opacity:.55;">Indigo · default</div>
+    </button>
+    <!-- Onyx -->
+    <button class="variant-swatch" data-v="onyx" onclick="applyVariant('onyx')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #38383a;display:flex;height:40px;">
+        <div style="flex:1;background:#0f0f0f;padding:6px;"><div style="height:3px;background:#0a84ff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#38383a;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#38383a;"></div>
+        <div style="flex:1;background:#f5f5f7;padding:6px;"><div style="height:3px;background:#0071e3;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#d8d8dc;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Onyx</div>
+      <div style="font-size:9px;opacity:.55;">Black · Apple</div>
+    </button>
+    <!-- Linear -->
+    <button class="variant-swatch" data-v="linear" onclick="applyVariant('linear')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #25253a;display:flex;height:40px;">
+        <div style="flex:1;background:#0a0a0e;padding:6px;"><div style="height:3px;background:#5c6aff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#25253a;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#d0d4f0;"></div>
+        <div style="flex:1;background:#f5f7ff;padding:6px;"><div style="height:3px;background:#4c5bff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#d4d8f4;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Linear</div>
+      <div style="font-size:9px;opacity:.55;">Indigo · tech</div>
+    </button>
+    <!-- Amber -->
+    <button class="variant-swatch" data-v="amber" onclick="applyVariant('amber')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #2a2530;display:flex;height:40px;">
+        <div style="flex:1;background:#08070a;padding:6px;"><div style="height:3px;background:#f0a030;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#2a2530;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#e8d8a8;"></div>
+        <div style="flex:1;background:#fdf8ee;padding:6px;"><div style="height:3px;background:#c17800;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#e8d8a8;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Amber</div>
+      <div style="font-size:9px;opacity:.55;">Gold · warm</div>
+    </button>
+    <!-- Rose -->
+    <button class="variant-swatch" data-v="rose" onclick="applyVariant('rose')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #4a2040;display:flex;height:40px;">
+        <div style="flex:1;background:#140a0f;padding:6px;"><div style="height:3px;background:#e879a8;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#4a2040;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#d8a0c4;"></div>
+        <div style="flex:1;background:#fce8f4;padding:6px;"><div style="height:3px;background:#c01870;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#d8a0c4;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Rose</div>
+      <div style="font-size:9px;opacity:.55;">Pink · dark</div>
+    </button>
+    <!-- Nord -->
+    <button class="variant-swatch" data-v="nord" onclick="applyVariant('nord')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #4c566a;display:flex;height:40px;">
+        <div style="flex:1;background:#232731;padding:6px;"><div style="height:3px;background:#88c0d0;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#4c566a;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#b0c4d8;"></div>
+        <div style="flex:1;background:#d8e4ef;padding:6px;"><div style="height:3px;background:#4a8cb4;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#b0c4d8;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Nord</div>
+      <div style="font-size:9px;opacity:.55;">Arctic · blue</div>
+    </button>
+    <!-- Forest -->
+    <button class="variant-swatch" data-v="forest" onclick="applyVariant('forest')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #244830;display:flex;height:40px;">
+        <div style="flex:1;background:#071209;padding:6px;"><div style="height:3px;background:#4ade80;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#244830;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#a0d4ac;"></div>
+        <div style="flex:1;background:#d4eeda;padding:6px;"><div style="height:3px;background:#16a34a;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#a0d4ac;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Forest</div>
+      <div style="font-size:9px;opacity:.55;">Green · dark</div>
+    </button>
+    <!-- Teal -->
+    <button class="variant-swatch" data-v="teal" onclick="applyVariant('teal')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #224c52;display:flex;height:40px;">
+        <div style="flex:1;background:#060f10;padding:6px;"><div style="height:3px;background:#2dd4bf;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#224c52;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#98d4d8;"></div>
+        <div style="flex:1;background:#cceef0;padding:6px;"><div style="height:3px;background:#0d9488;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#98d4d8;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Teal</div>
+      <div style="font-size:9px;opacity:.55;">Cyan · dark</div>
+    </button>
+  </div>
+</div>
 
   <script src="app.js"></script>
 </body>

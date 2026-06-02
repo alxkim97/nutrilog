@@ -911,9 +911,6 @@ let confCb=null;
 let selCat='breakfast';
 let pasteOpen=false;
 let acIdx=-1;
-let currentTheme='void';
-const THEME_IDS=['void','lumen','nord','forest','rose','mocha'];
-/* back-compat alias */
 let isDark=true;
 // serving recalc state
 let baseServingRef=null; // {serving, kcal, protein, fat, carbs, fiber} per base unit
@@ -942,7 +939,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   }
   // Restore persisted theme + variant before first render to avoid flash
   const _savedTheme=localStorage.getItem('nutrilog_theme');
-  if(_savedTheme) applyTheme(_savedTheme); else applyTheme('void');
+  if(_savedTheme==='light'){isDark=false;document.body.classList.add('light');document.getElementById('themeBtn').textContent='☀️';}
   const _savedVariant=localStorage.getItem('nutrilog_variant');
   if(_savedVariant&&_savedVariant!=='default')document.body.dataset.variant=_savedVariant;
   tick(); setInterval(tick,1000);
@@ -3949,7 +3946,7 @@ async function loadSettings(){
         updateFatHint(!!s.cholesterolManagement);
       }
       // Apply theme + variant for this profile
-      if(s.theme) applyTheme(s.theme);
+      if(s.theme){isDark=s.theme!=='light'&&s.theme!=='lumen';document.body.classList.toggle('light',!isDark);if(document.getElementById('themeBtn'))document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';}
       if(s.variant!==undefined){
         _uiVariant=s.variant||'default';
         if(_uiVariant==='default')delete document.body.dataset.variant;
@@ -4316,7 +4313,7 @@ function saveSettings(){
     templateOrder:tplOrder,
     streakOrder,
     displayName:_displayName,
-    theme:currentTheme,
+    theme:isDark?'dark':'light',
     variant:_uiVariant||'default',
     cholesterolManagement:document.getElementById('s-cholesterol-mgmt')?.checked??false,
   };
@@ -4871,37 +4868,34 @@ function openFullRef(){
   window.open('../references.html');
 }
 
-function applyTheme(id){
-  // back-compat: 'dark' → 'void', 'light' → 'lumen'
-  if(id==='dark')id='void';
-  if(id==='light')id='lumen';
-  if(!THEME_IDS.includes(id))id='void';
-  document.body.classList.remove('light','theme-nord','theme-forest','theme-rose','theme-mocha');
-  if(id==='lumen')document.body.classList.add('light');
-  else if(id!=='void')document.body.classList.add('theme-'+id);
-  currentTheme=id;
-  isDark=id!=='lumen';
-  localStorage.setItem('nutrilog_theme',id);
-  document.querySelectorAll('.tswatch').forEach(el=>el.classList.toggle('active',el.id==='tsw-'+id));
-  document.getElementById('themePopup')?.classList.remove('open');
-  Store.get('nutrilog_settings').then(s=>Store.set('nutrilog_settings',{...(s||{}),theme:id,savedAt:new Date().toISOString()})).catch(()=>{});
+function toggleTheme(){
+  isDark=!isDark;
+  document.body.classList.toggle('light',!isDark);
+  document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';
+  const t=isDark?'dark':'light';
+  localStorage.setItem('nutrilog_theme',t);
+  Store.get('nutrilog_settings').then(s=>Store.set('nutrilog_settings',{...(s||{}),theme:t,savedAt:new Date().toISOString()})).catch(()=>{});
 }
-function toggleThemePicker(){
-  const p=document.getElementById('themePopup');
-  if(!p)return;
-  p.classList.toggle('open');
-  if(p.classList.contains('open')){
-    // Mark active swatch
-    document.querySelectorAll('.tswatch').forEach(el=>el.classList.toggle('active',el.id==='tsw-'+currentTheme));
-    // Close on outside click
-    setTimeout(()=>document.addEventListener('click',_closeThemeOnOutside,{once:true}),10);
-  }
+const VARIANT_NAMES={default:'Aura',onyx:'Onyx',linear:'Linear',amber:'Amber',rose:'Rose',nord:'Nord',forest:'Forest',teal:'Teal'};
+function toggleAppearPopup(e){
+  e.stopPropagation();
+  const popup=document.getElementById('appearPopup');
+  if(!popup)return;
+  if(popup.classList.contains('open')){popup.classList.remove('open');return;}
+  // Position near trigger
+  const btn=e.currentTarget;
+  const rect=btn.getBoundingClientRect();
+  popup.style.top=(rect.bottom+8)+'px';
+  popup.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-448))+'px';
+  popup.classList.add('open');
+  // Update active state in popup
+  popup.querySelectorAll('.variant-swatch').forEach(el=>el.classList.toggle('active',el.dataset.v===_uiVariant));
+  setTimeout(()=>document.addEventListener('click',_closeAppearOnOutside,{once:true}),10);
 }
-function _closeThemeOnOutside(e){
-  const p=document.getElementById('themePopup');
-  if(p&&!p.contains(e.target)&&!document.getElementById('themeBtn').contains(e.target)) p.classList.remove('open');
+function _closeAppearOnOutside(e){
+  const p=document.getElementById('appearPopup');
+  if(p&&!p.contains(e.target))p.classList.remove('open');
 }
-function toggleTheme(){applyTheme(currentTheme==='lumen'?'void':'lumen');}/* legacy menu shortcut */
 
 let _uiVariant=localStorage.getItem('nutrilog_variant')||'default';
 function applyVariant(v){
@@ -4912,6 +4906,10 @@ function applyVariant(v){
   document.querySelectorAll('.variant-swatch').forEach(el=>{
     el.classList.toggle('active',el.dataset.v===_uiVariant);
   });
+  const name=VARIANT_NAMES[_uiVariant]||'Aura';
+  const sn=document.getElementById('sidebarAppearName');
+  if(sn)sn.textContent=name;
+  document.getElementById('appearPopup')?.classList.remove('open');
   Store.get('nutrilog_settings').then(s=>Store.set('nutrilog_settings',{...(s||{}),variant:_uiVariant,savedAt:new Date().toISOString()})).catch(()=>{});
 }
 
