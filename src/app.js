@@ -2458,6 +2458,8 @@ async function initFoodLib(){
 /* ═══ RECIPE BUILDER ═══ */
 let _editingRecipeId=null;
 let _recipeDraftIngredients=[];
+let _recipeAcMatch=null; // currently selected food from recipe autocomplete
+let _recipeAcIdx=-1;
 
 function saveRecipes(){
   Store.set('nutrilog_recipes',_recipes).catch(()=>{});
@@ -2510,6 +2512,7 @@ function openRecipeEditor(id){
 function closeRecipeModal(){
   document.getElementById('recipeModal').classList.remove('open');
   _editingRecipeId=null;_recipeDraftIngredients=[];
+  _recipeAcMatch=null;_recipeAcIdx=-1;recipeAcHide();
 }
 function renderRecipeDraftIngredients(){
   const el=document.getElementById('recipeDraftIngredients');
@@ -2537,16 +2540,68 @@ function updateRecipeTotals(){
   const el=document.getElementById('recipeTotals');
   if(el)el.textContent=`Total: ${Math.round(tot.kcal)} kcal · P${tot.protein.toFixed(1)}g F${tot.fat.toFixed(1)}g C${tot.carbs.toFixed(1)}g — Per serving (÷${srv}): ${Math.round(tot.kcal/srv)} kcal · P${(tot.protein/srv).toFixed(1)}g`;
 }
+/* ── Recipe ingredient autocomplete ── */
+function recipeAcSearch(q){
+  _recipeAcIdx=-1;
+  const list=document.getElementById('recipeAcList');
+  if(!list)return;
+  const qt=q.trim();
+  if(!qt){list.classList.remove('open');list.innerHTML='';return;}
+  const ql=qt.toLowerCase();
+  const matches=[
+    ...foodLib.filter(f=>f.name.toLowerCase().startsWith(ql)),
+    ...foodLib.filter(f=>!f.name.toLowerCase().startsWith(ql)&&f.name.toLowerCase().includes(ql))
+  ].slice(0,10);
+  if(!matches.length){list.classList.remove('open');list.innerHTML='';return;}
+  list.innerHTML=matches.map((f,i)=>`<div class="ac-item" onmousedown="recipeAcPick(${i})">
+    <span class="ac-name">${esc(f.name)}${f.variant?` <span style="font-size:10px;color:var(--text3);font-weight:400;">[${esc(f.variant)}]</span>`:''}</span>
+    <span class="ac-info">${f.kcal} kcal · P${f.protein}g · per ${f.serving}${f.unit}</span>
+  </div>`).join('');
+  list.dataset.matches=JSON.stringify(matches.map((_,i)=>foodLib.indexOf(matches[i])));
+  list._matches=matches;
+  list.classList.add('open');
+}
+function recipeAcPick(i){
+  const list=document.getElementById('recipeAcList');
+  const match=list._matches?list._matches[i]:null;
+  if(!match)return;
+  _recipeAcMatch=match;
+  document.getElementById('recipeIngSearch').value=match.name+(match.variant?' ['+match.variant+']':'');
+  const unitHint=document.getElementById('recipeIngUnit');
+  if(unitHint)unitHint.textContent=`per ${match.serving} ${match.unit}`;
+  list.classList.remove('open');list.innerHTML='';_recipeAcIdx=-1;
+  document.getElementById('recipeIngAmount').focus();
+}
+function recipeAcHide(){
+  const list=document.getElementById('recipeAcList');
+  if(list){list.classList.remove('open');list.innerHTML='';}
+}
+function recipeAcKey(e){
+  const list=document.getElementById('recipeAcList');
+  const items=list?.querySelectorAll('.ac-item')||[];
+  if(!items.length&&e.key!=='Escape')return;
+  if(e.key==='ArrowDown'){e.preventDefault();_recipeAcIdx=Math.min(_recipeAcIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('focused',i===_recipeAcIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();_recipeAcIdx=Math.max(_recipeAcIdx-1,0);items.forEach((el,i)=>el.classList.toggle('focused',i===_recipeAcIdx));}
+  else if(e.key==='Enter'){e.preventDefault();e.stopPropagation();recipeAcPick(_recipeAcIdx>=0?_recipeAcIdx:0);}
+  else if(e.key==='Escape'){recipeAcHide();}
+}
 function addRecipeIngredientFromSearch(){
-  const q=document.getElementById('recipeIngSearch').value.trim();
-  if(!q){toast('Enter a food name first','err');return;}
-  const ql=q.toLowerCase();
-  const match=foodLib.find(f=>f.name.toLowerCase().startsWith(ql))||foodLib.find(f=>f.name.toLowerCase().includes(ql));
-  if(!match){toast('Not found in food database — add it there first','err');return;}
-  const amt=+document.getElementById('recipeIngAmount').value||1;
+  // Use autocomplete-selected item, or fall back to text search
+  let match=_recipeAcMatch;
+  if(!match){
+    const q=(document.getElementById('recipeIngSearch').value||'').trim();
+    if(!q){toast('Search and select a food first','err');return;}
+    const ql=q.toLowerCase();
+    match=foodLib.find(f=>f.name.toLowerCase().startsWith(ql))||foodLib.find(f=>f.name.toLowerCase().includes(ql));
+    if(!match){toast('Not found in database — add it in Food Database first','err');return;}
+  }
+  const amtEl=document.getElementById('recipeIngAmount');
+  const amt=+amtEl.value;
+  if(!amt||amt<=0){toast('Enter a valid amount','err');amtEl.focus();return;}
   const ratio=amt/(match.serving||1);
   _recipeDraftIngredients.push({
-    name:match.name,amount:amt,unit:match.unit||'',
+    name:match.name+(match.variant?' ['+match.variant+']':''),
+    amount:amt,unit:match.unit||'',
     kcal:Math.round(match.kcal*ratio*10)/10,
     protein:Math.round(match.protein*ratio*100)/100,
     fat:Math.round(match.fat*ratio*100)/100,
@@ -2554,8 +2609,12 @@ function addRecipeIngredientFromSearch(){
     fiber:Math.round(match.fiber*ratio*100)/100,
   });
   document.getElementById('recipeIngSearch').value='';
-  document.getElementById('recipeIngAmount').value='';
+  amtEl.value='';
+  const unitHint=document.getElementById('recipeIngUnit');
+  if(unitHint)unitHint.textContent='';
+  _recipeAcMatch=null;recipeAcHide();
   renderRecipeDraftIngredients();
+  document.getElementById('recipeIngSearch').focus();
 }
 function removeRecipeIngredient(i){
   _recipeDraftIngredients.splice(i,1);

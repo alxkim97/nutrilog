@@ -2097,10 +2097,22 @@
       </div>
       <div>
         <label style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:8px;">Ingredients</label>
-        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-          <input type="text" id="recipeIngSearch" placeholder="Food name (from library)…" style="flex:1;min-width:180px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;">
-          <input type="number" id="recipeIngAmount" placeholder="Amount" min="0" step="any" style="width:90px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;text-align:center;">
-          <button class="btn btn-accent" onclick="addRecipeIngredientFromSearch()" style="height:34px;padding:0 14px;font-size:12px;">Add</button>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-start;">
+          <div class="ac-wrap" style="flex:1;min-width:180px;">
+            <input type="text" id="recipeIngSearch" placeholder="Search food library…"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box;"
+              oninput="recipeAcSearch(this.value)"
+              onkeydown="recipeAcKey(event)"
+              onblur="setTimeout(recipeAcHide,200)">
+            <div id="recipeAcList" class="ac-list"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+            <input type="number" id="recipeIngAmount" placeholder="Amount" min="0" step="any"
+              style="width:90px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;text-align:center;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();addRecipeIngredientFromSearch();}">
+            <span id="recipeIngUnit" style="font-size:9px;color:var(--text3);font-family:var(--fm);letter-spacing:.2px;"></span>
+          </div>
+          <button class="btn btn-accent" onclick="addRecipeIngredientFromSearch()" style="height:34px;padding:0 14px;font-size:12px;flex-shrink:0;">Add</button>
         </div>
         <div id="recipeDraftIngredients"></div>
       </div>
