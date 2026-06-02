@@ -6,11 +6,11 @@
   --accent:#8b82ff; --accent-dim:#2d2860; --accent-glow:rgba(139,130,255,.18);
   --green:#4ade80; --green-dim:#14532d;
   --red:#f87171; --red-dim:#450a0a;
-  --yellow:#fbbf24; --yellow-dim:#451a03;
+  --yellow:#fde047; --yellow-dim:#3a3000;
   --blue:#60a5fa; --blue-dim:#1e3a5f;
   --orange:#fb923c; --orange-dim:#431407;
   --mp:#60a5fa; --mp-dim:rgba(96,165,250,.13);
-  --mf:#fbbf24; --mf-dim:rgba(251,191,36,.13);
+  --mf:#fde047; --mf-dim:rgba(253,224,71,.13);
   --mc:#4ade80; --mc-dim:rgba(74,222,128,.13);
   --mfi:#c084fc; --mfi-dim:rgba(192,132,252,.13);
   --mk:#fb923c; --mk-dim:rgba(251,146,60,.13);
@@ -29,11 +29,11 @@
   --accent:#6366f1; --accent-dim:#ede9fe; --accent-glow:rgba(99,102,241,.12);
   --green:#16a34a; --green-dim:#dcfce7;
   --red:#dc2626; --red-dim:#fee2e2;
-  --yellow:#d97706; --yellow-dim:#fef3c7;
+  --yellow:#ca8a04; --yellow-dim:#fefce8;
   --blue:#2563eb; --blue-dim:#dbeafe;
   --orange:#ea580c; --orange-dim:#ffedd5;
-  --mp:#2563eb; --mf:#d97706; --mc:#16a34a; --mfi:#7c3aed; --mk:#ea580c;
-  --mp-dim:rgba(37,99,235,.10); --mf-dim:rgba(217,119,6,.10);
+  --mp:#2563eb; --mf:#ca8a04; --mc:#16a34a; --mfi:#7c3aed; --mk:#ea580c;
+  --mp-dim:rgba(37,99,235,.10); --mf-dim:rgba(202,138,4,.10);
   --mc-dim:rgba(22,163,74,.10); --mfi-dim:rgba(124,58,237,.10); --mk-dim:rgba(234,88,12,.10);
   --sh:0 2px 12px rgba(99,102,241,.08),0 1px 3px rgba(0,0,0,.04);
 }

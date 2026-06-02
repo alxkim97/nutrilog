@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.4",
-  "description": "NutriLog v2.6.4 — weight trend chart, nutrition insights, food DB variants, recipe button fix",
+  "version": "2.6.5",
+  "description": "NutriLog v2.6.5 — in-app references page, snack color fix, food DB audit report",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

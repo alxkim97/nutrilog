@@ -1078,7 +1078,7 @@ async function handleDayRollover(){
 }
 
 /* ═══ NAV ═══ */
-const PAGE_TITLES={today:'Today',history:'History',analysis:'Analysis',projection:'Projection',foods:'Food Database',settings:'Settings'};
+const PAGE_TITLES={today:'Today',history:'History',analysis:'Analysis',projection:'Projection',foods:'Food Database',settings:'Settings',references:'References'};
 function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -4839,6 +4839,10 @@ async function undoTplHistoryApply(){
 }
 
 /* ═══ THEME ═══ */
+function openFullRef(){
+  window.open('../references.html');
+}
+
 function toggleTheme(){
   isDark=!isDark;
   document.body.classList.toggle('light',!isDark);

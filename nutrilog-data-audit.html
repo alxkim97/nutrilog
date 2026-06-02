@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriLog — Food Database Audit</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#0d0b1a;--bg2:#160f2e;--bg3:#1f1840;--bg4:#2a2052;
+    --border:#2e2550;--text:#f0eeff;--text2:#9b90c8;--text3:#5c5483;
+    --accent:#8b82ff;--accent-dim:#2d2860;
+    --green:#4ade80;--green-dim:#14532d;
+    --red:#f87171;--red-dim:#450a0a;
+    --yellow:#fde047;--yellow-dim:#3a3000;
+    --orange:#fb923c;--orange-dim:#431407;
+    --blue:#60a5fa;--blue-dim:#1e3a5f;
+    --fm:'DM Mono',monospace;--fb:'Outfit',sans-serif;
+  }
+  body{background:var(--bg);color:var(--text);font-family:var(--fb),system-ui,sans-serif;padding:32px 20px;max-width:1000px;margin:0 auto;line-height:1.5;}
+  h1{font-size:24px;font-weight:700;color:var(--accent);margin-bottom:4px;}
+  .sub{font-size:13px;color:var(--text3);margin-bottom:32px;}
+  .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin:28px 0 10px;display:flex;align-items:center;gap:8px;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+  .issue-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:80px 1fr;gap:16px;}
+  .sev-badge{display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:4px 8px;height:fit-content;width:76px;text-align:center;}
+  .sev-critical{background:var(--red-dim);color:var(--red);}
+  .sev-significant{background:var(--orange-dim);color:var(--orange);}
+  .sev-minor{background:var(--yellow-dim);color:var(--yellow);}
+  .sev-note{background:var(--blue-dim);color:var(--blue);}
+  .sev-ok{background:var(--green-dim);color:var(--green);}
+  .item-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .item-desc{font-size:12px;color:var(--text2);line-height:1.6;}
+  .item-val{font-family:var(--fm);font-size:11px;background:var(--bg3);border-radius:6px;padding:6px 10px;margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;}
+  .val-label{color:var(--text3);}
+  .val-data{color:var(--text2);}
+  .val-data.bad{color:var(--red);}
+  .val-data.good{color:var(--green);}
+  .val-data.accent{color:var(--accent);}
+  .math-check{font-family:var(--fm);font-size:11px;padding:6px 10px;border-radius:6px;margin-top:8px;}
+  .math-fail{background:var(--red-dim);color:var(--red);}
+  .math-ok{background:var(--green-dim);color:var(--green);}
+  .note-box{background:var(--bg3);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 14px;margin-top:8px;font-size:11px;color:var(--text2);}
+  .summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:28px;}
+  .sum-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;}
+  .sum-num{font-size:28px;font-weight:700;}
+  .sum-lbl{font-size:11px;color:var(--text3);margin-top:2px;}
+  .disclaimer{margin-top:32px;padding:14px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text3);line-height:1.7;}
+  code{font-family:var(--fm);background:var(--bg4);padding:1px 5px;border-radius:4px;font-size:10.5px;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<h1>NutriLog — Food Database Audit</h1>
+<div class="sub">Generated 2026-06-02 · Reviewing 161 items in <code>profiles/alex/foodlib.json</code> against USDA FoodData Central, official product labels, and published nutritional literature.</div>
+
+<!-- Summary counts -->
+<div class="summary">
+  <div class="sum-card"><div class="sum-num" style="color:var(--red);">1</div><div class="sum-lbl">Critical</div></div>
+  <div class="sum-card"><div class="sum-num" style="color:var(--orange);">4</div><div class="sum-lbl">Significant</div></div>
+  <div class="sum-card"><div class="sum-num" style="color:var(--yellow);">6</div><div class="sum-lbl">Minor</div></div>
+  <div class="sum-card"><div class="sum-num" style="color:var(--blue);">3</div><div class="sum-lbl">Info / Note</div></div>
+  <div class="sum-card"><div class="sum-num" style="color:var(--green);">~147</div><div class="sum-lbl">Reviewed OK</div></div>
+</div>
+
+<!-- ─── CRITICAL ─────────────────────────────────────────────── -->
+<div class="section-label">🚨 Critical — mathematically impossible</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-critical">Critical</span></div>
+  <div>
+    <div class="item-name">Ice Cream Sundae</div>
+    <div class="item-desc">
+      The fat value alone exceeds the total calorie count — this is physically impossible.
+      Fat contributes 9 kcal/g, so 91 g fat = 819 kcal, which already surpasses the listed 700 kcal before counting carbs and protein.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed kcal</span><span class="val-data bad">700 kcal</span>
+      <span class="val-label">Listed fat</span><span class="val-data bad">91 g</span>
+      <span class="val-label">Listed carbs</span><span class="val-data">36 g</span>
+      <span class="val-label">Listed protein</span><span class="val-data">11 g</span>
+    </div>
+    <div class="math-check math-fail">
+      Macro math: (91 × 9) + (36 × 4) + (11 × 4) = 819 + 144 + 44 = <strong>1,007 kcal</strong> — 307 kcal over the listed total.
+    </div>
+    <div class="note-box">
+      <strong>Likely cause:</strong> Fat was probably entered as 9.1 g (mistyped as 91 g), which would give ~(9.1×9)+(36×4)+(11×4) = 82+144+44 = 270 kcal — close to 700 kcal only if serving size is larger, or fat should be ~30–35 g for this serving. Recommend reviewing against the original source and correcting.
+    </div>
+  </div>
+</div>
+
+<!-- ─── SIGNIFICANT ─────────────────────────────────────────── -->
+<div class="section-label">⚠️ Significant — notable deviation from reference values</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-significant">Significant</span></div>
+  <div>
+    <div class="item-name">Chicken Breast (cooked) — per 100 g</div>
+    <div class="item-desc">
+      Protein is understated. USDA FoodData Central (#171477) lists cooked boneless skinless chicken breast at <strong>31 g protein per 100 g</strong>. The current entry shows 25 g, which is the value for <em>raw</em> chicken breast (or a fattier cut).
+    </div>
+    <div class="item-val">
+      <span class="val-label">Current protein</span><span class="val-data bad">25 g / 100 g</span>
+      <span class="val-label">Reference (USDA)</span><span class="val-data good">31 g / 100 g</span>
+      <span class="val-label">Current kcal</span><span class="val-data">165 kcal / 100 g</span>
+      <span class="val-label">Reference kcal</span><span class="val-data good">165 kcal / 100 g ✓</span>
+    </div>
+    <div class="note-box">Impact: underestimates daily protein by ~6 g per 100 g serving logged. Over multiple entries this creates meaningful tracking error. Suggest updating protein to 31 g.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-significant">Significant</span></div>
+  <div>
+    <div class="item-name">Alli Cottage Cheese — ¼ cup (serving = 0.25)</div>
+    <div class="item-desc">
+      The entry is configured as <code>serving: 0.25 cup</code> delivering 25 g protein. Standard cottage cheese contains approximately <strong>7 g protein per ¼ cup (56 g)</strong> (USDA #1097512, 2% milkfat). Even the highest-protein cottage cheeses max out at ~9–10 g per ¼ cup.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Current protein per ¼ cup</span><span class="val-data bad">25 g</span>
+      <span class="val-label">Reference (USDA, ¼ cup)</span><span class="val-data good">~7 g</span>
+      <span class="val-label">Current kcal</span><span class="val-data">90 kcal / ¼ cup</span>
+      <span class="val-label">Reference kcal</span><span class="val-data good">~55 kcal / ¼ cup</span>
+    </div>
+    <div class="note-box">
+      <strong>Likely cause:</strong> The 25 g protein value was likely copied from a <em>per-cup</em> label, but the serving was then set to 0.25 cup — effectively quadrupling the protein density. Recommend changing <code>serving</code> to <code>1</code> cup (full cup reference) and adjusting macros accordingly, or using 7 g protein for the ¼ cup serving.
+    </div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-significant">Significant</span></div>
+  <div>
+    <div class="item-name">Yakult Original (80 mL)</div>
+    <div class="item-desc">
+      Listed at 70 kcal. Official Yakult Thailand nutrition label: <strong>50 kcal per 65 mL bottle</strong> (≈ 62 kcal if scaled to 80 mL). At 70 kcal the entry overstates by ~8–12 kcal per bottle — compounding if multiple are logged daily.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed kcal</span><span class="val-data bad">70 kcal</span>
+      <span class="val-label">Official label (65 mL)</span><span class="val-data good">50 kcal</span>
+      <span class="val-label">Listed carbs</span><span class="val-data bad">16 g</span>
+      <span class="val-label">Official carbs (65 mL)</span><span class="val-data good">12 g</span>
+    </div>
+    <div class="note-box">Yakult Original standard bottle is 65 mL in Thailand, not 80 mL. If your bottle is specifically labeled 80 mL, verify against its own label. Otherwise consider updating to 65 mL / 50 kcal / 12 g carbs.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-significant">Significant</span></div>
+  <div>
+    <div class="item-name">Swensen Belgian Chocolate and Black Forest — 1 set</div>
+    <div class="item-desc">
+      The listed macros sum to a higher calorie total than stated. This is one of the most calorie-dense entries in the database.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed kcal</span><span class="val-data bad">1,650 kcal</span>
+      <span class="val-label">Listed fat</span><span class="val-data">115 g</span>
+      <span class="val-label">Listed carbs</span><span class="val-data">175 g</span>
+      <span class="val-label">Listed protein</span><span class="val-data">24 g</span>
+    </div>
+    <div class="math-check math-fail">
+      Macro math: (115 × 9) + (175 × 4) + (24 × 4) = 1,035 + 700 + 96 = <strong>1,831 kcal</strong> — 181 kcal over the listed 1,650 kcal.
+    </div>
+    <div class="note-box">The macro math doesn't reconcile with the listed total. Fat appears ~20 g too high. Suggest reducing fat to ~95 g (giving 855+700+96 = 1,651 kcal) or accepting the listed 1,650 kcal and trimming the macro breakdown accordingly.</div>
+  </div>
+</div>
+
+<!-- ─── MINOR ───────────────────────────────────────────────── -->
+<div class="section-label">⚡ Minor — small variances or plausible but questionable values</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-minor">Minor</span></div>
+  <div>
+    <div class="item-name">Riceberry Mixed Jasmine Rice — 150 g cooked</div>
+    <div class="item-desc">
+      Fiber listed as 0 g. Riceberry (ข้าวไรซ์เบอร์รี่) is a deep purple hybrid rice specifically bred for higher fiber, anthocyanin, and antioxidant content compared to regular white rice.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed fiber (150 g cooked)</span><span class="val-data bad">0 g</span>
+      <span class="val-label">Expected (literature)</span><span class="val-data good">~1.5 – 3 g</span>
+    </div>
+    <div class="note-box">Raw riceberry has ~2–3 g fiber per 100 g dry weight. After cooking and expansion (≈ 2.5×), 150 g cooked ≈ 60 g dry → roughly 1.5–2 g fiber. Suggest updating to 2 g.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-minor">Minor</span></div>
+  <div>
+    <div class="item-name">Meiji Greek Style Yoghurt (1000 g) — 150 g serving</div>
+    <div class="item-desc">
+      Listed at only 7 g protein per 150 g. "Greek style" yogurts are characterised by straining that concentrates protein to typically 12–17 g per 150 g serving. 7 g is consistent with <em>regular</em> (unstrained) yogurt.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed protein (150 g)</span><span class="val-data bad">7 g</span>
+      <span class="val-label">Typical Greek yogurt (150 g)</span><span class="val-data good">12 – 17 g</span>
+      <span class="val-label">Listed fat (150 g)</span><span class="val-data">11 g</span>
+      <span class="val-label">Typical Greek (full fat)</span><span class="val-data">8 – 10 g</span>
+    </div>
+    <div class="note-box">The "Meiji Greek Style" may be a lighter Greek-style product rather than true strained Greek yogurt. Verify the actual Makro/Tops label on the 1 kg tub. If the label shows 7 g protein the entry is correct as recorded; if it shows higher, update.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-minor">Minor</span></div>
+  <div>
+    <div class="item-name">Chicken Leg (meat only, skin on) — per 100 g</div>
+    <div class="item-desc">
+      Listed at 250 kcal and 17 g fat. USDA FoodData Central (#171477 / #1099754) for cooked chicken thigh/drumstick with skin: ~232 kcal and 15–17 g fat per 100 g.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed kcal</span><span class="val-data">250 kcal</span>
+      <span class="val-label">USDA reference</span><span class="val-data good">~232 kcal</span>
+      <span class="val-label">Listed protein</span><span class="val-data">26 g</span>
+      <span class="val-label">USDA reference</span><span class="val-data good">~25 g ✓</span>
+    </div>
+    <div class="note-box">~8% calorie overshoot. Minor overestimation, but consistent with leggier/fattier cuts. Acceptable if the specific cut/cooking method justifies it.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-minor">Minor</span></div>
+  <div>
+    <div class="item-name">Mash Crunchy Peanut Butter — 15 g serving</div>
+    <div class="item-desc">
+      Macro math gives 100 kcal but the entry lists 90 kcal.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed kcal</span><span class="val-data">90 kcal</span>
+      <span class="val-label">Listed fat / carbs / protein</span><span class="val-data">8 g / 3 g / 4 g</span>
+    </div>
+    <div class="math-check math-fail">
+      (8 × 9) + (3 × 4) + (4 × 4) = 72 + 12 + 16 = <strong>100 kcal</strong> vs listed 90 kcal.
+    </div>
+    <div class="note-box">Standard peanut butter: 90–95 kcal per 15 g. The kcal is the more typical label value; the macros are slightly over. Either reduce fat to 7 g or increase kcal to 100. Minor rounding difference.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-minor">Minor</span></div>
+  <div>
+    <div class="item-name">แคบหมู (Pork Rinds) — per 100 g</div>
+    <div class="item-desc">
+      Protein appears slightly high versus typical pork rind values; macro math doesn't fully reconcile.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed kcal</span><span class="val-data">520 kcal</span>
+      <span class="val-label">Listed fat / protein</span><span class="val-data">30 g / 60 g</span>
+      <span class="val-label">USDA pork rinds (100 g)</span><span class="val-data good">~544 kcal, ~33 g fat, ~55 g protein</span>
+    </div>
+    <div class="math-check math-fail">
+      (30 × 9) + (0 × 4) + (60 × 4) = 270 + 0 + 240 = <strong>510 kcal</strong> vs listed 520 kcal.
+    </div>
+    <div class="note-box">USDA value suggests fat is slightly underestimated (30 vs ~33 g) and protein slightly overestimated (60 vs ~55 g). Thai brand แคบหมู may vary by recipe. Acceptable as a general estimate.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-minor">Minor</span></div>
+  <div>
+    <div class="item-name">Ferrero Rocher (37.5 g) — 3 pieces</div>
+    <div class="item-desc">
+      Per single Ferrero Rocher ball (12.5 g): 73 kcal, 5.3 g fat, 5.3 g carbs, 1.0 g protein. Multiplied by 3: 219 kcal, 15.9 g fat, 15.9 g carbs, 3 g protein. Entry shows 230 kcal and 18 g carbs — roughly 5% higher.
+    </div>
+    <div class="item-val">
+      <span class="val-label">Listed (3 pcs)</span><span class="val-data">230 kcal · 16 g fat · 18 g carbs · 3 g protein</span>
+      <span class="val-label">Per-piece × 3</span><span class="val-data good">219 kcal · 15.9 g fat · 15.9 g carbs · 3 g protein</span>
+    </div>
+    <div class="note-box">Minor overshoot (~11 kcal). Note a separate per-piece entry already exists in your database which is more precise. Consider deleting the 3-piece entry and logging 3 × the single-ball entry instead.</div>
+  </div>
+</div>
+
+<!-- ─── INFO / NOTES ─────────────────────────────────────────── -->
+<div class="section-label">ℹ️ Info / Notes — expected or by-design</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-note">Info</span></div>
+  <div>
+    <div class="item-name">Alcoholic beverages (Beer, Kyu Kyu Umeshu)</div>
+    <div class="item-desc">
+      Calories listed for Beer (150 kcal) and Kyu Kyu Umeshu (97 kcal/100 mL) are correct totals, but the macro breakdown (fat + carbs + protein) does not add up to the listed kcal because <strong>alcohol contributes ~7 kcal/g</strong> — a value NutriLog cannot track as a separate macro.
+    </div>
+    <div class="note-box">This is expected behavior. Total calorie entry is correct; the gap between macro math and listed kcal equals the alcohol calories. No change needed — just be aware that logged macros understate dietary energy when alcohol is involved.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-note">Info</span></div>
+  <div>
+    <div class="item-name">Singha Zero-Sugar Sodas (Lemon Cream, Lime Lemon, Red Lemon, Pink Lemon) — 0 kcal with 1 g carbs</div>
+    <div class="item-desc">
+      Listed as 0 kcal but with 1 g carbs. Technically 1 g carbs should contribute 4 kcal. This is consistent with Thai nutrition labeling rules that round to 0 kcal when total energy is below 4 kcal per serving.
+    </div>
+    <div class="note-box">No change needed — matches official label rounding practice.</div>
+  </div>
+</div>
+
+<div class="issue-card">
+  <div><span class="sev-badge sev-note">Info</span></div>
+  <div>
+    <div class="item-name">McDonald's Coca-Cola (Large) — 380 kcal / 100 g carbs</div>
+    <div class="item-desc">
+      US McDonald's large Coca-Cola (30 fl oz / ~887 mL) = ~310 kcal. Thai McDonald's large sizes may differ. The 380 kcal entry could reflect a Thai XL-size or a cup that is larger than the US standard large.
+    </div>
+    <div class="note-box">Macro math is internally consistent (100 g carbs × 4 = 400 kcal, close to 380 kcal given rounding). Verify against the cup's own nutrition panel — if Thailand's large = 380 kcal, the entry is correct.</div>
+  </div>
+</div>
+
+<div class="disclaimer">
+  <strong style="color:var(--text2);">How to use this report</strong><br>
+  This audit is informational — no data has been changed. Critical and significant issues are recommended for correction. Minor issues can be updated at your discretion. Homemade/custom meal entries (e.g., Chicken Breast Veggie Blend, Rice with กะเพราไก่) were not audited since they are self-reported and inherently variable by preparation.<br><br>
+  Reference sources: USDA FoodData Central (fdc.nal.usda.gov) · Official Thai product labels · WHO BMI Classification · ACSM Guidelines · IOM Dietary Reference Intakes.
+</div>
+
+</body>
+</html>
