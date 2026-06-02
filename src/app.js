@@ -4028,14 +4028,22 @@ function updateCalc(){
   // Safe timeline: 300–500 kcal/day = 0.3–0.5 kg/wk fat loss
   const minWeeks=Math.ceil(fatToLose/0.5);
   const maxWeeks=Math.ceil(fatToLose/0.3);
-  document.getElementById('c-bmi').textContent=(w/((h/100)**2)).toFixed(1)+' kg/m²';
-  document.getElementById('c-bmr').textContent=Math.round(bmr).toLocaleString()+' kcal';
-  document.getElementById('c-tdee').textContent=Math.round(tdee).toLocaleString()+' kcal';
-  document.getElementById('c-target').textContent=target.toLocaleString()+' kcal';
-  document.getElementById('c-lbm').textContent=lbm.toFixed(1)+' kg';
-  document.getElementById('c-fatloss').textContent=fatToLose.toFixed(1)+' kg to lose';
-  document.getElementById('c-deficit').textContent=Math.abs(deficit)+' kcal/day '+(deficit<0?'deficit':'surplus');
-  document.getElementById('c-safeweeks').textContent=minWeeks+'–'+maxWeeks+' wk recommended';
+  const bmi=w/((h/100)**2);
+  const bmiCol=bmi<18.5?'var(--blue)':bmi<25?'var(--green)':bmi<30?'var(--yellow)':'var(--red)';
+  const _cv=(id,text,col)=>{const e=document.getElementById(id);if(!e)return;e.textContent=text;e.style.color=col||'';};
+  _cv('c-bmi',bmi.toFixed(1)+' kg/m²',bmiCol);
+  _cv('c-bmr',Math.round(bmr).toLocaleString()+' kcal','var(--text2)');
+  _cv('c-tdee',Math.round(tdee).toLocaleString()+' kcal','var(--text2)');
+  const targetCol=target<1400?'var(--red)':target>4000?'var(--blue)':'var(--accent)';
+  _cv('c-target',target.toLocaleString()+' kcal',targetCol);
+  const lbmCol='var(--blue)';
+  _cv('c-lbm',lbm.toFixed(1)+' kg',lbmCol);
+  const fatCol=fatToLose<2?'var(--green)':fatToLose<5?'var(--accent)':fatToLose<10?'var(--yellow)':fatToLose<20?'var(--orange)':'var(--red)';
+  _cv('c-fatloss',fatToLose.toFixed(1)+' kg to lose',fatCol);
+  const deficitAbs=Math.abs(deficit);
+  const deficitCol=deficitAbs<300?'var(--green)':deficitAbs<500?'var(--accent)':deficitAbs<750?'var(--yellow)':'var(--red)';
+  _cv('c-deficit',deficitAbs+' kcal/day '+(deficit<0?'deficit':'surplus'),deficitCol);
+  _cv('c-safeweeks',minWeeks+'–'+maxWeeks+' wk recommended','var(--green)');
   const warn=document.getElementById('c-recomp-warn');
   if(goal==='recomp'&&!lifetime){
     const wksOk=weeks>=minWeeks&&weeks<=maxWeeks*1.5;
@@ -5149,11 +5157,11 @@ function renderStatsDashboard(){
   loggedDates.forEach(d=>{dowC[new Date(d+'T00:00:00').getDay()]++;});
   const maxDow=Math.max(...dowC,1);
   const dowEl=document.getElementById('statsDayOfWeek');
-  if(dowEl)dowEl.innerHTML=`<div style="display:flex;gap:4px;align-items:flex-end;height:64px;">
+  if(dowEl)dowEl.innerHTML=`<div style="display:flex;gap:4px;align-items:flex-end;height:96px;">
     ${dowC.map((c,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
-      <div style="font-size:9px;color:var(--text3);font-family:var(--fm);">${c>0?c:''}</div>
-      <div style="background:var(--accent);width:100%;border-radius:3px 3px 0 0;height:${Math.round(c/maxDow*42)}px;min-height:${c>0?2:0}px;opacity:.8;"></div>
-      <div style="font-size:9px;color:var(--text3);">${DOW[i]}</div>
+      <div style="font-size:9px;color:var(--accent);font-family:var(--fm);font-weight:600;">${c>0?c:''}</div>
+      <div style="background:var(--accent);width:100%;border-radius:3px 3px 0 0;height:${Math.round(c/maxDow*64)}px;min-height:${c>0?3:0}px;opacity:.75;transition:opacity .15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.75"></div>
+      <div style="font-size:9px;color:var(--text3);font-weight:600;">${DOW[i]}</div>
     </div>`).join('')}
   </div>`;
 }

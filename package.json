@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.7",
-  "description": "NutriLog v2.6.7 — food data corrections, sidebar simple mode toggle",
+  "version": "2.6.8",
+  "description": "NutriLog v2.6.8 — Lumen contrast fix, calc info tooltips + color coding, DOW bars taller",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

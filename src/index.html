@@ -889,14 +889,38 @@
                 <span style="font-size:12px;color:var(--text2)">Gentle recomp (−100 kcal)</span>
               </label></div>
             <div class="calc-box" style="margin-top:10px;">
-              <div class="calc-row"><span class="calc-lbl">BMI</span><span class="calc-val" id="c-bmi">—</span></div>
-              <div class="calc-row"><span class="calc-lbl">BMR</span><span class="calc-val" id="c-bmr">—</span></div>
-              <div class="calc-row"><span class="calc-lbl">TDEE</span><span class="calc-val" id="c-tdee">—</span></div>
-              <div class="calc-row"><span class="calc-lbl">Calorie Target</span><span class="calc-val accent" id="c-target">—</span></div>
-              <div class="calc-row"><span class="calc-lbl">Lean Body Mass</span><span class="calc-val" id="c-lbm" style="color:var(--blue)">—</span></div>
-              <div class="calc-row"><span class="calc-lbl">Fat to Lose</span><span class="calc-val" id="c-fatloss" style="color:var(--red)">—</span></div>
-              <div class="calc-row"><span class="calc-lbl">Required Deficit</span><span class="calc-val" id="c-deficit" style="color:var(--orange)">—</span></div>
-              <div class="calc-row"><span class="calc-lbl">Safe Timeline</span><span class="calc-val" id="c-safeweeks" style="color:var(--green)">—</span></div>
+              <div class="calc-row">
+                <span class="calc-lbl">BMI <span class="ci">i<span class="ci-tip"><strong>Body Mass Index</strong>Normal: 18.5–24.9 · Underweight: &lt;18.5 · Overweight: 25–29.9 · Obese: ≥30. Note: BMI doesn't distinguish muscle from fat — use body fat % for a fuller picture. Source: WHO 2000.</span></span></span>
+                <span class="calc-val" id="c-bmi">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">BMR <span class="ci">i<span class="ci-tip"><strong>Basal Metabolic Rate</strong>Calories burned at complete rest — your "floor." Calculated with Revised Harris-Benedict. Varies by body size, age, and sex. This number alone is not a target.</span></span></span>
+                <span class="calc-val" id="c-bmr">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">TDEE <span class="ci">i<span class="ci-tip"><strong>Total Daily Energy Expenditure</strong>BMR × activity multiplier. This is your maintenance calories — eating at TDEE neither gains nor loses weight. Source: McArdle, Katch &amp; Katch 2010.</span></span></span>
+                <span class="calc-val" id="c-tdee">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Calorie Target <span class="ci">i<span class="ci-tip"><strong>Your daily calorie goal</strong>TDEE + your deficit/surplus. Safe range: 1,400–3,500 kcal for most adults. Below 1,200 kcal risks nutrient deficiencies and muscle loss. Above 4,000 kcal is rarely needed outside elite athletes.</span></span></span>
+                <span class="calc-val" id="c-target">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Lean Body Mass <span class="ci">i<span class="ci-tip"><strong>Lean Body Mass (LBM)</strong>Weight minus fat mass. Estimated by Boer formula. Used to set protein targets (2.4 g/kg LBM) and muscle gain caps in the projection model. Higher LBM = higher metabolism.</span></span></span>
+                <span class="calc-val" id="c-lbm">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Fat to Lose <span class="ci">i<span class="ci-tip"><strong>Estimated fat mass to reach goal weight</strong>Assumes all weight difference is fat. Safe loss rate: 0.5–1% body weight per week. Losing faster risks muscle loss. Source: Garthe 2011; Hall 2012.</span></span></span>
+                <span class="calc-val" id="c-fatloss">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Required Deficit <span class="ci">i<span class="ci-tip"><strong>Daily calorie deficit needed</strong>Conservative &lt;300 kcal/day · Moderate 300–500 · Aggressive 500–750 · Risky &gt;750 (muscle loss likely). ~7,700 kcal deficit = 1 kg fat. Source: Hall et al. 2012.</span></span></span>
+                <span class="calc-val" id="c-deficit">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Safe Timeline <span class="ci">i<span class="ci-tip"><strong>Recommended weeks to reach goal weight</strong>Based on 0.3–0.5 kg/week fat loss rate — the range shown to preserve muscle while losing fat. Slower is better for body composition. Source: Barakat 2020; Garthe 2011.</span></span></span>
+                <span class="calc-val" id="c-safeweeks">—</span>
+              </div>
               <div id="c-recomp-warn" style="margin-top:8px;padding:8px;border-radius:6px;font-size:11px;line-height:1.5;display:none;"></div>
             </div>
           </div>

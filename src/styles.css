@@ -22,20 +22,21 @@
   --sh:0 4px 32px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.04);
 }
 .light {
-  /* Light — soft lavender, GND Leads inspired */
-  --bg:#f4f3ff; --bg2:#ffffff; --bg3:#f0eeff; --bg4:#e8e4ff;
-  --border:#e2dcf8; --border2:#ccc6f0;
-  --text:#1a1535; --text2:#5a5280; --text3:#9490b8;
-  --accent:#6366f1; --accent-dim:#ede9fe; --accent-glow:rgba(99,102,241,.12);
-  --green:#16a34a; --green-dim:#dcfce7;
-  --red:#dc2626; --red-dim:#fee2e2;
-  --yellow:#ca8a04; --yellow-dim:#fefce8;
-  --blue:#2563eb; --blue-dim:#dbeafe;
-  --orange:#ea580c; --orange-dim:#ffedd5;
-  --mp:#2563eb; --mf:#ca8a04; --mc:#16a34a; --mfi:#7c3aed; --mk:#ea580c;
-  --mp-dim:rgba(37,99,235,.10); --mf-dim:rgba(202,138,4,.10);
-  --mc-dim:rgba(22,163,74,.10); --mfi-dim:rgba(124,58,237,.10); --mk-dim:rgba(234,88,12,.10);
-  --sh:0 2px 12px rgba(99,102,241,.08),0 1px 3px rgba(0,0,0,.04);
+  /* Light — high-contrast soft lavender */
+  --bg:#e6e3f8; --bg2:#f8f7ff; --bg3:#eeecff; --bg4:#ddd9f5;
+  --border:#b8b0e0; --border2:#9a90cc;
+  --text:#110e28; --text2:#35306a; --text3:#68609a;
+  --accent:#4f52e8; --accent-dim:#e5e4fc; --accent-glow:rgba(79,82,232,.14);
+  --green:#15803d; --green-dim:#dcfce7;
+  --red:#b91c1c; --red-dim:#fee2e2;
+  --yellow:#a16207; --yellow-dim:#fef9c3;
+  --blue:#1d4ed8; --blue-dim:#dbeafe;
+  --orange:#c2410c; --orange-dim:#ffedd5;
+  --mp:#1d4ed8; --mf:#a16207; --mc:#15803d; --mfi:#6d28d9; --mk:#c2410c;
+  --mp-dim:rgba(29,78,216,.12); --mf-dim:rgba(161,98,7,.12);
+  --mc-dim:rgba(21,128,61,.12); --mfi-dim:rgba(109,40,217,.12); --mk-dim:rgba(194,65,12,.12);
+  --sh:0 2px 16px rgba(79,82,232,.12),0 1px 4px rgba(0,0,0,.07);
+  --c-warn:#c2410c; --c-redline:#b91c1c;
 }
 /* ── ADDITIONAL THEMES ── */
 body.theme-nord {
@@ -1009,9 +1010,15 @@ tbody tr:hover .row-acts { opacity:1; }
 .calc-row { display:flex; justify-content:space-between; align-items:center;
   font-size:12px; padding:4px 0; border-bottom:1px solid var(--border); }
 .calc-row:last-child { border-bottom:none; }
-.calc-lbl { color:var(--text2); }
+.calc-lbl { color:var(--text2); display:flex; align-items:center; gap:4px; }
 .calc-val { font-family:var(--fm); font-weight:500; }
 .calc-val.accent { color:var(--accent); }
+/* ── Calc info tooltip ── */
+.ci { display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid var(--text3);color:var(--text3);font-size:8px;cursor:help;position:relative;font-style:normal;font-family:var(--fm);flex-shrink:0;transition:.15s; }
+.ci:hover { border-color:var(--accent);color:var(--accent); }
+.ci .ci-tip { display:none;position:absolute;bottom:calc(100% + 8px);right:-8px;width:220px;background:var(--bg4);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--text2);line-height:1.6;z-index:1000;text-align:left;font-family:var(--fb);font-weight:400;box-shadow:var(--sh);pointer-events:none;white-space:normal; }
+.ci:hover .ci-tip { display:block; }
+.ci .ci-tip strong { color:var(--text);display:block;margin-bottom:4px; }
 .btn-save-settings {
   width:100%; height:36px; background:var(--accent); color:#fff; border:none;
   border-radius:8px; font-size:13px; font-weight:600; cursor:pointer;
@@ -1250,6 +1257,7 @@ tbody tr:hover .row-acts { opacity:1; }
 .goal-setup-body.open { max-height:600px; }
 
 /* ── Recipe Builder ── */
+
 .recipe-row { display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border); }
 .recipe-row:last-child { border-bottom:none; }
 .recipe-info { flex:1;min-width:0; }
