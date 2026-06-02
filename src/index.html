@@ -1396,6 +1396,233 @@
     </details>
   </div>
 
+  <!-- REFERENCES PAGE -->
+  <div class="page" id="page-references">
+    <div class="sec-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div class="sec-title">Scientific References</div>
+        <div class="sec-sub" style="font-size:12px;color:var(--text3);margin-top:2px;">Formulas, ranges, and evidence behind every calculation in NutriLog</div>
+      </div>
+      <a id="refFullLink" style="font-size:12px;color:var(--accent);text-decoration:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:20px;padding:5px 14px;cursor:pointer;" onclick="openFullRef()">Full references PDF ↗</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:4px;">
+
+      <!-- BMI -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">⚖️</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Body Mass Index (BMI)</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          BMI = weight (kg) ÷ height (m)²
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Category</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">BMI Range</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--blue);">Underweight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">&lt; 18.5</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Normal weight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">18.5 – 24.9</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--yellow);">Overweight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">25.0 – 29.9</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--orange);">Obese class I</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">30.0 – 34.9</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--red);">Obese class II–III</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">≥ 35.0</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Source: WHO (2000). BMI classification.</div>
+      </div>
+
+      <!-- BMR -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🔥</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Basal Metabolic Rate (BMR)</div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">Revised Harris-Benedict (Settings page)</div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:8px;line-height:1.7;">
+          ♂ 88.362 + (13.397 × W) + (4.799 × H) − (5.677 × A)<br>
+          ♀ 447.593 + (9.247 × W) + (3.098 × H) − (4.330 × A)
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">Mifflin–St Jeor (Projection model)</div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--green);background:var(--green-dim);border-radius:8px;padding:8px 12px;line-height:1.7;">
+          ♂ (10 × W) + (6.25 × H) − (5 × A) + 5<br>
+          ♀ (10 × W) + (6.25 × H) − (5 × A) − 161
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">W = kg, H = cm, A = years · Roza &amp; Shizgal 1984; Mifflin 1990</div>
+      </div>
+
+      <!-- TDEE -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">⚡</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">TDEE Activity Multipliers</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          TDEE = BMR × Activity Factor
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Level</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">Multiplier</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Sedentary (desk job)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.20</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Lightly active (1–3×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.375</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Moderately active (3–5×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.55</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Very active (6–7×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.725</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Extremely active</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.90</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Source: Harris &amp; Benedict 1918; McArdle, Katch &amp; Katch 2010</div>
+      </div>
+
+      <!-- Lean Body Mass -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">💪</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Lean Body Mass (LBM)</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7;">
+          ♂ LBM = 0.407W + 0.267H − 19.2<br>
+          ♀ LBM = 0.252W + 0.473H − 48.3
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">W = kg, H = cm. Used to set protein floor and muscle gain cap.</div>
+        <div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px;">Body Fat % categories (ACSM)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:2px 6px 5px 0;border-bottom:1px solid var(--border);">Category</th>
+            <th style="text-align:right;padding:2px 0 5px 0;border-bottom:1px solid var(--border);">♂ %</th>
+            <th style="text-align:right;padding:2px 0 5px 0;border-bottom:1px solid var(--border);">♀ %</th>
+          </tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--blue);">Essential fat</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">2–5</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">10–13</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--green);">Athlete</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">6–13</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">14–20</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--green);">Fit</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">14–17</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">21–24</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--yellow);">Average</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">18–24</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">25–31</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--red);">Obese</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 25</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 32</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Boer 1984; ACSM Guidelines 2018</div>
+      </div>
+
+      <!-- Protein -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🥩</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Protein Targets</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Context</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">g / kg BW</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Sedentary adult (RDA)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">0.8</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">General active adult</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">1.2 – 1.6</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Body recomp (app floor)</td><td style="text-align:right;font-family:var(--fm);color:var(--green);">1.8 min</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--accent);">Body recomp (app default)</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">2.4</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Max benefit ceiling</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≤ 3.1</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);">Morton 2018 (meta-analysis); Stokes 2018; Phillips &amp; Van Loon 2011</div>
+      </div>
+
+      <!-- Fat & Carbs -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🥑</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Fat &amp; Carbohydrates</div>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;">Dietary Fat (AMDR)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
+          <tr><td style="padding:3px 0;color:var(--text2);">Acceptable range (IOM)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">20 – 35% TDEE</td></tr>
+          <tr><td style="padding:3px 0;color:var(--accent);">App default</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">25% of TDEE</td></tr>
+          <tr><td style="padding:3px 0;color:var(--text2);">Minimum (hormonal health)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 0.5 g/kg BW</td></tr>
+        </table>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;">Carbohydrates</div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;">
+          Carbs = TDEE − (Protein × 4) − (Fat × 9), ÷ 4
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">IOM Dietary Reference Intakes 2005; Helms 2014</div>
+      </div>
+
+      <!-- Fiber -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🌾</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Dietary Fiber</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          14 g fiber per 1,000 kcal consumed
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Calorie level</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">Target fiber</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">1,400 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~20 g</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">1,800 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~25 g</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">2,200 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~31 g</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">2,500 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~35 g</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">IOM Adequate Intake 2001 (Trumbo et al. 2002)</div>
+      </div>
+
+      <!-- Weight Loss Rate -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">📉</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Safe Rate of Loss &amp; 7,700 Rule</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          ~7,700 kcal deficit ≈ 1 kg of fat
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Rate</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">% body weight / week</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Conservative (muscle-sparing)</td><td style="text-align:right;font-family:var(--fm);color:var(--green);">0.5%</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--accent);">Moderate (app default)</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">0.75%</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--yellow);">Aggressive</td><td style="text-align:right;font-family:var(--fm);color:var(--yellow);">1.0%</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--red);">Risky (muscle loss likely)</td><td style="text-align:right;font-family:var(--fm);color:var(--red);">&gt; 1.0%</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);">Hall 2012; Garthe 2011; Barakat 2020</div>
+      </div>
+
+      <!-- Projection Model -->
+      <div class="analysis-card full" style="grid-column:1/-1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🤖</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">NutriLog Projection Model — Step by Step</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 1 — Weekly BMR recalc</div>
+            <div style="font-size:11px;color:var(--text2);">Each week the model re-runs Mifflin–St Jeor with the projected weight, ensuring calorie targets drift down as body mass decreases.</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 2 — Adaptive factor</div>
+            <div style="font-size:11px;color:var(--text2);">From week 5, a 0.95× metabolic adaptation factor is applied. This models the ~5% metabolic slowdown seen in sustained deficit (Rosenbaum &amp; Leibel 2010).</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 3 — Muscle gain cap</div>
+            <div style="font-size:11px;color:var(--text2);">In recomp / lean-bulk phases, muscle accrual is capped at 0.15 kg/week (novice) down to 0.06 kg/week (advanced) based on training age.</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 4 — Protein adequacy factor</div>
+            <div style="font-size:11px;color:var(--text2);">A modifier min(1, protein ÷ (LBM × 1.6)) scales muscle outcomes when protein intake falls below 1.6 g/kg LBM.</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 5 — Net fat change</div>
+            <div style="font-size:11px;color:var(--text2);">Fat loss = (Energy deficit ÷ 7,700) − muscle gain. Weight = prior weight + muscle − fat. Repeated weekly until goal date.</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:12px;">Rosenbaum &amp; Leibel 2010; Hall et al. 2012; Morton 2018; Barakat 2020; Lemon 1998 (protein ceiling)</div>
+      </div>
+
+    </div><!-- end grid -->
+
+    <div style="margin-top:20px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text3);line-height:1.7;">
+      <strong style="color:var(--text2);">Full academic citations</strong> for all 14 formula sections are available in
+      <code style="font-family:var(--fm);background:var(--bg4);padding:1px 5px;border-radius:4px;">references.html</code>
+      (located alongside the app). All values are used for informational tracking purposes only — consult a registered dietitian or physician for medical advice.
+    </div>
+  </div><!-- end page-references -->
+
 </main>
 
 <!-- ADD / EDIT MEAL MODAL -->
@@ -1824,232 +2051,6 @@
   </div>
 </div>
 
-  <!-- REFERENCES PAGE -->
-  <div class="page" id="page-references">
-    <div class="sec-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <div>
-        <div class="sec-title">Scientific References</div>
-        <div class="sec-sub" style="font-size:12px;color:var(--text3);margin-top:2px;">Formulas, ranges, and evidence behind every calculation in NutriLog</div>
-      </div>
-      <a id="refFullLink" style="font-size:12px;color:var(--accent);text-decoration:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:20px;padding:5px 14px;cursor:pointer;" onclick="openFullRef()">Full references PDF ↗</a>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:4px;">
-
-      <!-- BMI -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">⚖️</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">Body Mass Index (BMI)</div>
-        </div>
-        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
-          BMI = weight (kg) ÷ height (m)²
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <tr style="color:var(--text3);font-family:var(--fm);">
-            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Category</th>
-            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">BMI Range</th>
-          </tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--blue);">Underweight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">&lt; 18.5</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Normal weight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">18.5 – 24.9</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--yellow);">Overweight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">25.0 – 29.9</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--orange);">Obese class I</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">30.0 – 34.9</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--red);">Obese class II–III</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">≥ 35.0</td></tr>
-        </table>
-        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Source: WHO (2000). BMI classification.</div>
-      </div>
-
-      <!-- BMR -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">🔥</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">Basal Metabolic Rate (BMR)</div>
-        </div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">Revised Harris-Benedict (Settings page)</div>
-        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:8px;line-height:1.7;">
-          ♂ 88.362 + (13.397 × W) + (4.799 × H) − (5.677 × A)<br>
-          ♀ 447.593 + (9.247 × W) + (3.098 × H) − (4.330 × A)
-        </div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">Mifflin–St Jeor (Projection model)</div>
-        <div style="font-family:var(--fm);font-size:11px;color:var(--green);background:var(--green-dim);border-radius:8px;padding:8px 12px;line-height:1.7;">
-          ♂ (10 × W) + (6.25 × H) − (5 × A) + 5<br>
-          ♀ (10 × W) + (6.25 × H) − (5 × A) − 161
-        </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:8px;">W = kg, H = cm, A = years · Roza &amp; Shizgal 1984; Mifflin 1990</div>
-      </div>
-
-      <!-- TDEE -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">⚡</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">TDEE Activity Multipliers</div>
-        </div>
-        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
-          TDEE = BMR × Activity Factor
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <tr style="color:var(--text3);font-family:var(--fm);">
-            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Level</th>
-            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">Multiplier</th>
-          </tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Sedentary (desk job)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.20</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Lightly active (1–3×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.375</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Moderately active (3–5×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.55</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Very active (6–7×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.725</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Extremely active</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.90</td></tr>
-        </table>
-        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Source: Harris &amp; Benedict 1918; McArdle, Katch &amp; Katch 2010</div>
-      </div>
-
-      <!-- Lean Body Mass -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">💪</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">Lean Body Mass (LBM)</div>
-        </div>
-        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7;">
-          ♂ LBM = 0.407W + 0.267H − 19.2<br>
-          ♀ LBM = 0.252W + 0.473H − 48.3
-        </div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">W = kg, H = cm. Used to set protein floor and muscle gain cap.</div>
-        <div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px;">Body Fat % categories (ACSM)</div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <tr style="color:var(--text3);font-family:var(--fm);">
-            <th style="text-align:left;padding:2px 6px 5px 0;border-bottom:1px solid var(--border);">Category</th>
-            <th style="text-align:right;padding:2px 0 5px 0;border-bottom:1px solid var(--border);">♂ %</th>
-            <th style="text-align:right;padding:2px 0 5px 0;border-bottom:1px solid var(--border);">♀ %</th>
-          </tr>
-          <tr><td style="padding:3px 6px 3px 0;color:var(--blue);">Essential fat</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">2–5</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">10–13</td></tr>
-          <tr><td style="padding:3px 6px 3px 0;color:var(--green);">Athlete</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">6–13</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">14–20</td></tr>
-          <tr><td style="padding:3px 6px 3px 0;color:var(--green);">Fit</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">14–17</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">21–24</td></tr>
-          <tr><td style="padding:3px 6px 3px 0;color:var(--yellow);">Average</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">18–24</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">25–31</td></tr>
-          <tr><td style="padding:3px 6px 3px 0;color:var(--red);">Obese</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 25</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 32</td></tr>
-        </table>
-        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Boer 1984; ACSM Guidelines 2018</div>
-      </div>
-
-      <!-- Protein -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">🥩</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">Protein Targets</div>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
-          <tr style="color:var(--text3);font-family:var(--fm);">
-            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Context</th>
-            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">g / kg BW</th>
-          </tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Sedentary adult (RDA)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">0.8</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">General active adult</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">1.2 – 1.6</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Body recomp (app floor)</td><td style="text-align:right;font-family:var(--fm);color:var(--green);">1.8 min</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--accent);">Body recomp (app default)</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">2.4</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Max benefit ceiling</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≤ 3.1</td></tr>
-        </table>
-        <div style="font-size:10px;color:var(--text3);">Morton 2018 (meta-analysis); Stokes 2018; Phillips &amp; Van Loon 2011</div>
-      </div>
-
-      <!-- Fat & Carbs -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">🥑</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">Fat &amp; Carbohydrates</div>
-        </div>
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;">Dietary Fat (AMDR)</div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
-          <tr><td style="padding:3px 0;color:var(--text2);">Acceptable range (IOM)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">20 – 35% TDEE</td></tr>
-          <tr><td style="padding:3px 0;color:var(--accent);">App default</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">25% of TDEE</td></tr>
-          <tr><td style="padding:3px 0;color:var(--text2);">Minimum (hormonal health)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 0.5 g/kg BW</td></tr>
-        </table>
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;">Carbohydrates</div>
-        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;">
-          Carbs = TDEE − (Protein × 4) − (Fat × 9), ÷ 4
-        </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:8px;">IOM Dietary Reference Intakes 2005; Helms 2014</div>
-      </div>
-
-      <!-- Fiber -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">🌾</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">Dietary Fiber</div>
-        </div>
-        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
-          14 g fiber per 1,000 kcal consumed
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;">
-          <tr style="color:var(--text3);font-family:var(--fm);">
-            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Calorie level</th>
-            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">Target fiber</th>
-          </tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">1,400 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~20 g</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">1,800 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~25 g</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">2,200 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~31 g</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">2,500 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~35 g</td></tr>
-        </table>
-        <div style="font-size:10px;color:var(--text3);margin-top:8px;">IOM Adequate Intake 2001 (Trumbo et al. 2002)</div>
-      </div>
-
-      <!-- Weight Loss Rate -->
-      <div class="analysis-card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">📉</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">Safe Rate of Loss &amp; 7,700 Rule</div>
-        </div>
-        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
-          ~7,700 kcal deficit ≈ 1 kg of fat
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;">
-          <tr style="color:var(--text3);font-family:var(--fm);">
-            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Rate</th>
-            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">% body weight / week</th>
-          </tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Conservative (muscle-sparing)</td><td style="text-align:right;font-family:var(--fm);color:var(--green);">0.5%</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--accent);">Moderate (app default)</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">0.75%</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--yellow);">Aggressive</td><td style="text-align:right;font-family:var(--fm);color:var(--yellow);">1.0%</td></tr>
-          <tr><td style="padding:4px 6px 4px 0;color:var(--red);">Risky (muscle loss likely)</td><td style="text-align:right;font-family:var(--fm);color:var(--red);">&gt; 1.0%</td></tr>
-        </table>
-        <div style="font-size:10px;color:var(--text3);">Hall 2012; Garthe 2011; Barakat 2020</div>
-      </div>
-
-      <!-- Projection Model -->
-      <div class="analysis-card full" style="grid-column:1/-1;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-          <span style="font-size:18px;">🤖</span>
-          <div style="font-size:14px;font-weight:700;color:var(--text);">NutriLog Projection Model — Step by Step</div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">
-          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 1 — Weekly BMR recalc</div>
-            <div style="font-size:11px;color:var(--text2);">Each week the model re-runs Mifflin–St Jeor with the projected weight, ensuring calorie targets drift down as body mass decreases.</div>
-          </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 2 — Adaptive factor</div>
-            <div style="font-size:11px;color:var(--text2);">From week 5, a 0.95× metabolic adaptation factor is applied. This models the ~5% metabolic slowdown seen in sustained deficit (Rosenbaum &amp; Leibel 2010).</div>
-          </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 3 — Muscle gain cap</div>
-            <div style="font-size:11px;color:var(--text2);">In recomp / lean-bulk phases, muscle accrual is capped at 0.15 kg/week (novice) down to 0.06 kg/week (advanced) based on training age.</div>
-          </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 4 — Protein adequacy factor</div>
-            <div style="font-size:11px;color:var(--text2);">A modifier min(1, protein ÷ (LBM × 1.6)) scales muscle outcomes when protein intake falls below 1.6 g/kg LBM.</div>
-          </div>
-          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 5 — Net fat change</div>
-            <div style="font-size:11px;color:var(--text2);">Fat loss = (Energy deficit ÷ 7,700) − muscle gain. Weight = prior weight + muscle − fat. Repeated weekly until goal date.</div>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--text3);margin-top:12px;">Rosenbaum &amp; Leibel 2010; Hall et al. 2012; Morton 2018; Barakat 2020; Lemon 1998 (protein ceiling)</div>
-      </div>
-
-    </div><!-- end grid -->
-
-    <div style="margin-top:20px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text3);line-height:1.7;">
-      <strong style="color:var(--text2);">Full academic citations</strong> for all 14 formula sections are available in
-      <code style="font-family:var(--fm);background:var(--bg4);padding:1px 5px;border-radius:4px;">references.html</code>
-      (located alongside the app). All values are used for informational tracking purposes only — consult a registered dietitian or physician for medical advice.
-    </div>
-  </div><!-- end page-references -->
 
   <script src="app.js"></script>
 </body>
