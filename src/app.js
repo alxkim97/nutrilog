@@ -4882,13 +4882,22 @@ function toggleAppearPopup(e){
   const popup=document.getElementById('appearPopup');
   if(!popup)return;
   if(popup.classList.contains('open')){popup.classList.remove('open');return;}
-  // Position near trigger
   const btn=e.currentTarget;
   const rect=btn.getBoundingClientRect();
-  popup.style.top=(rect.bottom+8)+'px';
-  popup.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-448))+'px';
+  const pw=448, ph=280;
+  // Sidebar trigger (left side): open to the RIGHT and align bottom to trigger
+  const fromSidebar=rect.left<250;
+  if(fromSidebar){
+    popup.style.left=(rect.right+8)+'px';
+    // Align bottom of popup with bottom of trigger, but clamp to screen
+    const idealTop=rect.bottom-ph;
+    popup.style.top=Math.max(8,idealTop)+'px';
+  } else {
+    // Top bar: open below, shifted left if near right edge
+    popup.style.top=(rect.bottom+8)+'px';
+    popup.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-pw-8))+'px';
+  }
   popup.classList.add('open');
-  // Update active state in popup
   popup.querySelectorAll('.variant-swatch').forEach(el=>el.classList.toggle('active',el.dataset.v===_uiVariant));
   setTimeout(()=>document.addEventListener('click',_closeAppearOnOutside,{once:true}),10);
 }
