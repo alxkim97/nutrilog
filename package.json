@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.5",
-  "description": "NutriLog v2.6.5 — in-app references page, snack color fix, food DB audit report",
+  "version": "2.6.6",
+  "description": "NutriLog v2.6.6 — 6 themes, food type categories, bulk type-tagging",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

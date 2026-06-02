@@ -69,7 +69,40 @@
       </div>
     </div>
     <!-- Profile pill removed — sidebar toggle is sufficient -->
-    <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleTheme()">🌙</button>
+    <div id="themePickerWrap">
+      <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleThemePicker()" title="Choose theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+      </button>
+      <div id="themePopup">
+        <h6>Choose Theme</h6>
+        <div class="theme-grid">
+          <div class="tswatch" id="tsw-void" onclick="applyTheme('void')">
+            <div class="tswatch-prev" style="background:#0d0b1a;"><div class="tswatch-dot" style="background:#8b82ff;"></div></div>
+            <div class="tswatch-name">Void</div>
+          </div>
+          <div class="tswatch" id="tsw-lumen" onclick="applyTheme('lumen')">
+            <div class="tswatch-prev" style="background:#f4f3ff;border:1px solid #e2dcf8;"><div class="tswatch-dot" style="background:#6366f1;"></div></div>
+            <div class="tswatch-name">Lumen</div>
+          </div>
+          <div class="tswatch" id="tsw-nord" onclick="applyTheme('nord')">
+            <div class="tswatch-prev" style="background:#2e3440;"><div class="tswatch-dot" style="background:#88c0d0;"></div></div>
+            <div class="tswatch-name">Nord</div>
+          </div>
+          <div class="tswatch" id="tsw-forest" onclick="applyTheme('forest')">
+            <div class="tswatch-prev" style="background:#091a0d;"><div class="tswatch-dot" style="background:#4ade80;"></div></div>
+            <div class="tswatch-name">Forest</div>
+          </div>
+          <div class="tswatch" id="tsw-rose" onclick="applyTheme('rose')">
+            <div class="tswatch-prev" style="background:#1a0d14;"><div class="tswatch-dot" style="background:#f472b6;"></div></div>
+            <div class="tswatch-name">Rose</div>
+          </div>
+          <div class="tswatch" id="tsw-mocha" onclick="applyTheme('mocha')">
+            <div class="tswatch-prev" style="background:#1a1208;"><div class="tswatch-dot" style="background:#f59e0b;"></div></div>
+            <div class="tswatch-name">Mocha</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- Local save status -->
     <div id="savePill" title="Local save status">
       <div class="sp-dot"></div>
@@ -595,6 +628,15 @@
         <div class="db-flt-group"><label>Fiber ≥</label><input id="dbFltMinFiber" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
         <button class="btn btn-ghost" onclick="clearDbFilters()" style="height:24px;font-size:10px;padding:0 8px;margin-left:auto;">Clear</button>
       </div>
+      <div class="db-type-filters">
+        <span style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;margin-right:2px;">Type:</span>
+        <button class="dtf-btn active" id="dtf-all" onclick="setDbTypeFilter('')">All</button>
+        <button class="dtf-btn" id="dtf-packaged" onclick="setDbTypeFilter('packaged')">🏷️ Packaged</button>
+        <button class="dtf-btn" id="dtf-whole" onclick="setDbTypeFilter('whole')">🌿 Whole</button>
+        <button class="dtf-btn" id="dtf-recipe" onclick="setDbTypeFilter('recipe')">🍳 Recipe</button>
+        <button class="dtf-btn" id="dtf-restaurant" onclick="setDbTypeFilter('restaurant')">🍜 Takeout</button>
+        <button class="dtf-btn" id="dtf-untagged" onclick="setDbTypeFilter('untagged')">◌ Untagged</button>
+      </div>
       <div class="db-toolbar">
         <input class="db-search" id="dbSearch" type="text" placeholder="Search food items…" oninput="renderFoodDb()">
         <button class="btn btn-ghost" onclick="importFoodDb()">
@@ -617,6 +659,15 @@
         </div>
         <div id="dbBulkBar" class="bulk-bar">
           <span class="bulk-count" id="dbSelCount">0 selected</span>
+          <select id="dbBulkTypeSelect" class="db-type-sel" style="height:28px;width:auto;font-size:11px;padding:0 8px;border-radius:6px;background:var(--bg3);">
+            <option value="">Set type…</option>
+            <option value="packaged">🏷️ Packaged</option>
+            <option value="whole">🌿 Whole</option>
+            <option value="recipe">🍳 Recipe</option>
+            <option value="restaurant">🍜 Takeout</option>
+            <option value="">◌ Clear type</option>
+          </select>
+          <button class="btn btn-ghost" onclick="bulkSetDbType()" style="height:28px;font-size:11px;padding:0 10px">Apply Type</button>
           <button class="btn btn-ghost" onclick="exportDbSelected()" style="height:28px;font-size:11px;padding:0 10px">Export</button>
           <button class="btn btn-ghost danger" onclick="deleteDbSelected()" style="height:28px;font-size:11px;padding:0 10px">Delete</button>
           <button class="btn btn-ghost" onclick="clearDbSel()" style="height:28px;font-size:11px;padding:0 10px">Clear</button>
@@ -1459,6 +1510,17 @@
           <input type="text" id="db-name" placeholder="e.g. Chicken Breast (cooked)"></div>
         <div class="ff"><label>Variant <span style="color:var(--text3);font-weight:400;font-size:10px;">(optional)</span></label>
           <input type="text" id="db-variant" placeholder="e.g. grilled, homemade" style="font-size:12px;"></div>
+      </div>
+      <div class="frow">
+        <div class="ff"><label>Data Source <span style="color:var(--text3);font-weight:400;font-size:10px;">(affects confidence indicator)</span></label>
+          <select class="db-type-sel" id="db-type">
+            <option value="">— Uncategorized —</option>
+            <option value="packaged">🏷️ Official / Packaged — has nutrition label</option>
+            <option value="whole">🌿 Whole / Common food — per-100g estimate</option>
+            <option value="recipe">🍳 Homemade / Recipe — calculated from ingredients</option>
+            <option value="restaurant">🍜 Restaurant / Takeout — rough estimate only</option>
+          </select>
+        </div>
       </div>
       <div class="frow">
         <div class="ff"><label>Default Serving</label>

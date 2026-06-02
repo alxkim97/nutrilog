@@ -907,6 +907,9 @@ let confCb=null;
 let selCat='breakfast';
 let pasteOpen=false;
 let acIdx=-1;
+let currentTheme='void';
+const THEME_IDS=['void','lumen','nord','forest','rose','mocha'];
+/* back-compat alias */
 let isDark=true;
 // serving recalc state
 let baseServingRef=null; // {serving, kcal, protein, fat, carbs, fiber} per base unit
@@ -935,7 +938,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   }
   // Restore persisted theme + variant before first render to avoid flash
   const _savedTheme=localStorage.getItem('nutrilog_theme');
-  if(_savedTheme==='light'){isDark=false;document.body.classList.add('light');}
+  if(_savedTheme) applyTheme(_savedTheme); else applyTheme('void');
   const _savedVariant=localStorage.getItem('nutrilog_variant');
   if(_savedVariant&&_savedVariant!=='default')document.body.dataset.variant=_savedVariant;
   tick(); setInterval(tick,1000);
@@ -2674,6 +2677,14 @@ document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))acHide();
 
 /* ═══ FOOD DATABASE PAGE ═══ */
 let dbFilteredCache=[];
+let dbTypeFilter='';
+function setDbTypeFilter(type){
+  dbTypeFilter=type;
+  document.querySelectorAll('.dtf-btn').forEach(b=>b.classList.remove('active'));
+  const btnId='dtf-'+(type||'all');
+  document.getElementById(btnId)?.classList.add('active');
+  renderFoodDb();
+}
 function clearDbFilters(){
   ['dbFltMinProt','dbFltMaxKcal','dbFltMaxCarbs','dbFltMaxFat','dbFltMinFiber'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
@@ -2687,14 +2698,17 @@ function renderFoodDb(){
   const maxCarbs=parseFloat(document.getElementById('dbFltMaxCarbs')?.value)||Infinity;
   const maxFat=parseFloat(document.getElementById('dbFltMaxFat')?.value)||Infinity;
   const minFiber=parseFloat(document.getElementById('dbFltMinFiber')?.value)||0;
-  dbFilteredCache=foodLib.filter(f=>
-    f.name.toLowerCase().includes(q)&&
-    (+f.protein||0)>=minProt&&
-    (+f.kcal||0)<=maxKcal&&
-    (+f.carbs||0)<=maxCarbs&&
-    (+f.fat||0)<=maxFat&&
-    (+f.fiber||0)>=minFiber
-  );
+  dbFilteredCache=foodLib.filter(f=>{
+    if(!f.name.toLowerCase().includes(q))return false;
+    if((+f.protein||0)<minProt)return false;
+    if((+f.kcal||0)>maxKcal)return false;
+    if((+f.carbs||0)>maxCarbs)return false;
+    if((+f.fat||0)>maxFat)return false;
+    if((+f.fiber||0)<minFiber)return false;
+    if(dbTypeFilter==='untagged')return !f.type;
+    if(dbTypeFilter&&dbTypeFilter!=='untagged')return f.type===dbTypeFilter;
+    return true;
+  });
   document.getElementById('dbCount').textContent=dbFilteredCache.length+' item'+(dbFilteredCache.length!==1?'s':'');
   const b=document.getElementById('dbBody');
   if(!dbFilteredCache.length){b.innerHTML='<tr><td colspan="11"><div class="empty-row"><div class="ei">No items found</div></div></td></tr>';return;}
@@ -2706,7 +2720,7 @@ function renderFoodDb(){
     return `<tr class="${sel?'row-selected':''}">
       ${showChk?`<td class="chk"><input type="checkbox" ${sel?'checked':''} onchange="dbToggle(${ri},this.checked)" style="cursor:pointer;accent-color:var(--accent)"></td>`:''}
       <td class="rn">${i+1}</td>
-      <td><div class="food-name">${esc(f.name)}</div>${f.variant?`<span class="db-variant-tag">${esc(f.variant)}</span>`:''}</td>
+      <td><div class="food-name">${esc(f.name)}${f.type?`<span class="db-type-badge ${f.type}">${{packaged:'🏷️',whole:'🌿',recipe:'🍳',restaurant:'🍜'}[f.type]||''} ${f.type}</span>`:''}</div>${f.variant?`<span class="db-variant-tag">${esc(f.variant)}</span>`:''}</td>
       <td class="nr" style="font-family:var(--fm);font-size:12px">${f.serving}</td>
       <td style="font-size:12px;color:var(--text2)">${esc(f.unit)}</td>
       <td class="nr ck">${f.kcal}</td>
@@ -2761,23 +2775,31 @@ function deleteDbSelected(){
   });
 }
 
-function openDbAdd(){dbEditIdx=null;document.getElementById('dbTitle').textContent='Add Food Item';document.getElementById('dbSaveBtn').textContent='Save Item';['db-name','db-variant','db-serving','db-unit','db-kcal','db-protein','db-fat','db-carbs','db-fiber'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
-function openDbEdit(i){dbEditIdx=i;const f=foodLib[i];document.getElementById('dbTitle').textContent='Edit Food Item';document.getElementById('dbSaveBtn').textContent='Update Item';document.getElementById('db-name').value=f.name;const varEl=document.getElementById('db-variant');if(varEl)varEl.value=f.variant||'';document.getElementById('db-serving').value=f.serving;document.getElementById('db-unit').value=f.unit;document.getElementById('db-kcal').value=f.kcal;document.getElementById('db-protein').value=f.protein;document.getElementById('db-fat').value=f.fat;document.getElementById('db-carbs').value=f.carbs;document.getElementById('db-fiber').value=f.fiber;document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
+function openDbAdd(){dbEditIdx=null;document.getElementById('dbTitle').textContent='Add Food Item';document.getElementById('dbSaveBtn').textContent='Save Item';['db-name','db-variant','db-serving','db-unit','db-kcal','db-protein','db-fat','db-carbs','db-fiber'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});const tp=document.getElementById('db-type');if(tp)tp.value='';document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
+function openDbEdit(i){dbEditIdx=i;const f=foodLib[i];document.getElementById('dbTitle').textContent='Edit Food Item';document.getElementById('dbSaveBtn').textContent='Update Item';document.getElementById('db-name').value=f.name;const varEl=document.getElementById('db-variant');if(varEl)varEl.value=f.variant||'';const tp=document.getElementById('db-type');if(tp)tp.value=f.type||'';document.getElementById('db-serving').value=f.serving;document.getElementById('db-unit').value=f.unit;document.getElementById('db-kcal').value=f.kcal;document.getElementById('db-protein').value=f.protein;document.getElementById('db-fat').value=f.fat;document.getElementById('db-carbs').value=f.carbs;document.getElementById('db-fiber').value=f.fiber;document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
 function closeDbModal(){document.getElementById('dbOverlay').classList.remove('open');dbEditIdx=null;}
 function submitDb(){
   const name=document.getElementById('db-name').value.trim();
   if(!name){toast('Name required','err');return;}
   const variant=(document.getElementById('db-variant')?.value||'').trim();
-  const item={name,variant:variant||undefined,serving:pnum(document.getElementById('db-serving').value)||100,unit:document.getElementById('db-unit').value.trim()||'g',kcal:pnum(document.getElementById('db-kcal').value),protein:pnum(document.getElementById('db-protein').value),fat:pnum(document.getElementById('db-fat').value),carbs:pnum(document.getElementById('db-carbs').value),fiber:pnum(document.getElementById('db-fiber').value)};
+  const type=(document.getElementById('db-type')?.value||'').trim();
+  const item={name,variant:variant||undefined,type:type||undefined,serving:pnum(document.getElementById('db-serving').value)||100,unit:document.getElementById('db-unit').value.trim()||'g',kcal:pnum(document.getElementById('db-kcal').value),protein:pnum(document.getElementById('db-protein').value),fat:pnum(document.getElementById('db-fat').value),carbs:pnum(document.getElementById('db-carbs').value),fiber:pnum(document.getElementById('db-fiber').value)};
   if(dbEditIdx!==null){foodLib[dbEditIdx]=item;toast('Item updated','ok');}else{foodLib.unshift(item);toast('Item added','ok');}
   saveFoodLib();closeDbModal();renderFoodDb();
+}
+function bulkSetDbType(){
+  const type=(document.getElementById('dbBulkTypeSelect')?.value||'');
+  if(!dbMultiSel.size){toast('No items selected','err');return;}
+  dbMultiSel.forEach(i=>{if(foodLib[i])foodLib[i].type=type||undefined;});
+  saveFoodLib();updateDbSelCount();renderFoodDb();
+  toast(dbMultiSel.size+' items updated','ok');
 }
 function delDb(i){showConf('Delete food item?','Remove "'+foodLib[i].name+'" from the database?','Delete',()=>{foodLib.splice(i,1);saveFoodLib();renderFoodDb();toast('Removed','info');});}
 
 /* Food DB import/export */
 function exportFoodDb(){
-  const tsv=['Food Item\tServing\tUnit\tCalories\tProtein\tFat\tCarbs\tFiber',
-    ...foodLib.map(f=>`${f.name}\t${f.serving}\t${f.unit}\t${f.kcal}\t${f.protein}\t${f.fat}\t${f.carbs}\t${f.fiber}`)
+  const tsv=['Food Item\tVariant\tType\tServing\tUnit\tCalories\tProtein\tFat\tCarbs\tFiber',
+    ...foodLib.map(f=>`${f.name}\t${f.variant||''}\t${f.type||''}\t${f.serving}\t${f.unit}\t${f.kcal}\t${f.protein}\t${f.fat}\t${f.carbs}\t${f.fiber}`)
   ].join('\n');
   downloadText(tsv,'nutrilog_foods_full.tsv','text/tab-separated-values');
   toast('Food database exported ('+foodLib.length+' items)','ok');
@@ -3923,13 +3945,7 @@ async function loadSettings(){
         updateFatHint(!!s.cholesterolManagement);
       }
       // Apply theme + variant for this profile
-      if(s.theme){
-        isDark=s.theme!=='light';
-        document.body.classList.toggle('light',!isDark);
-        localStorage.setItem('nutrilog_theme',s.theme);
-        const btn=document.getElementById('themeBtn');
-        if(btn)btn.textContent=isDark?'🌙':'☀️';
-      }
+      if(s.theme) applyTheme(s.theme);
       if(s.variant!==undefined){
         _uiVariant=s.variant||'default';
         if(_uiVariant==='default')delete document.body.dataset.variant;
@@ -4288,7 +4304,7 @@ function saveSettings(){
     templateOrder:tplOrder,
     streakOrder,
     displayName:_displayName,
-    theme:isDark?'dark':'light',
+    theme:currentTheme,
     variant:_uiVariant||'default',
     cholesterolManagement:document.getElementById('s-cholesterol-mgmt')?.checked??false,
   };
@@ -4843,14 +4859,37 @@ function openFullRef(){
   window.open('../references.html');
 }
 
-function toggleTheme(){
-  isDark=!isDark;
-  document.body.classList.toggle('light',!isDark);
-  document.getElementById('themeBtn').textContent=isDark?'🌙':'☀️';
-  const t=isDark?'dark':'light';
-  localStorage.setItem('nutrilog_theme',t);
-  Store.get('nutrilog_settings').then(s=>Store.set('nutrilog_settings',{...(s||{}),theme:t,savedAt:new Date().toISOString()})).catch(()=>{});
+function applyTheme(id){
+  // back-compat: 'dark' → 'void', 'light' → 'lumen'
+  if(id==='dark')id='void';
+  if(id==='light')id='lumen';
+  if(!THEME_IDS.includes(id))id='void';
+  document.body.classList.remove('light','theme-nord','theme-forest','theme-rose','theme-mocha');
+  if(id==='lumen')document.body.classList.add('light');
+  else if(id!=='void')document.body.classList.add('theme-'+id);
+  currentTheme=id;
+  isDark=id!=='lumen';
+  localStorage.setItem('nutrilog_theme',id);
+  document.querySelectorAll('.tswatch').forEach(el=>el.classList.toggle('active',el.id==='tsw-'+id));
+  document.getElementById('themePopup')?.classList.remove('open');
+  Store.get('nutrilog_settings').then(s=>Store.set('nutrilog_settings',{...(s||{}),theme:id,savedAt:new Date().toISOString()})).catch(()=>{});
 }
+function toggleThemePicker(){
+  const p=document.getElementById('themePopup');
+  if(!p)return;
+  p.classList.toggle('open');
+  if(p.classList.contains('open')){
+    // Mark active swatch
+    document.querySelectorAll('.tswatch').forEach(el=>el.classList.toggle('active',el.id==='tsw-'+currentTheme));
+    // Close on outside click
+    setTimeout(()=>document.addEventListener('click',_closeThemeOnOutside,{once:true}),10);
+  }
+}
+function _closeThemeOnOutside(e){
+  const p=document.getElementById('themePopup');
+  if(p&&!p.contains(e.target)&&!document.getElementById('themeBtn').contains(e.target)) p.classList.remove('open');
+}
+function toggleTheme(){applyTheme(currentTheme==='lumen'?'void':'lumen');}/* legacy menu shortcut */
 
 let _uiVariant=localStorage.getItem('nutrilog_variant')||'default';
 function applyVariant(v){
