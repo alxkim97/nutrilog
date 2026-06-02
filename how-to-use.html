@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriLog — How to Use</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0b1a; --bg2: #13101f; --bg3: #1c1830; --bg4: #221e38;
+    --accent: #8b82ff; --text: #e8e6f0; --text2: #a09cbd; --text3: #6b668a;
+    --green: #3ecf8e; --red: #f76a6a; --orange: #f0a030; --blue: #6ab4f7;
+    --border: rgba(255,255,255,.07); --fb: 'DM Sans', system-ui, sans-serif;
+    --fm: 'DM Mono', 'Courier New', monospace;
+  }
+  body { background: var(--bg); color: var(--text); font-family: var(--fb); min-height: 100vh; padding: 40px 20px 80px; }
+
+  .page-header { text-align: center; margin-bottom: 56px; }
+  .logo { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 16px; }
+  .logo-icon { width: 52px; height: 52px; background: linear-gradient(135deg, var(--accent), #a78bfa); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .logo-text { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+  .logo-sub { font-size: 12px; color: var(--text3); font-family: var(--fm); text-transform: uppercase; letter-spacing: 2px; }
+  .page-tagline { font-size: 15px; color: var(--text2); max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+  .section { max-width: 960px; margin: 0 auto 64px; }
+  .section-label { font-size: 10px; font-family: var(--fm); text-transform: uppercase; letter-spacing: 2px; color: var(--accent); margin-bottom: 8px; }
+  .section-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .section-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; line-height: 1.5; }
+
+  /* ── Feature grid ── */
+  .feat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+  .feat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 20px; transition: border-color .2s; }
+  .feat-card:hover { border-color: var(--accent); }
+  .feat-icon { font-size: 28px; margin-bottom: 12px; }
+  .feat-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .feat-desc { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+  /* ── Steps ── */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step { display: grid; grid-template-columns: 48px 1fr; gap: 20px; align-items: flex-start; padding: 24px 0; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: none; }
+  .step-num { width: 48px; height: 48px; border-radius: 50%; background: var(--bg3); border: 2px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: var(--accent); flex-shrink: 0; }
+  .step-body { padding-top: 10px; }
+  .step-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .step-desc { font-size: 13px; color: var(--text2); line-height: 1.7; }
+  .step-tip { margin-top: 8px; font-size: 11px; color: var(--text3); font-family: var(--fm); background: var(--bg3); padding: 6px 10px; border-radius: 6px; border-left: 3px solid var(--accent); }
+
+  /* ── Two-col layout ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── Info box ── */
+  .info-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+  .info-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .info-box ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .info-box li { font-size: 13px; color: var(--text2); display: flex; gap: 10px; line-height: 1.5; }
+  .info-box li::before { content: '→'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+
+  /* ── Shortcut table ── */
+  .shortcuts { display: flex; flex-direction: column; gap: 6px; }
+  .sc-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg3); border-radius: 8px; font-size: 13px; }
+  .sc-key { font-family: var(--fm); font-size: 11px; background: var(--bg4); border: 1px solid rgba(255,255,255,.12); border-radius: 5px; padding: 3px 8px; color: var(--text2); white-space: nowrap; }
+  .sc-label { color: var(--text2); }
+
+  /* ── Goal cards ── */
+  .goal-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .goal-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+  .goal-card .gi { font-size: 24px; margin-bottom: 8px; }
+  .goal-card .gn { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .goal-card .gd { font-size: 11px; color: var(--text3); line-height: 1.5; }
+  .goal-card.recommended { border-color: var(--accent); background: linear-gradient(135deg, var(--bg2), rgba(139,130,255,.08)); }
+
+  /* ── Tips banner ── */
+  .tip-banner { background: linear-gradient(135deg, rgba(139,130,255,.12), rgba(167,139,250,.08)); border: 1px solid rgba(139,130,255,.3); border-radius: 12px; padding: 16px 20px; display: flex; gap: 14px; align-items: flex-start; }
+  .tip-banner-icon { font-size: 22px; flex-shrink: 0; }
+  .tip-banner-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .tip-banner-text strong { color: var(--text); }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); max-width: 960px; margin: 0 auto 64px; }
+
+  /* ── Footer ── */
+  footer { text-align: center; font-size: 12px; color: var(--text3); font-family: var(--fm); }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div class="page-header">
+  <div class="logo">
+    <div class="logo-icon">🥗</div>
+    <div>
+      <div class="logo-text">NutriLog</div>
+      <div class="logo-sub">Calorie Tracker</div>
+    </div>
+  </div>
+  <p class="page-tagline">A personal macro tracker built for real food, real goals, and real progress — not calorie guilt.</p>
+</div>
+
+<!-- ── WHAT'S IN THE APP ── -->
+<div class="section">
+  <div class="section-label">Overview</div>
+  <div class="section-title">Five views, one purpose</div>
+  <div class="section-sub">Everything you need to track, analyse, and project your nutrition — no subscriptions, no ads.</div>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📅</div>
+      <div class="feat-name">Today</div>
+      <div class="feat-desc">Log meals, see macro rings, track calories vs target, and view your weekly summary chart.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📖</div>
+      <div class="feat-name">History</div>
+      <div class="feat-desc">Browse past days, search entries, copy a day's meals, and compare weekly nutrition.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-name">Analysis</div>
+      <div class="feat-desc">Heatmap, 12-month calorie chart, personal records, achievements, and nutrition insights.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📈</div>
+      <div class="feat-name">Projection</div>
+      <div class="feat-desc">Body composition model, actual weight trend chart, fat loss / muscle gain projections.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🗄️</div>
+      <div class="feat-name">Food Database</div>
+      <div class="feat-desc">Your personal food library with 300+ items, macro filters, search, import and export.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚙️</div>
+      <div class="feat-name">Settings</div>
+      <div class="feat-desc">Profiles, goals, macro targets, theme, cloud sync, and a stats dashboard overview.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── GETTING STARTED ── -->
+<div class="section">
+  <div class="section-label">Getting Started</div>
+  <div class="section-title">Set up in 3 minutes</div>
+  <div class="section-sub">Follow these steps when you open NutriLog for the first time.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Fill in Personal Info</div>
+        <div class="step-desc">Go to <strong>Settings → Personal Info</strong>. Enter your age, height, weight, gender, and activity level. The app will automatically calculate your TDEE and set your calorie target.</div>
+        <div class="step-tip">💡 You don't need to enter body fat % right away — leave it at the default 16% and update it later.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Choose Your Goal</div>
+        <div class="step-desc">In <strong>Settings → Personal Info → Goal</strong>, pick what you're working toward. Each option adjusts your calorie target automatically. See goal descriptions below.</div>
+        <div class="step-tip">👴👵 For older users or those who want slow, safe weight loss — choose <strong>Gentle Loss (−200 kcal)</strong>.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Log Your First Meal</div>
+        <div class="step-desc">Click <strong>+ Add Meal</strong> (top right). Type a food name — if it's in your library, it autocompletes. Enter the serving amount and click <strong>Add Meal</strong> (or press <kbd>Enter</kbd>).</div>
+        <div class="step-tip">💡 The app saves foods to your personal library automatically so future logging is faster.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Check Your Macro Rings</div>
+        <div class="step-desc">Back on the <strong>Today</strong> page, the four rings show Protein, Fat, Fiber, and Carbs as a percentage of your daily target. The calorie bar shows total calories vs your target range.</div>
+        <div class="step-tip">💡 Click the <strong>Summary</strong> button next to the calorie bar to see a projected end-of-day total based on your history.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Log Your Weight (Optional)</div>
+        <div class="step-desc">Click the <strong>⚖️ weight widget</strong> on the Today page to record your current weight. This feeds into the Projection page's actual weight trend chart and the body composition model.</div>
+        <div class="step-tip">💡 Weigh yourself first thing in the morning, after using the toilet, for the most consistent readings.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── GOALS ── -->
+<div class="section">
+  <div class="section-label">Goals</div>
+  <div class="section-title">Which goal should I pick?</div>
+  <div class="section-sub">All goals auto-calculate your calorie and macro targets based on your personal stats.</div>
+  <div class="goal-cards">
+    <div class="goal-card recommended">
+      <div class="gi">⭐</div>
+      <div class="gn">Body Recomposition</div>
+      <div class="gd">Lose fat + build muscle simultaneously. Best for active people who train regularly. Slow scale change, big body composition change.</div>
+    </div>
+    <div class="goal-card">
+      <div class="gi">👴👵</div>
+      <div class="gn">Gentle Loss</div>
+      <div class="gd">−200 kcal/day. About 0.2 kg/week loss. Safe and sustainable, especially for older adults or those new to tracking.</div>
+    </div>
+    <div class="goal-card">
+      <div class="gi">🔥</div>
+      <div class="gn">Fat Loss</div>
+      <div class="gd">−500 kcal/day. About 0.5 kg/week loss. Faster results but requires consistent adherence and higher protein intake.</div>
+    </div>
+    <div class="goal-card">
+      <div class="gi">⚖️</div>
+      <div class="gn">Maintenance</div>
+      <div class="gd">Eat at TDEE. No intentional weight change — useful for building healthy habits before cutting or bulking.</div>
+    </div>
+    <div class="goal-card">
+      <div class="gi">💪</div>
+      <div class="gn">Lean Bulk</div>
+      <div class="gd">+300 kcal/day above TDEE. Slow muscle gain with minimal fat. Best paired with a structured training programme.</div>
+    </div>
+  </div>
+  <div style="margin-top: 16px;">
+    <div class="tip-banner">
+      <div class="tip-banner-icon">🌱</div>
+      <div class="tip-banner-text"><strong>Lifetime Mode</strong> (in Goal Planning) sets a tiny −100 kcal deficit that runs indefinitely — ideal if you've reached your goal weight and want gentle recomposition without a set end date.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADDING MEALS ── -->
+<div class="section">
+  <div class="section-label">Daily Logging</div>
+  <div class="section-title">Logging meals quickly</div>
+  <div class="section-sub">There are four ways to add food to your log.</div>
+  <div class="two-col">
+    <div class="info-box">
+      <h3>📝 Manual Entry</h3>
+      <ul>
+        <li>Click <strong>+ Add Meal</strong> → type the food name. If it's in your library, it will autocomplete. Pick a match with <kbd>↑↓</kbd> + <kbd>Enter</kbd>.</li>
+        <li>Enter serving amount and press <kbd>Enter</kbd> to confirm.</li>
+        <li>New foods are automatically saved to your library for next time.</li>
+        <li>Use the <strong>category buttons</strong> (Breakfast / Lunch / Dinner / Snack) to organise your log.</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h3>📋 Paste from Excel</h3>
+      <ul>
+        <li>Click <strong>Paste tab-separated data instead</strong> inside the Add Meal modal.</li>
+        <li>Copy rows from your Excel tracker (cols Q→AA from PART 3, or the full sheet).</li>
+        <li>The app auto-detects the format and skips TOTALS / TARGETS / blank rows.</li>
+        <li>Simple format also works: Food · Serving · Unit · kcal · Protein · Fat · Carbs · Fiber</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h3>⏪ Copy Yesterday</h3>
+      <ul>
+        <li>Click <strong>… More</strong> in the top bar → <strong>Copy Yesterday</strong>.</li>
+        <li>All of yesterday's meals are appended to today's log.</li>
+        <li>Also works from History — open any past day and use the copy action.</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h3>🍽️ Meal Templates</h3>
+      <ul>
+        <li>Click <strong>Show Templates</strong> on the Today page to see saved day templates.</li>
+        <li>Save any day as a template via the History page actions.</li>
+        <li>Apply a template to add all its meals to today with one click.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOD DATABASE ── -->
+<div class="section">
+  <div class="section-label">Food Database</div>
+  <div class="section-title">Managing your food library</div>
+  <div class="section-sub">The Food Database stores all your foods with their macros for fast autocomplete when logging.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">✏️</div>
+      <div class="step-body">
+        <div class="step-title">Add or Edit a Food</div>
+        <div class="step-desc">Click <strong>+ Add Food</strong> in the Food Database page. Enter the food name, optional <strong>Variant</strong> (e.g. "grilled", "homemade"), default serving, unit, and all macros. The variant tag appears in the table and in autocomplete suggestions.</div>
+        <div class="step-tip">💡 Use variants to store the same food with different preps — e.g. "Chicken Breast [grilled]" vs "Chicken Breast [boiled]".</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🔍</div>
+      <div class="step-body">
+        <div class="step-title">Filter by Macros</div>
+        <div class="step-desc">Use the macro filter bar above the food list to narrow down results: Protein ≥, Kcal ≤, Carbs ≤, Fat ≤, Fiber ≥. Combine with the search box for precise lookups.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">📤</div>
+      <div class="step-body">
+        <div class="step-title">Export / Import</div>
+        <div class="step-desc">Use the <strong>Export</strong> button to download your food library as a TSV file. Import new foods by clicking <strong>Import</strong> and pasting TSV data or uploading a JSON export.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🔨</div>
+      <div class="step-body">
+        <div class="step-title">Recipe Builder</div>
+        <div class="step-desc">Click <strong>Build Recipe</strong> to create a composite food from ingredients. Enter ingredient names (from your library), amounts, and number of servings. The recipe is saved as a single food item in your database.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ANALYSIS ── -->
+<div class="section">
+  <div class="section-label">Analysis & Projection</div>
+  <div class="section-title">Understanding your data</div>
+  <div class="section-sub">The Analysis and Projection pages turn your logged data into actionable insights.</div>
+  <div class="two-col">
+    <div class="info-box">
+      <h3>📊 Analysis Page</h3>
+      <ul>
+        <li><strong>Heatmap</strong> — one year of daily calorie data at a glance. Darker = more calories.</li>
+        <li><strong>12-Month Chart</strong> — average daily calories per month vs your target.</li>
+        <li><strong>Achievements</strong> — unlock badges for streaks, milestones, and consistency.</li>
+        <li><strong>Personal Records</strong> — best single-day stats across all history.</li>
+        <li><strong>Nutrition Insights</strong> — automatic pattern detection (fiber streaks, calorie adherence, protein streaks, variability).</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <h3>📈 Projection Page</h3>
+      <ul>
+        <li><strong>Projection Model</strong> — week-by-week fat loss and lean mass gain forecast based on your deficit, protein, and training.</li>
+        <li><strong>Weight Trend Chart</strong> — plots your actual check-in weights over time with a goal weight reference line.</li>
+        <li><strong>Timeline Progress</strong> — shows how far through your plan you are, based on Plan Start Date in settings.</li>
+        <li><strong>Projection Summary</strong> — plain-English summary of what the model predicts.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ── KEYBOARD SHORTCUTS ── -->
+<div class="section">
+  <div class="section-label">Keyboard Shortcuts</div>
+  <div class="section-title">Work faster with shortcuts</div>
+  <div class="section-sub">All shortcuts work in the desktop app.</div>
+  <div class="two-col">
+    <div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Navigation</div>
+      <div class="shortcuts">
+        <div class="sc-row"><span class="sc-label">Today page</span><span class="sc-key">Ctrl + 1</span></div>
+        <div class="sc-row"><span class="sc-label">History page</span><span class="sc-key">Ctrl + 2</span></div>
+        <div class="sc-row"><span class="sc-label">Food Database</span><span class="sc-key">Ctrl + 3</span></div>
+        <div class="sc-row"><span class="sc-label">Settings page</span><span class="sc-key">Ctrl + 4</span></div>
+        <div class="sc-row"><span class="sc-label">Close any modal</span><span class="sc-key">Escape</span></div>
+        <div class="sc-row"><span class="sc-label">Toggle dark / light</span><span class="sc-key">Ctrl + T</span></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Actions</div>
+      <div class="shortcuts">
+        <div class="sc-row"><span class="sc-label">Confirm / Submit modal</span><span class="sc-key">Enter</span></div>
+        <div class="sc-row"><span class="sc-label">Undo last meal delete</span><span class="sc-key">Ctrl + Z</span></div>
+        <div class="sc-row"><span class="sc-label">Redo</span><span class="sc-key">Ctrl + Y</span></div>
+        <div class="sc-row"><span class="sc-label">Push to cloud</span><span class="sc-key">Ctrl + S</span></div>
+        <div class="sc-row"><span class="sc-label">Pull from cloud</span><span class="sc-key">Ctrl + Shift + U</span></div>
+        <div class="sc-row"><span class="sc-label">Keyboard shortcuts help</span><span class="sc-key">?</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PROFILES ── -->
+<div class="section">
+  <div class="section-label">Profiles</div>
+  <div class="section-title">Multiple users on one app</div>
+  <div class="section-sub">Each profile has its own goals, settings, and meal log — stored separately.</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">➕</div>
+      <div class="step-body">
+        <div class="step-title">Add a Profile</div>
+        <div class="step-desc">Go to <strong>Settings → Profiles → Add Profile</strong>. Type a name (e.g. "Mom", "Dad") and press Enter or click Add. Switch between profiles by clicking the name pill in the sidebar.</div>
+        <div class="step-tip">💡 Each profile is completely independent — different calorie targets, different food logs, different goals.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🧓</div>
+      <div class="step-body">
+        <div class="step-title">Simple Mode for Parents</div>
+        <div class="step-desc">For family members who find the app overwhelming, go to their profile's <strong>Settings → Appearance → Simple Mode → On</strong>. This hides advanced views (Analysis, Projection) and advanced settings, leaving only the essentials.</div>
+        <div class="step-tip">💡 Simple mode is saved per-device. The user just sees Today, History, Food Database, and Settings with a clean, minimal layout.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── EXPORT ── -->
+<div class="section">
+  <div class="section-label">Export</div>
+  <div class="section-title">Getting your data out</div>
+  <div class="section-sub">All exports are available from the <strong>Export</strong> button in the top bar.</div>
+  <div class="feat-grid">
+    <div class="feat-card">
+      <div class="feat-icon">📄</div>
+      <div class="feat-name">Today (JSON)</div>
+      <div class="feat-desc">Export today's meal log as a JSON file for backup or manual analysis.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-name">Today / Week / Month (CSV)</div>
+      <div class="feat-desc">Export as CSV — opens directly in Excel or Google Sheets with correct columns.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🗂️</div>
+      <div class="feat-name">All Data (CSV)</div>
+      <div class="feat-desc">Full history export — every logged meal from every date in one CSV file.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">☁️</div>
+      <div class="feat-name">Cloud Sync</div>
+      <div class="feat-desc">Push or pull all data to/from Supabase cloud. Switch devices without losing history.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TIPS ── -->
+<div class="section">
+  <div class="section-label">Pro Tips</div>
+  <div class="section-title">Get the most out of NutriLog</div>
+  <div class="section-sub">Habits and features that make a real difference.</div>
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div class="tip-banner">
+      <div class="tip-banner-icon">🌅</div>
+      <div class="tip-banner-text"><strong>Pre-log your meals the night before.</strong> Log tomorrow's planned meals tonight. The end-of-day projection will use your pre-logged meals directly instead of estimating from history — giving you a more accurate picture.</div>
+    </div>
+    <div class="tip-banner">
+      <div class="tip-banner-icon">⚖️</div>
+      <div class="tip-banner-text"><strong>Weigh yourself consistently.</strong> Same time, same conditions (morning, after toilet, before eating). Even 2–3 check-ins per week gives the Projection page enough data to draw your actual weight trend.</div>
+    </div>
+    <div class="tip-banner">
+      <div class="tip-banner-icon">🥩</div>
+      <div class="tip-banner-text"><strong>Hit protein first, then fill the rest.</strong> Protein is the most important macro for body recomposition. Once you hit your protein target, use remaining calories for carbs and fat based on preference.</div>
+    </div>
+    <div class="tip-banner">
+      <div class="tip-banner-icon">📋</div>
+      <div class="tip-banner-text"><strong>Use meal templates for repeated days.</strong> If you eat the same things most weekdays, save Monday's log as a template and apply it each morning. It takes 2 seconds instead of re-entering every item.</div>
+    </div>
+    <div class="tip-banner">
+      <div class="tip-banner-icon">🔬</div>
+      <div class="tip-banner-text"><strong>Check Nutrition Insights weekly.</strong> The Analysis page automatically detects patterns — fiber consistently low, protein streak on a roll, calorie variability too high. Use it to course-correct before small issues become habits.</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<footer>
+  NutriLog · Personal Macro Tracker · Built for APm R&amp;D · Alex<br>
+  <span style="margin-top:6px;display:block;">Data is stored locally on your device and optionally synced to Supabase cloud</span>
+</footer>
+
+</body>
+</html>
