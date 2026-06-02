@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NutriLog — Formulas & Scientific References</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0b1a;--bg2:#13101f;--bg3:#1c1830;--bg4:#221e38;
+  --accent:#8b82ff;--acdim:rgba(139,130,255,.13);
+  --text:#e8e6f0;--text2:#a09cbd;--text3:#6b668a;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --green:#3ecf8e;--red:#f76a6a;--orange:#f0a030;--blue:#6ab4f7;--yellow:#f7c76a;--purple:#a78bfa;
+  --fm:'DM Mono','Courier New',monospace;--fb:'DM Sans',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--fb);line-height:1.6;padding:0 0 80px}
+
+/* ── HEADER ── */
+.hdr{background:linear-gradient(135deg,rgba(139,130,255,.1),rgba(167,139,250,.05));border-bottom:1px solid var(--border);padding:52px 24px 44px;text-align:center}
+.hdr-eyebrow{font-size:11px;font-family:var(--fm);text-transform:uppercase;letter-spacing:2.5px;color:var(--accent);margin-bottom:12px}
+.hdr-title{font-size:34px;font-weight:800;letter-spacing:-1px;margin-bottom:10px}
+.hdr-sub{font-size:14px;color:var(--text2);max-width:560px;margin:0 auto;line-height:1.6}
+.hdr-note{margin-top:16px;font-size:12px;color:var(--text3);font-family:var(--fm);background:var(--bg3);display:inline-block;padding:6px 14px;border-radius:20px;border:1px solid var(--border2)}
+
+/* ── TOC ── */
+.toc{max-width:900px;margin:40px auto 0;padding:0 24px}
+.toc-inner{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px}
+.toc-title{font-size:12px;font-family:var(--fm);text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:14px}
+.toc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px}
+.toc-item{font-size:13px;color:var(--accent);text-decoration:none;padding:5px 8px;border-radius:6px;display:flex;gap:8px;align-items:center;transition:background .15s}
+.toc-item:hover{background:var(--acdim)}
+.toc-item span{font-size:10px;color:var(--text3);font-family:var(--fm)}
+
+/* ── MAIN CONTENT ── */
+.content{max-width:900px;margin:0 auto;padding:0 24px}
+
+/* ── SECTION ── */
+.ref-section{margin-top:56px;padding-top:56px;border-top:1px solid var(--border)}
+.ref-section:first-child{border-top:none;padding-top:40px}
+.sec-eyebrow{font-size:10px;font-family:var(--fm);text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:8px}
+.sec-title{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+.sec-sub{font-size:14px;color:var(--text2);margin-bottom:24px;line-height:1.6}
+
+/* ── FORMULA BOX ── */
+.formula-box{background:var(--bg3);border:1px solid var(--border2);border-radius:12px;padding:20px 24px;margin-bottom:20px}
+.formula-label{font-size:10px;font-family:var(--fm);text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:10px}
+.formula{font-family:var(--fm);font-size:15px;color:var(--text);line-height:2;background:var(--bg4);padding:14px 18px;border-radius:8px;border-left:3px solid var(--accent);margin-bottom:10px;overflow-x:auto;white-space:nowrap}
+.formula em{color:var(--accent);font-style:normal;font-weight:700}
+.formula-note{font-size:12px;color:var(--text3);line-height:1.6}
+.formula-note strong{color:var(--text2)}
+
+/* ── TWO FORMULAS SIDE BY SIDE ── */
+.formula-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:680px){.formula-pair{grid-template-columns:1fr}}
+.formula-half{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.fh-label{font-size:10px;font-family:var(--fm);color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px}
+.fh-eq{font-family:var(--fm);font-size:12px;color:var(--text);background:var(--bg4);padding:8px 12px;border-radius:6px;line-height:1.8;white-space:pre-wrap}
+
+/* ── RANGE TABLE ── */
+.range-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px}
+.range-table th{text-align:left;font-size:10px;font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border2);background:var(--bg4)}
+.range-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.range-table tr:last-child td{border-bottom:none}
+.range-table tr:hover td{background:rgba(255,255,255,.02)}
+.rt-badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 10px;border-radius:12px}
+.rt-badge.ideal{background:rgba(62,207,142,.15);color:var(--green)}
+.rt-badge.ok{background:rgba(139,130,255,.15);color:var(--accent)}
+.rt-badge.warn{background:rgba(240,160,48,.15);color:var(--orange)}
+.rt-badge.risk{background:rgba(247,106,106,.15);color:var(--red)}
+.rt-app{font-size:11px;font-family:var(--fm);color:var(--accent);background:var(--acdim);padding:2px 7px;border-radius:4px}
+
+/* ── INFO GRID ── */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:600px){.info-grid{grid-template-columns:1fr}}
+.info-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.ic-label{font-size:10px;font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:6px}
+.ic-val{font-size:20px;font-weight:800;color:var(--accent);margin-bottom:4px}
+.ic-desc{font-size:11px;color:var(--text2);line-height:1.5}
+
+/* ── ACTIVITY TABLE ── */
+.act-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px}
+.act-table th{text-align:left;font-size:10px;font-family:var(--fm);text-transform:uppercase;letter-spacing:1px;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border2);background:var(--bg4)}
+.act-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.act-table tr:last-child td{border-bottom:none}
+.mult{font-family:var(--fm);font-weight:700;color:var(--accent)}
+
+/* ── BODY FAT TABLE ── */
+.bf-section{margin-bottom:12px}
+.bf-title{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px}
+
+/* ── CALLOUT BOX ── */
+.callout{border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-start;font-size:13px;line-height:1.6}
+.callout.info{background:rgba(106,180,247,.07);border:1px solid rgba(106,180,247,.2);color:var(--text2)}
+.callout.warn{background:rgba(240,160,48,.07);border:1px solid rgba(240,160,48,.2);color:var(--text2)}
+.callout.good{background:rgba(62,207,142,.07);border:1px solid rgba(62,207,142,.2);color:var(--text2)}
+.callout.app{background:var(--acdim);border:1px solid rgba(139,130,255,.25);color:var(--text2)}
+.callout-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.callout strong{color:var(--text)}
+.callout code{font-family:var(--fm);font-size:11px;background:var(--bg4);padding:1px 5px;border-radius:3px;color:var(--accent)}
+
+/* ── PROTEIN SPECTRUM ── */
+.protein-spectrum{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.ps-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg3);border-radius:8px;font-size:13px}
+.ps-range{font-family:var(--fm);font-weight:700;width:90px;flex-shrink:0}
+.ps-label{flex:1;color:var(--text2)}
+.ps-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;white-space:nowrap}
+
+/* ── PROJECTION MODEL ── */
+.model-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.ms-row{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:flex-start;padding:12px 14px;background:var(--bg3);border-radius:8px}
+.ms-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ms-body{}
+.ms-title{font-size:13px;font-weight:700;margin-bottom:3px}
+.ms-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.ms-code{font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--bg4);padding:4px 8px;border-radius:5px;display:inline-block;margin-top:4px}
+
+/* ── CITATIONS ── */
+.cite-list{display:flex;flex-direction:column;gap:12px}
+.cite-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 18px;font-size:12px;line-height:1.7}
+.cite-id{display:inline-block;font-family:var(--fm);font-size:10px;color:var(--accent);background:var(--acdim);border:1px solid rgba(139,130,255,.25);border-radius:4px;padding:1px 6px;margin-bottom:6px;font-weight:700}
+.cite-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.cite-authors{color:var(--text3);font-size:11px;margin-bottom:3px}
+.cite-journal{color:var(--text3);font-size:11px;font-style:italic}
+.cite-used{margin-top:6px;font-size:11px;color:var(--text2)}
+.cite-used strong{color:var(--accent)}
+
+/* ── INLINE CODE ── */
+code{font-family:var(--fm);font-size:11px;background:var(--bg3);border:1px solid var(--border2);padding:1px 5px;border-radius:3px;color:var(--accent)}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:8px 0}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:40px 20px 0;font-size:11px;color:var(--text3);font-family:var(--fm)}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="hdr">
+  <div class="hdr-eyebrow">NutriLog · Science Behind the App</div>
+  <div class="hdr-title">Formulas &amp; Scientific References</div>
+  <div class="hdr-sub">Every calculation NutriLog performs is documented here — the formula used, the recommended ranges, and the peer-reviewed source it draws from.</div>
+  <div class="hdr-note">All formulas match the exact code running in NutriLog v2.6.4</div>
+</div>
+
+<!-- ═══ TABLE OF CONTENTS ═══ -->
+<div class="toc">
+  <div class="toc-inner">
+    <div class="toc-title">Contents</div>
+    <div class="toc-grid">
+      <a class="toc-item" href="#bmi"><span>01</span> BMI</a>
+      <a class="toc-item" href="#bmr"><span>02</span> BMR (Basal Metabolic Rate)</a>
+      <a class="toc-item" href="#tdee"><span>03</span> TDEE &amp; Activity Multipliers</a>
+      <a class="toc-item" href="#lbm"><span>04</span> Lean Body Mass</a>
+      <a class="toc-item" href="#bodyfat"><span>05</span> Body Fat % Ranges</a>
+      <a class="toc-item" href="#deficit"><span>06</span> Calorie Deficit &amp; Target</a>
+      <a class="toc-item" href="#7700"><span>07</span> 7,700 kcal/kg Rule</a>
+      <a class="toc-item" href="#protein"><span>08</span> Protein Targets</a>
+      <a class="toc-item" href="#fat"><span>09</span> Fat Targets</a>
+      <a class="toc-item" href="#carbs"><span>10</span> Carbohydrate Targets</a>
+      <a class="toc-item" href="#fiber"><span>11</span> Fiber Targets</a>
+      <a class="toc-item" href="#safelose"><span>12</span> Safe Weight Loss Rate</a>
+      <a class="toc-item" href="#projection"><span>13</span> Projection Model</a>
+      <a class="toc-item" href="#citations"><span>14</span> Full Citations</a>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ═══ 01 BMI ═══ -->
+<div class="ref-section" id="bmi">
+  <div class="sec-eyebrow">01</div>
+  <div class="sec-title">Body Mass Index (BMI)</div>
+  <div class="sec-sub">A simple screening tool based on height and weight. Used in NutriLog to give a quick health context — not used to calculate calorie targets.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">Formula</div>
+    <div class="formula">BMI = <em>weight (kg)</em> ÷ <em>height (m)</em>²</div>
+    <div class="formula-note">Example: 77 kg ÷ (1.91 m)² = <strong>21.1 kg/m²</strong></div>
+  </div>
+
+  <table class="range-table">
+    <thead><tr><th>BMI Range</th><th>Classification</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 18.5</td><td>Underweight</td><td><span class="rt-badge warn">⚠ Monitor</span></td></tr>
+      <tr><td>18.5 – 24.9</td><td>Normal / Healthy weight</td><td><span class="rt-badge ideal">✓ Ideal</span></td></tr>
+      <tr><td>25.0 – 29.9</td><td>Overweight</td><td><span class="rt-badge warn">⚠ Elevated risk</span></td></tr>
+      <tr><td>30.0 – 34.9</td><td>Obese Class I</td><td><span class="rt-badge risk">✗ High risk</span></td></tr>
+      <tr><td>35.0 – 39.9</td><td>Obese Class II</td><td><span class="rt-badge risk">✗ Very high risk</span></td></tr>
+      <tr><td>≥ 40.0</td><td>Obese Class III (Severe)</td><td><span class="rt-badge risk">✗ Extreme risk</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️</div>
+    <div><strong>BMI limitations:</strong> BMI does not distinguish between fat mass and muscle mass. A muscular athlete can show "overweight" BMI while being lean. Use it alongside body fat % for a more complete picture. BMI is less reliable for individuals under 18, over 65, or of Asian descent (where risk thresholds are lower).</div>
+  </div>
+  <div class="callout app">
+    <div class="callout-icon">🔵</div>
+    <div><strong>In NutriLog:</strong> BMI is displayed in Settings → Personal Info and Projection page as an informational metric. It does not influence calorie or macro targets.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Source: World Health Organization. <em>BMI classification.</em> WHO, 2000. <a href="#citations" style="color:var(--accent)">[1]</a></p>
+</div>
+
+<!-- ═══ 02 BMR ═══ -->
+<div class="ref-section" id="bmr">
+  <div class="sec-eyebrow">02</div>
+  <div class="sec-title">Basal Metabolic Rate (BMR)</div>
+  <div class="sec-sub">The number of calories your body burns at complete rest — just to maintain basic organ function. NutriLog uses two different formulas for two different purposes.</div>
+
+  <div class="callout app">
+    <div class="callout-icon">🔵</div>
+    <div><strong>NutriLog uses two formulas:</strong> Harris-Benedict Revised for the Settings page (TDEE &amp; calorie target), and Mifflin-St Jeor for the weekly-recalculated Projection model.</div>
+  </div>
+
+  <div class="formula-pair">
+    <div class="formula-half">
+      <div class="fh-label">Harris-Benedict Revised — Settings Page</div>
+      <div class="fh-eq">♂ Male:
+88.362
++ (13.397 × weight_kg)
++ (4.799  × height_cm)
+− (5.677  × age_years)
+
+♀ Female:
+447.593
++ (9.247  × weight_kg)
++ (3.098  × height_cm)
+− (4.330  × age_years)</div>
+    </div>
+    <div class="formula-half">
+      <div class="fh-label">Mifflin-St Jeor — Projection Model (weekly recalc)</div>
+      <div class="fh-eq">♂ Male:
+(10 × weight_kg)
++ (6.25 × height_cm)
+− (5   × age_years)
++ 5
+
+♀ Female:
+(10 × weight_kg)
++ (6.25 × height_cm)
+− (5   × age_years)
+− 161</div>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon">📊</div>
+    <div><strong>Which is more accurate?</strong> Mifflin-St Jeor (1990) is generally considered more accurate for modern populations — studies show it predicts RMR within 10% for most people. Harris-Benedict Revised (Roza &amp; Shizgal, 1984) tends to slightly overestimate BMR in obese individuals. Neither accounts for muscle mass directly — use body fat % for more precision.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Sources: Roza AM, Shizgal HM. <em>Am J Clin Nutr.</em> 1984;40(1):168–182. <a href="#citations" style="color:var(--accent)">[2]</a> · Mifflin MD et al. <em>Am J Clin Nutr.</em> 1990;51(2):241–247. <a href="#citations" style="color:var(--accent)">[3]</a></p>
+</div>
+
+<!-- ═══ 03 TDEE ═══ -->
+<div class="ref-section" id="tdee">
+  <div class="sec-eyebrow">03</div>
+  <div class="sec-title">TDEE &amp; Activity Multipliers</div>
+  <div class="sec-sub">Total Daily Energy Expenditure — how many calories you actually burn per day, accounting for physical activity.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">Formula</div>
+    <div class="formula">TDEE = <em>BMR</em> × <em>Activity Multiplier</em></div>
+    <div class="formula-note">Example: BMR 1,871 × 1.55 (4–5× / week) = <strong>2,900 kcal/day</strong></div>
+  </div>
+
+  <table class="act-table">
+    <thead><tr><th>Activity Level</th><th>Description</th><th>Multiplier</th><th>Used in NutriLog</th></tr></thead>
+    <tbody>
+      <tr><td>Sedentary</td><td>Desk job, no exercise</td><td class="mult">× 1.200</td><td><code>No exercise</code></td></tr>
+      <tr><td>Lightly Active</td><td>Light exercise 1–3 days/week</td><td class="mult">× 1.375</td><td><code>1–3× / week</code></td></tr>
+      <tr><td>Moderately Active</td><td>Moderate exercise 4–5 days/week</td><td class="mult">× 1.550</td><td><code>4–5× / week</code> ⭐ default</td></tr>
+      <tr><td>Very Active</td><td>Hard training 6–7 days/week</td><td class="mult">× 1.725</td><td><code>6–7× / week</code></td></tr>
+      <tr><td>Extra Active</td><td>Physical job or 2× daily training</td><td class="mult">× 1.900</td><td><code>2× / day</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️</div>
+    <div><strong>Most people overestimate their activity level.</strong> Research shows self-reported activity is typically 20–30% higher than measured. If weight loss stalls, try dropping one level (e.g., "4–5×" → "1–3×") before reducing calories further.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Source: Harris JA, Benedict FG. <em>A Biometric Study of Human Basal Metabolism.</em> Proc Natl Acad Sci. 1918. <a href="#citations" style="color:var(--accent)">[4]</a></p>
+</div>
+
+<!-- ═══ 04 LBM ═══ -->
+<div class="ref-section" id="lbm">
+  <div class="sec-eyebrow">04</div>
+  <div class="sec-title">Lean Body Mass (LBM)</div>
+  <div class="sec-sub">Everything in your body that isn't fat — muscle, bone, organs, water, and connective tissue. Used to calculate protein targets and the fat-to-lose estimate.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">Formula</div>
+    <div class="formula">LBM = <em>weight (kg)</em> × (1 − <em>body fat %</em> ÷ 100)</div>
+    <div class="formula-note">Example: 77 kg × (1 − 16 ÷ 100) = <strong>64.7 kg LBM</strong></div>
+  </div>
+
+  <div class="callout app">
+    <div class="callout-icon">🔵</div>
+    <div><strong>In NutriLog:</strong> LBM is used as the basis for protein target calculation (<code>LBM × 2.4 g/kg</code>) and to set a floor on the Goal Weight — you cannot set a goal weight below your current LBM, as that would imply losing muscle.</div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon">📊</div>
+    <div><strong>Fat to Lose formula:</strong> <code>Fat to Lose = max(0, weight − max(goal_weight, LBM))</code><br>
+    This ensures the calculated fat to lose is always ≥ 0, and goal weight is always ≥ LBM. Example: 77 kg − max(72 kg, 64.7 kg) = 77 − 72 = <strong>5 kg fat to lose</strong>.</div>
+  </div>
+</div>
+
+<!-- ═══ 05 BODY FAT % ═══ -->
+<div class="ref-section" id="bodyfat">
+  <div class="sec-eyebrow">05</div>
+  <div class="sec-title">Body Fat % — Healthy Ranges</div>
+  <div class="sec-sub">Body fat percentage is a far more meaningful metric than BMI. NutriLog uses it to calculate LBM, protein targets, and fat-to-lose projections.</div>
+
+  <div class="bf-section">
+    <div class="bf-title">♂ Men</div>
+    <table class="range-table">
+      <thead><tr><th>Category</th><th>Body Fat %</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Essential fat</td><td>2 – 5%</td><td><span class="rt-badge warn">Minimum for survival</span></td></tr>
+        <tr><td>Athletes</td><td>6 – 13%</td><td><span class="rt-badge ideal">✓ Excellent</span></td></tr>
+        <tr><td>Fitness</td><td>14 – 17%</td><td><span class="rt-badge ideal">✓ Good</span></td></tr>
+        <tr><td>Average / Acceptable</td><td>18 – 24%</td><td><span class="rt-badge ok">Acceptable</span></td></tr>
+        <tr><td>Obese</td><td>≥ 25%</td><td><span class="rt-badge risk">✗ High health risk</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bf-section">
+    <div class="bf-title">♀ Women</div>
+    <table class="range-table">
+      <thead><tr><th>Category</th><th>Body Fat %</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Essential fat</td><td>10 – 13%</td><td><span class="rt-badge warn">Minimum (hormonal)</span></td></tr>
+        <tr><td>Athletes</td><td>14 – 20%</td><td><span class="rt-badge ideal">✓ Excellent</span></td></tr>
+        <tr><td>Fitness</td><td>21 – 24%</td><td><span class="rt-badge ideal">✓ Good</span></td></tr>
+        <tr><td>Average / Acceptable</td><td>25 – 31%</td><td><span class="rt-badge ok">Acceptable</span></td></tr>
+        <tr><td>Obese</td><td>≥ 32%</td><td><span class="rt-badge risk">✗ High health risk</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon">📊</div>
+    <div><strong>How to measure:</strong> DEXA scan (most accurate, ~$50–100), hydrostatic weighing (research-grade), Bod Pod, or skinfold calipers (trained user). Consumer scales using bioelectrical impedance (BIA) have ±3–5% error and are affected by hydration. Use the same method and time of day for consistent tracking.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Source: American College of Sports Medicine. <em>ACSM's Guidelines for Exercise Testing and Prescription.</em> 11th ed. 2022. <a href="#citations" style="color:var(--accent)">[5]</a></p>
+</div>
+
+<!-- ═══ 06 DEFICIT ═══ -->
+<div class="ref-section" id="deficit">
+  <div class="sec-eyebrow">06</div>
+  <div class="sec-title">Calorie Target &amp; Deficit Calculation</div>
+  <div class="sec-sub">How NutriLog calculates your daily calorie target for each goal type.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">Calorie Target (all goals)</div>
+    <div class="formula">Calorie Target = <em>TDEE</em> + <em>Goal Adjustment</em></div>
+    <table style="font-size:12px;margin-top:10px;width:100%;border-collapse:collapse">
+      <tr style="background:var(--bg4)"><th style="padding:6px 10px;text-align:left;color:var(--text3);font-weight:500">Goal</th><th style="padding:6px 10px;text-align:right;color:var(--text3);font-weight:500">Adjustment</th></tr>
+      <tr><td style="padding:7px 10px;border-top:1px solid var(--border)">Body Recomposition</td><td style="padding:7px 10px;text-align:right;font-family:var(--fm);color:var(--accent)">auto-calculated from fat to lose &amp; timeline</td></tr>
+      <tr><td style="padding:7px 10px;border-top:1px solid var(--border)">Gentle Loss (👴👵)</td><td style="padding:7px 10px;text-align:right;font-family:var(--fm);color:var(--green)">− 200 kcal/day</td></tr>
+      <tr><td style="padding:7px 10px;border-top:1px solid var(--border)">Fat Loss</td><td style="padding:7px 10px;text-align:right;font-family:var(--fm);color:var(--orange)">− 500 kcal/day</td></tr>
+      <tr><td style="padding:7px 10px;border-top:1px solid var(--border)">Maintenance</td><td style="padding:7px 10px;text-align:right;font-family:var(--fm);color:var(--text2)">± 0 kcal/day</td></tr>
+      <tr><td style="padding:7px 10px;border-top:1px solid var(--border)">Lean Bulk</td><td style="padding:7px 10px;text-align:right;font-family:var(--fm);color:var(--blue)">+ 300 kcal/day</td></tr>
+      <tr><td style="padding:7px 10px;border-top:1px solid var(--border)">Lifetime Mode</td><td style="padding:7px 10px;text-align:right;font-family:var(--fm);color:var(--purple)">− 100 kcal/day</td></tr>
+    </table>
+  </div>
+
+  <div class="formula-box">
+    <div class="formula-label">Recomposition Auto-Deficit Formula</div>
+    <div class="formula">Deficit = (<em>fat to lose (kg)</em> × 7,700) ÷ (<em>weeks</em> × 7)</div>
+    <div class="formula-note" style="margin-top:8px">
+      Clamped: <strong>min 50 kcal/day</strong> (never zero) · <strong>max 700 kcal/day</strong> (safety limit)<br>
+      Example: 5 kg fat × 7,700 ÷ (20 weeks × 7 days) = <strong>275 kcal/day deficit</strong>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️</div>
+    <div><strong>NutriLog flags timelines as aggressive</strong> when the required deficit exceeds 600 kcal/day. A deficit above 500–700 kcal/day significantly increases muscle loss risk, especially without high protein intake and resistance training.</div>
+  </div>
+</div>
+
+<!-- ═══ 07 7700 RULE ═══ -->
+<div class="ref-section" id="7700">
+  <div class="sec-eyebrow">07</div>
+  <div class="sec-title">The 7,700 kcal/kg Rule &amp; Its Limitations</div>
+  <div class="sec-sub">The widely used conversion between calorie deficit and fat loss — and why it overestimates results over time.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">The Rule</div>
+    <div class="formula">1 kg body fat ≈ <em>7,700 kcal</em> (≈ 3,500 kcal per pound)</div>
+    <div class="formula-note">Fat tissue is ~87% triglycerides (9 kcal/g) + water &amp; connective tissue. Pure triglyceride = 9.44 kcal/g, but mixed adipose tissue averages ~7,700 kcal/kg.</div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️</div>
+    <div><strong>Why it overestimates after 4+ weeks:</strong> As you lose fat, your BMR drops (less body mass to maintain). Your body also becomes more metabolically efficient under sustained deficit — a process called metabolic adaptation. The 7,700 rule assumes a static metabolism, which overestimates fat loss by approximately <strong>2× beyond 4 weeks</strong>.</div>
+  </div>
+
+  <div class="callout app">
+    <div class="callout-icon">🔵</div>
+    <div><strong>NutriLog's Projection Model accounts for this</strong> by recalculating BMR weekly using your actual (decreasing) weight, and applying an <strong>adaptive factor of 0.95× from week 5 onward</strong> to simulate metabolic adaptation. See Section 13 for full model details.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Source: Hall KD et al. <em>Lancet.</em> 2011;378(9793):826–837. <a href="#citations" style="color:var(--accent)">[6]</a></p>
+</div>
+
+<!-- ═══ 08 PROTEIN ═══ -->
+<div class="ref-section" id="protein">
+  <div class="sec-eyebrow">08</div>
+  <div class="sec-title">Protein Targets</div>
+  <div class="sec-sub">The most debated macro in nutrition science. Here is what the evidence actually says at each intake level.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">NutriLog Default Protein Target</div>
+    <div class="formula">Protein = <em>body weight (kg)</em> × <em>2.4 g</em></div>
+    <div class="formula-note">Example: 77 kg × 2.4 = <strong>185 g/day</strong><br>
+    Minimum (floor): body weight × 1.8 g → <strong>139 g/day</strong></div>
+  </div>
+
+  <div class="protein-spectrum">
+    <div class="ps-row">
+      <div class="ps-range" style="color:var(--text3)">1.2 – 1.4 g/kg</div>
+      <div class="ps-label">Minimum to prevent muscle loss in sedentary healthy adults. WHO/FAO recommendation. Insufficient for active people or recomposition.</div>
+      <div class="ps-badge" style="background:rgba(247,106,106,.1);color:var(--red)">Minimum</div>
+    </div>
+    <div class="ps-row">
+      <div class="ps-range" style="color:var(--text2)">1.6 – 1.8 g/kg</div>
+      <div class="ps-label">Meta-analysis sweet spot for muscle gain in resistance-trained individuals not in a deficit. Morton et al. (2018): gains plateau at ~1.62 g/kg across 49 studies.</div>
+      <div class="ps-badge" style="background:rgba(106,180,247,.1);color:var(--blue)">Effective</div>
+    </div>
+    <div class="ps-row" style="border:1px solid rgba(139,130,255,.2)">
+      <div class="ps-range" style="color:var(--accent)">2.0 – 2.4 g/kg</div>
+      <div class="ps-label">Optimal for body recomposition (simultaneous fat loss + muscle gain). Helms et al. (2014): 2.3–3.1 g/kg LBM for natural athletes in a deficit. NutriLog default.</div>
+      <div class="ps-badge" style="background:var(--acdim);color:var(--accent);border:1px solid rgba(139,130,255,.3)">⭐ NutriLog Default</div>
+    </div>
+    <div class="ps-row">
+      <div class="ps-range" style="color:var(--text3)">2.4 – 3.1 g/kg</div>
+      <div class="ps-label">High-end recomposition range. Longland et al. (2016): 2.4 g/kg group gained more LBM than 1.2 g/kg group in a 40% deficit over 4 weeks. Safe but diminishing returns.</div>
+      <div class="ps-badge" style="background:rgba(62,207,142,.1);color:var(--green)">High-end safe</div>
+    </div>
+    <div class="ps-row">
+      <div class="ps-range" style="color:var(--text3)">&gt; 3.1 g/kg</div>
+      <div class="ps-label">No additional muscle benefit shown. Not harmful for healthy kidneys. Only useful if calorie budget is very restricted (protein is filling and thermogenic).</div>
+      <div class="ps-badge" style="background:var(--bg4);color:var(--text3)">Diminishing returns</div>
+    </div>
+  </div>
+
+  <div class="callout good">
+    <div class="callout-icon">💡</div>
+    <div><strong>Why higher protein during a deficit?</strong> In a caloric deficit, the body can break down muscle for energy. Elevated protein intake (≥ 2.0 g/kg) signals the body to preserve muscle and prioritise fat for fuel. This is especially important when training hard.</div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon">🔴</div>
+    <div><strong>Kidney safety note:</strong> High protein intake (up to 2.4 g/kg) is safe for people with healthy kidneys. If you have pre-existing kidney disease, consult a nephrologist before exceeding 0.8 g/kg. NutriLog does not screen for kidney conditions.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Sources: Morton RW et al. <em>Br J Sports Med.</em> 2018. <a href="#citations" style="color:var(--accent)">[7]</a> · Helms ER et al. <em>JISSN.</em> 2014;11:20. <a href="#citations" style="color:var(--accent)">[8]</a> · Longland TM et al. <em>Am J Clin Nutr.</em> 2016;103(3):738–746. <a href="#citations" style="color:var(--accent)">[9]</a> · Stokes T et al. (ISSN Position Stand). <em>JISSN.</em> 2018;15:10. <a href="#citations" style="color:var(--accent)">[10]</a></p>
+</div>
+
+<!-- ═══ 09 FAT ═══ -->
+<div class="ref-section" id="fat">
+  <div class="sec-eyebrow">09</div>
+  <div class="sec-title">Dietary Fat Targets</div>
+  <div class="sec-sub">Fat is essential for hormone production, fat-soluble vitamin absorption (A, D, E, K), and cell membrane integrity. Going too low is dangerous.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">NutriLog Default Fat Target (standard)</div>
+    <div class="formula">Fat = (<em>calorie target</em> × 0.30) ÷ 9</div>
+    <div class="formula-note">30% of calories from fat · 9 kcal per gram of fat<br>
+    Example: 2,517 kcal × 0.30 ÷ 9 = <strong>84 g/day</strong><br>
+    Range: 20% floor (min) · 35% ceiling (max) per AMDR</div>
+  </div>
+
+  <table class="range-table">
+    <thead><tr><th>Fat Intake</th><th>% of Total Calories</th><th>Guidance</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 20% of calories</td><td>&lt; 0.44 g/kcal</td><td><span class="rt-badge risk">✗ Too low — hormonal disruption risk</span></td></tr>
+      <tr><td>20 – 25% of calories</td><td>0.44 – 0.56 g/kcal</td><td><span class="rt-badge warn">Minimum range (deficit phases)</span></td></tr>
+      <tr><td>25 – 35% of calories</td><td>0.56 – 0.78 g/kcal</td><td><span class="rt-badge ideal">✓ AMDR recommended range</span></td></tr>
+      <tr><td>&gt; 35% of calories</td><td>&gt; 0.78 g/kcal</td><td><span class="rt-badge warn">⚠ Limits carbs/protein budget</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <div class="callout-icon">💛</div>
+    <div><strong>Cholesterol management mode:</strong> NutriLog has an optional cholesterol management setting that keeps fat within a medically conservative range (AHA: &lt;7% saturated fat of total calories, &lt;300mg dietary cholesterol/day). When enabled, fat targets are user-defined rather than auto-calculated.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Sources: Institute of Medicine. <em>Dietary Reference Intakes for Energy, Carbohydrate, Fiber, Fat.</em> 2005. <a href="#citations" style="color:var(--accent)">[11]</a> · American Heart Association. <em>Dietary Fat and Cardiovascular Disease.</em> Circulation. 2017. <a href="#citations" style="color:var(--accent)">[12]</a></p>
+</div>
+
+<!-- ═══ 10 CARBS ═══ -->
+<div class="ref-section" id="carbs">
+  <div class="sec-eyebrow">10</div>
+  <div class="sec-title">Carbohydrate Targets</div>
+  <div class="sec-sub">Carbs are calculated last — from whatever calories remain after protein and fat are accounted for. This is the standard "protein-first" macro hierarchy used by most sports nutrition frameworks.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">Formula — Residual Method</div>
+    <div class="formula">Carb kcal = <em>Total kcal</em> − (<em>protein (g)</em> × 4) − (<em>fat (g)</em> × 9)</div>
+    <div class="formula" style="margin-top:8px">Carbs (g) = <em>Carb kcal</em> ÷ 4</div>
+    <div class="formula-note">Example: 2,517 − (185 × 4) − (84 × 9) = 2,517 − 740 − 756 = <strong>1,021 kcal → 255 g carbs</strong><br>
+    Protein: 4 kcal/g · Fat: 9 kcal/g · Carbohydrate: 4 kcal/g · Fiber: ~2 kcal/g (partially fermented)</div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon">🔵</div>
+    <div><strong>Minimum carbohydrate intake:</strong> The brain requires ~130 g/day of glucose as a minimum (IOM). However, ketosis provides an alternative fuel source, so this minimum isn't absolute. NutriLog does not currently support ketogenic macro profiles.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Source: Institute of Medicine. <em>Dietary Reference Intakes.</em> 2005. <a href="#citations" style="color:var(--accent)">[11]</a></p>
+</div>
+
+<!-- ═══ 11 FIBER ═══ -->
+<div class="ref-section" id="fiber">
+  <div class="sec-eyebrow">11</div>
+  <div class="sec-title">Fiber Targets</div>
+  <div class="sec-sub">Dietary fiber supports gut microbiome health, satiety, blood sugar control, and cardiovascular health. Most people eat less than half the recommended amount.</div>
+
+  <div class="formula-box">
+    <div class="formula-label">NutriLog Formula — IOM Adequate Intake</div>
+    <div class="formula">Fiber (g) = 14 × (<em>calorie target</em> ÷ 1,000)</div>
+    <div class="formula-note">Example: 14 × (2,517 ÷ 1,000) = <strong>35 g/day</strong><br>
+    Hard cap: 60 g/day (GI discomfort at very high intakes) · Floor: 20 g/day minimum<br>
+    Tolerance range applied: −20% to +25% of target</div>
+  </div>
+
+  <table class="range-table">
+    <thead><tr><th>Population</th><th>Daily Fiber Target</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>Adult men (19–50)</td><td>38 g/day</td><td>IOM Adequate Intake</td></tr>
+      <tr><td>Adult women (19–50)</td><td>25 g/day</td><td>IOM Adequate Intake</td></tr>
+      <tr><td>Adults 51+</td><td>Men: 30g · Women: 21g</td><td>IOM (energy needs decrease)</td></tr>
+      <tr><td>NutriLog default (2,500 kcal)</td><td>35 g/day</td><td><span class="rt-app">14 g per 1,000 kcal</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout good">
+    <div class="callout-icon">🌿</div>
+    <div><strong>Why fiber matters for body composition:</strong> High-fiber foods are voluminous and low in calorie density, making them excellent for satiety during a deficit. Fiber also slows glucose absorption, reducing insulin spikes that promote fat storage. Fermentable fiber feeds beneficial gut bacteria that may influence body composition through hormonal pathways.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Source: Institute of Medicine. <em>Dietary Reference Intakes for Energy, Carbohydrate, Fiber, Fat.</em> 2005. <a href="#citations" style="color:var(--accent)">[11]</a></p>
+</div>
+
+<!-- ═══ 12 SAFE RATE ═══ -->
+<div class="ref-section" id="safelose">
+  <div class="sec-eyebrow">12</div>
+  <div class="sec-title">Safe Weight Loss Rate</div>
+  <div class="sec-sub">How fast you can lose weight while minimising muscle loss and metabolic adaptation.</div>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="ic-label">Conservative (safe for most)</div>
+      <div class="ic-val" style="color:var(--green)">0.5% BW/week</div>
+      <div class="ic-desc">At 77 kg → ~0.4 kg/week. Minimal muscle loss. Recommended for older adults, beginners, and those with a small amount to lose.</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-label">Moderate (active individuals)</div>
+      <div class="ic-val" style="color:var(--orange)">0.5–1% BW/week</div>
+      <div class="ic-desc">At 77 kg → 0.4–0.8 kg/week. Acceptable with high protein intake and resistance training. ISSN recommendation.</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-label">Aggressive (short-term only)</div>
+      <div class="ic-val" style="color:var(--red)">1–1.5% BW/week</div>
+      <div class="ic-desc">At 77 kg → 0.8–1.2 kg/week. Significant muscle loss risk without very high protein. Not sustainable beyond 6–8 weeks.</div>
+    </div>
+    <div class="info-card">
+      <div class="ic-label">NutriLog Safety Flag</div>
+      <div class="ic-val" style="color:var(--accent)">≤ 700 kcal/day</div>
+      <div class="ic-desc">NutriLog caps the auto-calculated deficit at 700 kcal/day and warns when the timeline would require more than 600 kcal/day.</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-icon">👴👵</div>
+    <div><strong>For adults over 60:</strong> Muscle loss with age (sarcopenia) is a serious concern. Aggressive deficits accelerate muscle loss significantly. The <strong>Gentle Loss (−200 kcal/day)</strong> goal in NutriLog is specifically designed for this population — ~0.2 kg/week fat loss with minimal muscle risk when paired with adequate protein.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Sources: Aragon AA et al. (ISSN Position Stand on Diets). <em>JISSN.</em> 2017;14:16. <a href="#citations" style="color:var(--accent)">[13]</a> · Helms ER et al. <em>JISSN.</em> 2014. <a href="#citations" style="color:var(--accent)">[8]</a></p>
+</div>
+
+<!-- ═══ 13 PROJECTION MODEL ═══ -->
+<div class="ref-section" id="projection">
+  <div class="sec-eyebrow">13</div>
+  <div class="sec-title">Body Composition Projection Model</div>
+  <div class="sec-sub">A week-by-week hybrid model that simulates fat loss and lean mass gain simultaneously. Unlike simple deficit calculators, it accounts for metabolic adaptation and weekly weight change.</div>
+
+  <div class="model-steps">
+    <div class="ms-row">
+      <div class="ms-num">1</div>
+      <div class="ms-body">
+        <div class="ms-title">Weekly BMR Recalculation (Mifflin-St Jeor)</div>
+        <div class="ms-desc">Each week, BMR is recalculated using the model's current weight — not your starting weight. As you lose fat, BMR drops, making future fat loss slightly harder. This reflects real physiology.</div>
+        <div class="ms-code">BMR_week = (10 × weight) + (6.25 × height) − (5 × age) ± 5</div>
+      </div>
+    </div>
+    <div class="ms-row">
+      <div class="ms-num">2</div>
+      <div class="ms-body">
+        <div class="ms-title">Adaptive Factor (Week 5+)</div>
+        <div class="ms-desc">From week 5 onward, the effective TDEE is multiplied by 0.95 to simulate metabolic adaptation — the body becoming more efficient under sustained deficit. This prevents the model from overestimating long-term fat loss.</div>
+        <div class="ms-code">TDEE_effective = BMR × activity × (week > 4 ? 0.95 : 1.0)</div>
+      </div>
+    </div>
+    <div class="ms-row">
+      <div class="ms-num">3</div>
+      <div class="ms-body">
+        <div class="ms-title">Weekly Fat Loss</div>
+        <div class="ms-desc">Fat lost per week is calculated from the effective deficit, using 7,700 kcal/kg. A floor of TDEE − 1,200 kcal prevents the model from projecting starvation-level deficits.</div>
+        <div class="ms-code">fat_loss_kg = (min(deficit, max(50, TDEE − 1200)) × 7) ÷ 7700</div>
+      </div>
+    </div>
+    <div class="ms-row">
+      <div class="ms-num">4</div>
+      <div class="ms-body">
+        <div class="ms-title">Muscle Gain (Protein-Dependent)</div>
+        <div class="ms-desc">Weekly lean mass gain is capped at 0.15 kg/week, scaled by how close protein intake is to 1.6 g/kg LBM (the minimum effective recomposition level). Gain tapers toward zero over ~60 weeks as the beginner advantage diminishes.</div>
+        <div class="ms-code">protein_adequacy = min(1, protein ÷ (LBM × 1.6))
+muscle_gain = max(0, 0.15 × protein_adequacy × (1 − week / 60))</div>
+      </div>
+    </div>
+    <div class="ms-row">
+      <div class="ms-num">5</div>
+      <div class="ms-body">
+        <div class="ms-title">Fat Floor Safety</div>
+        <div class="ms-desc">Fat mass is prevented from falling below 4% of body weight — the approximate essential fat minimum. This prevents the model from projecting biologically impossible outcomes.</div>
+        <div class="ms-code">fat = max(weight × 0.04, fat − fat_loss_kg)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️</div>
+    <div><strong>Model limitations:</strong> This is a deterministic simulation, not a personalised physiological model. Individual response varies significantly based on genetics, training programme, sleep quality, stress levels, and actual dietary adherence. Use the projection as a directional estimate, not a precise prediction. Weight fluctuations of ±1–2 kg from water retention are normal and not captured by the model.</div>
+  </div>
+  <p style="font-size:12px;color:var(--text3)">Sources: Hall KD et al. <em>Lancet.</em> 2011. <a href="#citations" style="color:var(--accent)">[6]</a> · Schoenfeld BJ, Aragon AA. <em>JISSN.</em> 2018;15:10. <a href="#citations" style="color:var(--accent)">[14]</a></p>
+</div>
+
+<!-- ═══ 14 CITATIONS ═══ -->
+<div class="ref-section" id="citations">
+  <div class="sec-eyebrow">14</div>
+  <div class="sec-title">Full Citations</div>
+  <div class="sec-sub">All sources referenced in NutriLog's calculations and this document.</div>
+
+  <div class="cite-list">
+    <div class="cite-item">
+      <div class="cite-id">[1]</div>
+      <div class="cite-title">BMI Classification</div>
+      <div class="cite-authors">World Health Organization</div>
+      <div class="cite-journal">Global Database on Body Mass Index. WHO, 2000. Updated 2006.</div>
+      <div class="cite-used">Used for: <strong>BMI range classification labels in Settings and Projection pages</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[2]</div>
+      <div class="cite-title">The Harris Benedict equation reevaluated: resting energy requirements and the body cell mass</div>
+      <div class="cite-authors">Roza AM, Shizgal HM</div>
+      <div class="cite-journal">Am J Clin Nutr. 1984;40(1):168–182.</div>
+      <div class="cite-used">Used for: <strong>BMR formula in Settings page (Harris-Benedict Revised)</strong> · Male: 88.362 + 13.397w + 4.799h − 5.677a · Female: 447.593 + 9.247w + 3.098h − 4.330a</div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[3]</div>
+      <div class="cite-title">A new predictive equation for resting energy expenditure in healthy individuals</div>
+      <div class="cite-authors">Mifflin MD, St Jeor ST, Hill LA, Scott BJ, Daugherty SA, Koh YO</div>
+      <div class="cite-journal">Am J Clin Nutr. 1990;51(2):241–247.</div>
+      <div class="cite-used">Used for: <strong>BMR formula in Projection Model (weekly recalculation)</strong> · Male: 10w + 6.25h − 5a + 5 · Female: 10w + 6.25h − 5a − 161</div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[4]</div>
+      <div class="cite-title">A Biometric Study of Human Basal Metabolism</div>
+      <div class="cite-authors">Harris JA, Benedict FG</div>
+      <div class="cite-journal">Proc Natl Acad Sci USA. 1918;4(12):370–373.</div>
+      <div class="cite-used">Used for: <strong>Activity multiplier framework (sedentary 1.2 → extra active 1.9)</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[5]</div>
+      <div class="cite-title">ACSM's Guidelines for Exercise Testing and Prescription, 11th Edition</div>
+      <div class="cite-authors">American College of Sports Medicine</div>
+      <div class="cite-journal">Wolters Kluwer. 2022.</div>
+      <div class="cite-used">Used for: <strong>Body fat % classification ranges (essential, athlete, fitness, average, obese) for both sexes</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[6]</div>
+      <div class="cite-title">Quantification of the effect of energy imbalance on bodyweight</div>
+      <div class="cite-authors">Hall KD, Sacks G, Chandramohan D, et al.</div>
+      <div class="cite-journal">Lancet. 2011;378(9793):826–837.</div>
+      <div class="cite-used">Used for: <strong>Metabolic adaptation rationale (adaptive factor 0.95×) and 7,700 kcal/kg fat limitation notes in Projection Model</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[7]</div>
+      <div class="cite-title">A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults</div>
+      <div class="cite-authors">Morton RW, Murphy KT, McKellar SR, et al.</div>
+      <div class="cite-journal">Br J Sports Med. 2018;52(6):376–384.</div>
+      <div class="cite-used">Used for: <strong>1.6–1.8 g/kg protein plateau finding; baseline for protein spectrum labels in Settings protein guide</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[8]</div>
+      <div class="cite-title">Evidence-based recommendations for natural bodybuilding contest preparation: nutrition and supplementation</div>
+      <div class="cite-authors">Helms ER, Aragon AA, Fitschen PJ</div>
+      <div class="cite-journal">J Int Soc Sports Nutr (JISSN). 2014;11:20.</div>
+      <div class="cite-used">Used for: <strong>2.3–3.1 g/kg LBM protein recommendation for natural athletes in deficit; basis for NutriLog's 2.4 g/kg default</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[9]</div>
+      <div class="cite-title">Higher compared with lower dietary protein during an energy deficit combined with intense exercise promotes greater lean mass gain and fat mass loss</div>
+      <div class="cite-authors">Longland TM, Oikawa SY, Mitchell CJ, Devries MC, Phillips SM</div>
+      <div class="cite-journal">Am J Clin Nutr. 2016;103(3):738–746.</div>
+      <div class="cite-used">Used for: <strong>High-protein recomposition evidence (2.4 g/kg vs 1.2 g/kg in 40% deficit, simultaneous fat loss + muscle gain)</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[10]</div>
+      <div class="cite-title">International Society of Sports Nutrition Position Stand: protein and exercise</div>
+      <div class="cite-authors">Stokes T, Hector AJ, Morton RW, McGlory C, Phillips SM</div>
+      <div class="cite-journal">J Int Soc Sports Nutr (JISSN). 2018;15:10.</div>
+      <div class="cite-used">Used for: <strong>ISSN consensus 1.4–2.0 g/kg protein range for active individuals; basis for minimum protein floor</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[11]</div>
+      <div class="cite-title">Dietary Reference Intakes for Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, Protein, and Amino Acids</div>
+      <div class="cite-authors">Institute of Medicine (IOM), Food and Nutrition Board</div>
+      <div class="cite-journal">National Academies Press. Washington, DC. 2005.</div>
+      <div class="cite-used">Used for: <strong>Fat AMDR (20–35% of calories) · Carbohydrate AMDR (45–65%) · Fiber AI (14 g per 1,000 kcal) · Minimum carbohydrate 130 g/day</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[12]</div>
+      <div class="cite-title">Dietary Fats and Cardiovascular Disease: A Presidential Advisory</div>
+      <div class="cite-authors">Sacks FM, Lichtenstein AH, Wu JHY, et al. (American Heart Association)</div>
+      <div class="cite-journal">Circulation. 2017;136(3):e1–e23.</div>
+      <div class="cite-used">Used for: <strong>Cholesterol management mode fat targets; saturated fat guidance (&lt;7% of total calories)</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[13]</div>
+      <div class="cite-title">International Society of Sports Nutrition Position Stand: Diets and Body Composition</div>
+      <div class="cite-authors">Aragon AA, Schoenfeld BJ, Wildman R, et al.</div>
+      <div class="cite-journal">J Int Soc Sports Nutr (JISSN). 2017;14:16.</div>
+      <div class="cite-used">Used for: <strong>Safe weight loss rate (0.5–1% body weight/week); deficit cap rationale; recomposition feasibility discussion</strong></div>
+    </div>
+
+    <div class="cite-item">
+      <div class="cite-id">[14]</div>
+      <div class="cite-title">How much protein can the body use in a single meal for muscle-building? Implications for daily protein distribution</div>
+      <div class="cite-authors">Schoenfeld BJ, Aragon AA</div>
+      <div class="cite-journal">J Int Soc Sports Nutr (JISSN). 2018;15:10.</div>
+      <div class="cite-used">Used for: <strong>Protein distribution rationale; muscle protein synthesis kinetics used in Projection Model's muscle gain cap</strong></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<footer>
+  NutriLog v2.6.4 · Formulas &amp; Scientific References<br>
+  <span style="display:block;margin-top:6px;opacity:.5">This document is for informational purposes. Always consult a qualified healthcare professional before making significant dietary changes.</span>
+</footer>
+
+</body>
+</html>
