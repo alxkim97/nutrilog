@@ -314,6 +314,10 @@ function applySimpleMode(on){
   document.body.classList.toggle('simple-mode',on);
   const btn=document.getElementById('simpleModeToggle');
   if(btn)btn.textContent=on?'On':'Off';
+  const sidebarToggle=document.getElementById('sidebarSimpleToggle');
+  if(sidebarToggle)sidebarToggle.classList.toggle('active',on);
+  const sidebarPill=document.getElementById('sidebarSimplePill');
+  if(sidebarPill)sidebarPill.textContent=on?'On':'Off';
   // If on a hidden page, redirect to Today
   if(on){
     const hidden=['page-analysis','page-projection'];

@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.6",
-  "description": "NutriLog v2.6.6 — 6 themes, food type categories, bulk type-tagging",
+  "version": "2.6.7",
+  "description": "NutriLog v2.6.7 — food data corrections, sidebar simple mode toggle",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

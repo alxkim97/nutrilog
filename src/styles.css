@@ -425,6 +425,16 @@ input, select, textarea { font-family:var(--fb); }
   background:var(--accent-glow); color:var(--accent);
   border-color:var(--accent-dim);
 }
+.sidebar-simple-toggle {
+  display:flex;align-items:center;justify-content:space-between;
+  margin:6px 10px 4px;padding:8px 10px;border-radius:8px;
+  border:1px solid var(--border);cursor:pointer;color:var(--text3);
+  background:transparent;transition:.15s;user-select:none;flex-shrink:0;
+}
+.sidebar-simple-toggle:hover{border-color:var(--border2);color:var(--text2);}
+.sidebar-simple-toggle.active{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
+.sidebar-simple-pill{font-size:10px;font-weight:700;font-family:var(--fm);padding:2px 7px;border-radius:10px;background:var(--bg4);color:var(--text3);transition:.15s;}
+.sidebar-simple-toggle.active .sidebar-simple-pill{background:var(--accent);color:#fff;}
 .sidebar-footer { padding:10px; border-top:1px solid var(--border); flex-shrink:0; }
 .app-version { font-family:var(--fm); font-size:10px; color:var(--text3); letter-spacing:.4px; padding:0 4px 8px; opacity:.6; }
 .ms-box { background:var(--bg3); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
