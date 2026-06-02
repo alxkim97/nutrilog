@@ -558,6 +558,20 @@ tbody tr:hover .row-acts { opacity:1; }
 }
 .modal-close:hover, .modal-x:hover { color:var(--text); background:var(--bg3); }
 .modal-body { padding:16px 22px 22px; }
+.modal-ftr { display:flex; gap:8px; justify-content:flex-end; padding:12px 22px 18px; border-top:1px solid var(--border); }
+
+/* ── Food DB variant tag ── */
+.db-variant-tag { display:inline-block; font-size:10px; color:var(--text3); background:var(--bg3); border:1px solid var(--border); border-radius:4px; padding:1px 5px; margin-top:2px; font-family:var(--fm); }
+
+/* ── Nutrition Insights ── */
+.insight-card { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; background:var(--bg3); border-radius:8px; border-left:3px solid var(--accent); }
+.insight-card.warn { border-left-color:var(--orange); }
+.insight-card.good { border-left-color:var(--green); }
+.insight-card.info { border-left-color:var(--blue); }
+.insight-icon { font-size:18px; line-height:1; flex-shrink:0; margin-top:1px; }
+.insight-body { flex:1; }
+.insight-title { font-size:13px; font-weight:600; color:var(--text); }
+.insight-desc { font-size:11px; color:var(--text3); margin-top:2px; line-height:1.5; }
 
 /* ── FORM ── */
 .ff { display:flex; flex-direction:column; gap:4px; margin-bottom:12px; }

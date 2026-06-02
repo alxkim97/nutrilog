@@ -2630,7 +2630,7 @@ function acSearch(q){
         serving:1,unit:'serving',_isRecipe:true,_recipeId:r.id};});
   const matches=[...foodMatches,...recipeMatches];
   if(!matches.length){acHide();return;}
-  list.innerHTML=matches.map((f,i)=>`<div class="ac-item" onmousedown="acPick(${i})"><span class="ac-name">${esc(f.name)}</span><span class="ac-info">${f.kcal} kcal · P${f.protein}g F${f.fat}g C${f.carbs}g</span></div>`).join('');
+  list.innerHTML=matches.map((f,i)=>`<div class="ac-item" onmousedown="acPick(${i})"><span class="ac-name">${esc(f.name)}${f.variant?` <span style="font-size:10px;color:var(--text3);font-weight:400;">[${esc(f.variant)}]</span>`:''}</span><span class="ac-info">${f.kcal} kcal · P${f.protein}g F${f.fat}g C${f.carbs}g</span></div>`).join('');
   list._m=matches;list.classList.add('open');
 }
 function acPick(i){
@@ -2706,7 +2706,7 @@ function renderFoodDb(){
     return `<tr class="${sel?'row-selected':''}">
       ${showChk?`<td class="chk"><input type="checkbox" ${sel?'checked':''} onchange="dbToggle(${ri},this.checked)" style="cursor:pointer;accent-color:var(--accent)"></td>`:''}
       <td class="rn">${i+1}</td>
-      <td><div class="food-name">${esc(f.name)}</div></td>
+      <td><div class="food-name">${esc(f.name)}</div>${f.variant?`<span class="db-variant-tag">${esc(f.variant)}</span>`:''}</td>
       <td class="nr" style="font-family:var(--fm);font-size:12px">${f.serving}</td>
       <td style="font-size:12px;color:var(--text2)">${esc(f.unit)}</td>
       <td class="nr ck">${f.kcal}</td>
@@ -2761,13 +2761,14 @@ function deleteDbSelected(){
   });
 }
 
-function openDbAdd(){dbEditIdx=null;document.getElementById('dbTitle').textContent='Add Food Item';document.getElementById('dbSaveBtn').textContent='Save Item';['db-name','db-serving','db-unit','db-kcal','db-protein','db-fat','db-carbs','db-fiber'].forEach(id=>document.getElementById(id).value='');document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
-function openDbEdit(i){dbEditIdx=i;const f=foodLib[i];document.getElementById('dbTitle').textContent='Edit Food Item';document.getElementById('dbSaveBtn').textContent='Update Item';document.getElementById('db-name').value=f.name;document.getElementById('db-serving').value=f.serving;document.getElementById('db-unit').value=f.unit;document.getElementById('db-kcal').value=f.kcal;document.getElementById('db-protein').value=f.protein;document.getElementById('db-fat').value=f.fat;document.getElementById('db-carbs').value=f.carbs;document.getElementById('db-fiber').value=f.fiber;document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
+function openDbAdd(){dbEditIdx=null;document.getElementById('dbTitle').textContent='Add Food Item';document.getElementById('dbSaveBtn').textContent='Save Item';['db-name','db-variant','db-serving','db-unit','db-kcal','db-protein','db-fat','db-carbs','db-fiber'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
+function openDbEdit(i){dbEditIdx=i;const f=foodLib[i];document.getElementById('dbTitle').textContent='Edit Food Item';document.getElementById('dbSaveBtn').textContent='Update Item';document.getElementById('db-name').value=f.name;const varEl=document.getElementById('db-variant');if(varEl)varEl.value=f.variant||'';document.getElementById('db-serving').value=f.serving;document.getElementById('db-unit').value=f.unit;document.getElementById('db-kcal').value=f.kcal;document.getElementById('db-protein').value=f.protein;document.getElementById('db-fat').value=f.fat;document.getElementById('db-carbs').value=f.carbs;document.getElementById('db-fiber').value=f.fiber;document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
 function closeDbModal(){document.getElementById('dbOverlay').classList.remove('open');dbEditIdx=null;}
 function submitDb(){
   const name=document.getElementById('db-name').value.trim();
   if(!name){toast('Name required','err');return;}
-  const item={name,serving:pnum(document.getElementById('db-serving').value)||100,unit:document.getElementById('db-unit').value.trim()||'g',kcal:pnum(document.getElementById('db-kcal').value),protein:pnum(document.getElementById('db-protein').value),fat:pnum(document.getElementById('db-fat').value),carbs:pnum(document.getElementById('db-carbs').value),fiber:pnum(document.getElementById('db-fiber').value)};
+  const variant=(document.getElementById('db-variant')?.value||'').trim();
+  const item={name,variant:variant||undefined,serving:pnum(document.getElementById('db-serving').value)||100,unit:document.getElementById('db-unit').value.trim()||'g',kcal:pnum(document.getElementById('db-kcal').value),protein:pnum(document.getElementById('db-protein').value),fat:pnum(document.getElementById('db-fat').value),carbs:pnum(document.getElementById('db-carbs').value),fiber:pnum(document.getElementById('db-fiber').value)};
   if(dbEditIdx!==null){foodLib[dbEditIdx]=item;toast('Item updated','ok');}else{foodLib.unshift(item);toast('Item added','ok');}
   saveFoodLib();closeDbModal();renderFoodDb();
 }
@@ -3497,6 +3498,8 @@ function renderAnalysis(){
   renderAchievements();
   // ── Best Day Records ──
   renderBestDayRecords();
+  // ── Nutrition Insights ──
+  renderNutritionInsights();
 }
 
 /* ── Achievements ── */
@@ -5108,6 +5111,103 @@ function renderStatsDashboard(){
   </div>`;
 }
 
+/* ═══ NUTRITION INSIGHTS ═══ */
+function renderNutritionInsights(){
+  const el=document.getElementById('nutritionInsights');
+  if(!el)return;
+  const liveHist={...histIdx};
+  const today=todayStr();
+  if(meals.length)liveHist[today]=meals;
+  const dates=Object.keys(liveHist).filter(d=>(liveHist[d]||[]).length>0).sort();
+  if(dates.length<3){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px 0;">Log at least 3 days to see insights.</div>';return;}
+  const insights=[];
+  // Helper: totals for a date
+  const dayT=d=>totals(liveHist[d]);
+  // Last N days
+  const last=n=>dates.slice(-n);
+  const recent7=last(7);
+  const recent30=last(30);
+
+  // 1. Fiber streak low
+  const lowFiberDays=recent7.filter(d=>dayT(d).fiber<TGT.fiber*0.7);
+  if(lowFiberDays.length>=4)insights.push({type:'warn',icon:'🌿',title:`Fiber low ${lowFiberDays.length} of last 7 days`,desc:`Avg ${(recent7.reduce((a,d)=>a+dayT(d).fiber,0)/recent7.length).toFixed(0)}g vs ${TGT.fiber}g target. Add more veggies, legumes, or oats.`});
+
+  // 2. Protein hit streak
+  let protStreak=0;
+  for(let i=dates.length-1;i>=0;i--){if(dayT(dates[i]).protein>=TGT.protein)protStreak++;else break;}
+  if(protStreak>=3)insights.push({type:'good',icon:'🥩',title:`Protein target hit ${protStreak} days in a row`,desc:`Keep it up — consistent protein intake drives muscle retention and growth.`});
+
+  // 3. Over-calorie days this week
+  const overDays=recent7.filter(d=>dayT(d).kcal>TGT.kcal*1.1);
+  if(overDays.length>=3)insights.push({type:'warn',icon:'🔥',title:`${overDays.length} of last 7 days over calorie target`,desc:`Avg ${(recent7.reduce((a,d)=>a+dayT(d).kcal,0)/recent7.length).toFixed(0)} kcal vs ${TGT.kcal} kcal target.`});
+
+  // 4. Calorie consistency (low variance = good)
+  if(recent7.length>=5){
+    const kcals=recent7.map(d=>dayT(d).kcal);
+    const avg=kcals.reduce((a,b)=>a+b,0)/kcals.length;
+    const std=Math.sqrt(kcals.reduce((a,b)=>a+(b-avg)**2,0)/kcals.length);
+    if(std<150)insights.push({type:'good',icon:'📊',title:'Very consistent calorie intake this week',desc:`Standard deviation of only ${std.toFixed(0)} kcal — predictable intake aids body composition.`});
+    else if(std>500)insights.push({type:'info',icon:'📊',title:'High calorie variability this week',desc:`${std.toFixed(0)} kcal std dev — large swings can make fat loss harder to predict.`});
+  }
+
+  // 5. Fat target frequently exceeded
+  const highFatDays=recent7.filter(d=>dayT(d).fat>(TGT.fat||99)*1.3);
+  if(highFatDays.length>=4)insights.push({type:'warn',icon:'🧈',title:`Fat over target ${highFatDays.length} of last 7 days`,desc:`Watch saturated fat sources — cream cheese, processed snacks, frying oils.`});
+
+  // 6. Best calorie adherence month
+  if(recent30.length>=20){
+    const onTarget=recent30.filter(d=>{const k=dayT(d).kcal;return k>=TGT.kcal*0.9&&k<=TGT.kcal*1.1;});
+    const pct=Math.round(onTarget.length/recent30.length*100);
+    if(pct>=70)insights.push({type:'good',icon:'🎯',title:`${pct}% calorie adherence last 30 days`,desc:`${onTarget.length} of ${recent30.length} days within 10% of target.`});
+    else if(pct<40)insights.push({type:'info',icon:'🎯',title:`Only ${pct}% calorie adherence last 30 days`,desc:`${onTarget.length} of ${recent30.length} days on target. Try pre-logging meals the night before.`});
+  }
+
+  // 7. Logging consistency
+  if(dates.length>=14){
+    const daysSinceFirst=Math.ceil((new Date(dates[dates.length-1])-new Date(dates[0]))/(86400000))+1;
+    const pct=Math.round(dates.length/daysSinceFirst*100);
+    if(pct>=85)insights.push({type:'good',icon:'📅',title:`${pct}% logging consistency`,desc:`You've logged ${dates.length} of the last ${daysSinceFirst} days — excellent habit formation.`});
+    else if(pct<50)insights.push({type:'info',icon:'📅',title:`${pct}% logging consistency`,desc:`${dates.length} of ${daysSinceFirst} days logged. More data improves projection accuracy.`});
+  }
+
+  if(!insights.length)insights.push({type:'info',icon:'✅',title:'All macros on track this week',desc:'No notable patterns to flag — keep up the good work!'});
+  el.innerHTML=insights.map(ins=>`<div class="insight-card ${ins.type}"><div class="insight-icon">${ins.icon}</div><div class="insight-body"><div class="insight-title">${ins.title}</div><div class="insight-desc">${ins.desc}</div></div></div>`).join('');
+}
+
+/* ═══ WEIGHT TREND CHART ═══ */
+async function renderWeightTrendChart(){
+  const canvas=document.getElementById('weightTrendChart');
+  const emptyEl=document.getElementById('weightTrendEmpty');
+  if(!canvas)return;
+  const checkins=await loadCheckins();
+  const pts=checkins.filter(c=>c.weight&&c.date).sort((a,b)=>a.date.localeCompare(b.date));
+  if(pts.length<2){canvas.style.display='none';if(emptyEl)emptyEl.style.display='block';return;}
+  canvas.style.display='block';if(emptyEl)emptyEl.style.display='none';
+  if(window._weightTrendInst){window._weightTrendInst.destroy();window._weightTrendInst=null;}
+  const cssV=getComputedStyle(document.documentElement);
+  const accentColor=cssV.getPropertyValue('--accent').trim()||'#7c6af7';
+  const goalWt=parseFloat(document.getElementById('s-goalwt')?.value)||null;
+  const datasets=[{
+    label:'Weight (kg)',data:pts.map(p=>({x:p.date.slice(0,10),y:+p.weight})),
+    borderColor:accentColor,backgroundColor:accentColor+'22',
+    tension:.3,pointRadius:4,pointHoverRadius:6,fill:true,borderWidth:2
+  }];
+  if(goalWt){datasets.push({label:'Goal',data:pts.map(p=>({x:p.date.slice(0,10),y:goalWt})),borderColor:'#3ecf8e',borderDash:[6,4],pointRadius:0,borderWidth:1.5,fill:false});}
+  window._weightTrendInst=new Chart(canvas,{
+    type:'line',
+    data:{datasets},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      parsing:{xAxisKey:'x',yAxisKey:'y'},
+      scales:{
+        x:{type:'category',ticks:{color:cssV.getPropertyValue('--text3').trim(),font:{size:10}},grid:{color:cssV.getPropertyValue('--border').trim()}},
+        y:{ticks:{color:cssV.getPropertyValue('--text3').trim(),font:{size:10},callback:v=>v+' kg'},grid:{color:cssV.getPropertyValue('--border').trim()}}
+      },
+      plugins:{legend:{display:goalWt!=null,labels:{color:cssV.getPropertyValue('--text2').trim(),font:{size:11}}},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y} kg`}}}
+    }
+  });
+}
+
 /* ═══ KEYBOARD ═══ */
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeModal();closeConf();closeDbModal();closeImport();closeWeightLog();closeShortcuts();closeCopyDay();acHide();}
@@ -5400,6 +5500,7 @@ async function renderProjection(){
   insight+=`<br><br><span style="color:var(--text3);font-size:11px;">📌 Adaptive factor (0.95×) applies from week 5 · BMR recalculates each week with actual weight · The 3,500 kcal/lb rule overestimates fat loss by ~2× beyond 4 weeks.</span>`;
   if(isLifetime)insight=`<strong>Lifetime recomposition mode</strong> — −100 kcal/day. Scale barely moves; fat slowly trades for muscle over months and years. Sustainable indefinitely.<br><br>`+insight;
   const insEl=document.getElementById('pj-insight');if(insEl)insEl.innerHTML=insight;
+  renderWeightTrendChart();
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
