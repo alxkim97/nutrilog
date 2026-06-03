@@ -426,6 +426,8 @@ input, select, textarea { font-family:var(--fb); }
   background:var(--accent-glow); color:var(--accent);
   border-color:var(--accent-dim);
 }
+.dow-bar { background:var(--accent);width:100%;border-radius:3px 3px 0 0;opacity:.75;transition:opacity .15s; }
+.dow-bar:hover { opacity:1; }
 .sidebar-simple-toggle {
   display:flex;align-items:center;justify-content:space-between;
   margin:6px 10px 4px;padding:8px 10px;border-radius:8px;

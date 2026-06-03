@@ -2548,16 +2548,14 @@ function recipeAcSearch(q){
   const qt=q.trim();
   if(!qt){list.classList.remove('open');list.innerHTML='';return;}
   const ql=qt.toLowerCase();
-  const matches=[
-    ...foodLib.filter(f=>f.name.toLowerCase().startsWith(ql)),
-    ...foodLib.filter(f=>!f.name.toLowerCase().startsWith(ql)&&f.name.toLowerCase().includes(ql))
-  ].slice(0,10);
+  const startsWith=[],contains=[];
+  for(const f of foodLib){const n=f.name.toLowerCase();if(n.startsWith(ql))startsWith.push(f);else if(n.includes(ql))contains.push(f);}
+  const matches=[...startsWith,...contains].slice(0,10);
   if(!matches.length){list.classList.remove('open');list.innerHTML='';return;}
   list.innerHTML=matches.map((f,i)=>`<div class="ac-item" onmousedown="recipeAcPick(${i})">
     <span class="ac-name">${esc(f.name)}${f.variant?` <span style="font-size:10px;color:var(--text3);font-weight:400;">[${esc(f.variant)}]</span>`:''}</span>
     <span class="ac-info">${f.kcal} kcal · P${f.protein}g · per ${f.serving}${f.unit}</span>
   </div>`).join('');
-  list.dataset.matches=JSON.stringify(matches.map((_,i)=>foodLib.indexOf(matches[i])));
   list._matches=matches;
   list.classList.add('open');
 }
@@ -2577,13 +2575,13 @@ function recipeAcHide(){
   if(list){list.classList.remove('open');list.innerHTML='';}
 }
 function recipeAcKey(e){
+  if(e.key==='Escape'){recipeAcHide();return;}
   const list=document.getElementById('recipeAcList');
   const items=list?.querySelectorAll('.ac-item')||[];
-  if(!items.length&&e.key!=='Escape')return;
+  if(!items.length)return;
   if(e.key==='ArrowDown'){e.preventDefault();_recipeAcIdx=Math.min(_recipeAcIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('focused',i===_recipeAcIdx));}
   else if(e.key==='ArrowUp'){e.preventDefault();_recipeAcIdx=Math.max(_recipeAcIdx-1,0);items.forEach((el,i)=>el.classList.toggle('focused',i===_recipeAcIdx));}
   else if(e.key==='Enter'){e.preventDefault();e.stopPropagation();recipeAcPick(_recipeAcIdx>=0?_recipeAcIdx:0);}
-  else if(e.key==='Escape'){recipeAcHide();}
 }
 function addRecipeIngredientFromSearch(){
   // Use autocomplete-selected item, or fall back to text search
@@ -2736,8 +2734,11 @@ function acKey(e){
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))acHide();});
 
 /* ═══ FOOD DATABASE PAGE ═══ */
+const DB_TYPE_EMOJI={packaged:'🏷️',whole:'🌿',recipe:'🍳',restaurant:'🍜'};
 let dbFilteredCache=[];
 let dbTypeFilter='';
+let _dbRenderTimer;
+function renderFoodDbD(){clearTimeout(_dbRenderTimer);_dbRenderTimer=setTimeout(renderFoodDb,150);}
 function setDbTypeFilter(type){
   dbTypeFilter=type;
   document.querySelectorAll('.dtf-btn').forEach(b=>b.classList.remove('active'));
@@ -2758,16 +2759,19 @@ function renderFoodDb(){
   const maxCarbs=parseFloat(document.getElementById('dbFltMaxCarbs')?.value)||Infinity;
   const maxFat=parseFloat(document.getElementById('dbFltMaxFat')?.value)||Infinity;
   const minFiber=parseFloat(document.getElementById('dbFltMinFiber')?.value)||0;
-  dbFilteredCache=foodLib.filter(f=>{
-    if(!f.name.toLowerCase().includes(q))return false;
-    if((+f.protein||0)<minProt)return false;
-    if((+f.kcal||0)>maxKcal)return false;
-    if((+f.carbs||0)>maxCarbs)return false;
-    if((+f.fat||0)>maxFat)return false;
-    if((+f.fiber||0)<minFiber)return false;
-    if(dbTypeFilter==='untagged')return !f.type;
-    if(dbTypeFilter&&dbTypeFilter!=='untagged')return f.type===dbTypeFilter;
-    return true;
+  dbFilteredCache=[];
+  foodLib.forEach((f,ri)=>{
+    const n=f.name.toLowerCase();
+    if(!n.includes(q))return;
+    if((+f.protein||0)<minProt)return;
+    if((+f.kcal||0)>maxKcal)return;
+    if((+f.carbs||0)>maxCarbs)return;
+    if((+f.fat||0)>maxFat)return;
+    if((+f.fiber||0)<minFiber)return;
+    if(dbTypeFilter==='untagged'&&f.type)return;
+    if(dbTypeFilter&&dbTypeFilter!=='untagged'&&f.type!==dbTypeFilter)return;
+    f._ri=ri;
+    dbFilteredCache.push(f);
   });
   document.getElementById('dbCount').textContent=dbFilteredCache.length+' item'+(dbFilteredCache.length!==1?'s':'');
   const b=document.getElementById('dbBody');
@@ -2775,12 +2779,12 @@ function renderFoodDb(){
   const showChk=dbMultiMode;
   document.getElementById('dbChkHead').style.display=showChk?'':'none';
   b.innerHTML=dbFilteredCache.map((f,i)=>{
-    const ri=foodLib.indexOf(f);
+    const ri=f._ri;
     const sel=dbMultiSel.has(ri);
     return `<tr class="${sel?'row-selected':''}">
       ${showChk?`<td class="chk"><input type="checkbox" ${sel?'checked':''} onchange="dbToggle(${ri},this.checked)" style="cursor:pointer;accent-color:var(--accent)"></td>`:''}
       <td class="rn">${i+1}</td>
-      <td><div class="food-name">${esc(f.name)}${f.type?`<span class="db-type-badge ${f.type}">${{packaged:'🏷️',whole:'🌿',recipe:'🍳',restaurant:'🍜'}[f.type]||''} ${f.type}</span>`:''}</div>${f.variant?`<span class="db-variant-tag">${esc(f.variant)}</span>`:''}</td>
+      <td><div class="food-name">${esc(f.name)}${f.type?`<span class="db-type-badge ${f.type}">${DB_TYPE_EMOJI[f.type]||''} ${f.type}</span>`:''}</div>${f.variant?`<span class="db-variant-tag">${esc(f.variant)}</span>`:''}</td>
       <td class="nr" style="font-family:var(--fm);font-size:12px">${f.serving}</td>
       <td style="font-size:12px;color:var(--text2)">${esc(f.unit)}</td>
       <td class="nr ck">${f.kcal}</td>
@@ -4092,8 +4096,7 @@ function updateCalc(){
   _cv('c-tdee',Math.round(tdee).toLocaleString()+' kcal','var(--text2)');
   const targetCol=target<1400?'var(--red)':target>4000?'var(--blue)':'var(--accent)';
   _cv('c-target',target.toLocaleString()+' kcal',targetCol);
-  const lbmCol='var(--blue)';
-  _cv('c-lbm',lbm.toFixed(1)+' kg',lbmCol);
+  _cv('c-lbm',lbm.toFixed(1)+' kg','var(--blue)');
   const fatCol=fatToLose<2?'var(--green)':fatToLose<5?'var(--accent)':fatToLose<10?'var(--yellow)':fatToLose<20?'var(--orange)':'var(--red)';
   _cv('c-fatloss',fatToLose.toFixed(1)+' kg to lose',fatCol);
   const deficitAbs=Math.abs(deficit);
@@ -4943,18 +4946,13 @@ function toggleAppearPopup(e){
   if(popup.classList.contains('open')){popup.classList.remove('open');return;}
   const btn=e.currentTarget;
   const rect=btn.getBoundingClientRect();
-  const pw=448, ph=280;
-  // Sidebar trigger (left side): open to the RIGHT and align bottom to trigger
-  const fromSidebar=rect.left<250;
+  const fromSidebar=e.currentTarget.dataset.trigger==='sidebar';
   if(fromSidebar){
     popup.style.left=(rect.right+8)+'px';
-    // Align bottom of popup with bottom of trigger, but clamp to screen
-    const idealTop=rect.bottom-ph;
-    popup.style.top=Math.max(8,idealTop)+'px';
+    popup.style.top=Math.max(8,rect.bottom-280)+'px';
   } else {
-    // Top bar: open below, shifted left if near right edge
     popup.style.top=(rect.bottom+8)+'px';
-    popup.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-pw-8))+'px';
+    popup.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-456))+'px';
   }
   popup.classList.add('open');
   popup.querySelectorAll('.variant-swatch').forEach(el=>el.classList.toggle('active',el.dataset.v===_uiVariant));
@@ -5226,7 +5224,7 @@ function renderStatsDashboard(){
   if(dowEl)dowEl.innerHTML=`<div style="display:flex;gap:4px;align-items:flex-end;height:96px;">
     ${dowC.map((c,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
       <div style="font-size:9px;color:var(--accent);font-family:var(--fm);font-weight:600;">${c>0?c:''}</div>
-      <div style="background:var(--accent);width:100%;border-radius:3px 3px 0 0;height:${Math.round(c/maxDow*64)}px;min-height:${c>0?3:0}px;opacity:.75;transition:opacity .15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.75"></div>
+      <div class="dow-bar" style="height:${Math.round(c/maxDow*64)}px;min-height:${c>0?3:0}px;"></div>
       <div style="font-size:9px;color:var(--text3);font-weight:600;">${DOW[i]}</div>
     </div>`).join('')}
   </div>`;
@@ -5242,12 +5240,9 @@ function renderNutritionInsights(){
   const dates=Object.keys(liveHist).filter(d=>(liveHist[d]||[]).length>0).sort();
   if(dates.length<3){el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:12px 0;">Log at least 3 days to see insights.</div>';return;}
   const insights=[];
-  // Helper: totals for a date
   const dayT=d=>totals(liveHist[d]);
-  // Last N days
-  const last=n=>dates.slice(-n);
-  const recent7=last(7);
-  const recent30=last(30);
+  const recent7=dates.slice(-7);
+  const recent30=dates.slice(-30);
 
   // 1. Fiber streak low
   const lowFiberDays=recent7.filter(d=>dayT(d).fiber<TGT.fiber*0.7);

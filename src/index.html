@@ -229,7 +229,7 @@
       Settings
     </div>
   </nav>
-  <div class="sidebar-appear-btn" onclick="toggleAppearPopup(event)" title="Change appearance">
+  <div class="sidebar-appear-btn" onclick="toggleAppearPopup(event)" data-trigger="sidebar" title="Change appearance">
     <div style="display:flex;align-items:center;gap:7px;">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="13" height="13"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
       <span style="font-size:12px;">Appearance</span>
@@ -602,11 +602,11 @@
       <!-- Macro filter bar -->
       <div class="db-macro-filter">
         <span style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Filter:</span>
-        <div class="db-flt-group"><label>Protein ≥</label><input id="dbFltMinProt" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
-        <div class="db-flt-group"><label>Kcal ≤</label><input id="dbFltMaxKcal" type="number" min="0" placeholder="kcal" oninput="renderFoodDb()"></div>
-        <div class="db-flt-group"><label>Carbs ≤</label><input id="dbFltMaxCarbs" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
-        <div class="db-flt-group"><label>Fat ≤</label><input id="dbFltMaxFat" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
-        <div class="db-flt-group"><label>Fiber ≥</label><input id="dbFltMinFiber" type="number" min="0" placeholder="g" oninput="renderFoodDb()"></div>
+        <div class="db-flt-group"><label>Protein ≥</label><input id="dbFltMinProt" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Kcal ≤</label><input id="dbFltMaxKcal" type="number" min="0" placeholder="kcal" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Carbs ≤</label><input id="dbFltMaxCarbs" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Fat ≤</label><input id="dbFltMaxFat" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Fiber ≥</label><input id="dbFltMinFiber" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
         <button class="btn btn-ghost" onclick="clearDbFilters()" style="height:24px;font-size:10px;padding:0 8px;margin-left:auto;">Clear</button>
       </div>
       <div class="db-type-filters">
@@ -619,7 +619,7 @@
         <button class="dtf-btn" id="dtf-untagged" onclick="setDbTypeFilter('untagged')">◌ Untagged</button>
       </div>
       <div class="db-toolbar">
-        <input class="db-search" id="dbSearch" type="text" placeholder="Search food items…" oninput="renderFoodDb()">
+        <input class="db-search" id="dbSearch" type="text" placeholder="Search food items…" oninput="renderFoodDbD()">
         <button class="btn btn-ghost" onclick="importFoodDb()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           Import DB
