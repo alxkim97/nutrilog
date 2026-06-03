@@ -297,6 +297,10 @@ ipcMain.handle('storage:set-checkins', (_, data) => writeJSON(profileDataFile('c
 ipcMain.handle('storage:get-templates', () => readJSON(profileDataFile('templates'), {}));
 ipcMain.handle('storage:set-templates', (_, data) => writeJSON(profileDataFile('templates'), data));
 
+// Recipes (per-profile)
+ipcMain.handle('storage:get-recipes', () => readJSON(profileDataFile('recipes'), {}));
+ipcMain.handle('storage:set-recipes', (_, data) => writeJSON(profileDataFile('recipes'), data));
+
 // Day notes (per-date context notes)
 ipcMain.handle('storage:get-daynotes', () => readJSON(profileDataFile('daynotes'), {}));
 ipcMain.handle('storage:set-daynotes', (_, data) => writeJSON(profileDataFile('daynotes'), data));

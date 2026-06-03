@@ -407,6 +407,9 @@ async function forcePushToCloud(){
     // Templates
     const tmpl=await Store._localGet('nutrilog_templates');
     if(tmpl&&!await sbSet('nutrilog_templates',tmpl))failures++;
+    // Recipes
+    const rcp=await Store._localGet('nutrilog_recipes');
+    if(rcp&&Object.keys(rcp).length&&!await sbSet('nutrilog_recipes',rcp))failures++;
     // Check-ins
     const ckins=await Store._localGet('nutrilog_checkins');
     if(ckins&&!await sbSet('nutrilog_checkins',ckins))failures++;
@@ -559,8 +562,8 @@ async function pullFromSupabase(){
   if(_pullInProgress)return;
   _pullInProgress=true;
   try{
-    const [remSettings,remFoodLib,remHistory,remCheckins,remTemplates]=await Promise.all([
-      sbGet('nutrilog_settings'),sbGetShared('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates')
+    const [remSettings,remFoodLib,remHistory,remCheckins,remTemplates,remRecipes]=await Promise.all([
+      sbGet('nutrilog_settings'),sbGetShared('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates'),sbGet('nutrilog_recipes')
     ]);
     if(remSettings){await Store._localSet('nutrilog_settings',remSettings);}
     if(remFoodLib) {await Store._localSet('nutrilog_foodlib',remFoodLib);}
@@ -623,6 +626,21 @@ async function pullFromSupabase(){
         tplOrder=tplOrder.filter(id=>merged[id]);
         allIds.forEach(id=>{if(!tplOrder.includes(id))tplOrder.push(id);});
         await sbSet('nutrilog_templates',merged);
+      }
+    }
+    {
+      // Recipe merge: same strategy as templates (updatedAt wins on conflict)
+      const localRecipes=(await Store._localGet('nutrilog_recipes'))||{};
+      const base=remRecipes?{...remRecipes}:{};
+      Object.entries(localRecipes).forEach(([id,r])=>{
+        if(!base[id]){base[id]=r;}
+        else{const localNewer=new Date(r.updatedAt||0)>new Date(base[id].updatedAt||0);if(localNewer)base[id]=r;}
+      });
+      if(Object.keys(base).length){
+        await Store._localSet('nutrilog_recipes',base);
+        _recipes=base;
+        renderRecipes();
+        await sbSet('nutrilog_recipes',base);
       }
     }
     // Recover past-date meals that exist in sessions table but are missing from history.
@@ -718,7 +736,7 @@ async function pullFromSupabase(){
 const Store = {
   _localGet(key){
     if(IS_ELECTRON){
-      const map={'nutrilog_v1':()=>window.electronAPI.getSession(),'nutrilog_settings':()=>window.electronAPI.getSettings(),'nutrilog_foodlib':()=>window.electronAPI.getFoodLib(),'nutrilog_history':()=>window.electronAPI.getHistory(),'nutrilog_checkins':()=>window.electronAPI.getCheckins?.()??Promise.resolve(null),'nutrilog_templates':()=>window.electronAPI.getTemplates?.()??Promise.resolve(null),'nutrilog_daynotes':()=>window.electronAPI.getDayNotes?.()??Promise.resolve({}),'nutrilog_synclog':()=>window.electronAPI.getSyncLog?.()??Promise.resolve([])};
+      const map={'nutrilog_v1':()=>window.electronAPI.getSession(),'nutrilog_settings':()=>window.electronAPI.getSettings(),'nutrilog_foodlib':()=>window.electronAPI.getFoodLib(),'nutrilog_history':()=>window.electronAPI.getHistory(),'nutrilog_checkins':()=>window.electronAPI.getCheckins?.()??Promise.resolve(null),'nutrilog_templates':()=>window.electronAPI.getTemplates?.()??Promise.resolve(null),'nutrilog_recipes':()=>window.electronAPI.getRecipes?.()??Promise.resolve({}),'nutrilog_daynotes':()=>window.electronAPI.getDayNotes?.()??Promise.resolve({}),'nutrilog_synclog':()=>window.electronAPI.getSyncLog?.()??Promise.resolve([])};
       return map[key]?map[key]():Promise.resolve(null);
     }
     const raw=localStorage.getItem(key);
@@ -726,7 +744,7 @@ const Store = {
   },
   _localSet(key,value){
     if(IS_ELECTRON){
-      const map={'nutrilog_v1':(v)=>window.electronAPI.setSession(v),'nutrilog_settings':(v)=>window.electronAPI.setSettings(v),'nutrilog_foodlib':(v)=>window.electronAPI.setFoodLib(v),'nutrilog_history':(v)=>window.electronAPI.setHistory(v),'nutrilog_checkins':(v)=>window.electronAPI.setCheckins?.(v)??Promise.resolve(),'nutrilog_templates':(v)=>window.electronAPI.setTemplates?.(v)??Promise.resolve(),'nutrilog_daynotes':(v)=>window.electronAPI.setDayNotes?.(v)??Promise.resolve(),'nutrilog_synclog':(v)=>window.electronAPI.setSyncLog?.(v)??Promise.resolve()};
+      const map={'nutrilog_v1':(v)=>window.electronAPI.setSession(v),'nutrilog_settings':(v)=>window.electronAPI.setSettings(v),'nutrilog_foodlib':(v)=>window.electronAPI.setFoodLib(v),'nutrilog_history':(v)=>window.electronAPI.setHistory(v),'nutrilog_checkins':(v)=>window.electronAPI.setCheckins?.(v)??Promise.resolve(),'nutrilog_templates':(v)=>window.electronAPI.setTemplates?.(v)??Promise.resolve(),'nutrilog_recipes':(v)=>window.electronAPI.setRecipes?.(v)??Promise.resolve(),'nutrilog_daynotes':(v)=>window.electronAPI.setDayNotes?.(v)??Promise.resolve(),'nutrilog_synclog':(v)=>window.electronAPI.setSyncLog?.(v)??Promise.resolve()};
       return map[key]?map[key](value):Promise.resolve();
     }
     localStorage.setItem(key,JSON.stringify(value));
@@ -747,6 +765,7 @@ const Store = {
         else if(key==='nutrilog_history')   ok=await sbSetHistory(value);
         else if(key==='nutrilog_checkins')  ok=await sbSet('nutrilog_checkins',value);
         else if(key==='nutrilog_templates') ok=await sbSet('nutrilog_templates',value);
+        else if(key==='nutrilog_recipes')   ok=await sbSet('nutrilog_recipes',value);
         else if(key==='nutrilog_v1'){
           const d=todayStr(); const m=value?.meals||[];
           ok=await sbSetSession(d,m);

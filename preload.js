@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setCheckins:   (data)   => ipcRenderer.invoke('storage:set-checkins', data),
   getTemplates:  ()       => ipcRenderer.invoke('storage:get-templates'),
   setTemplates:  (data)   => ipcRenderer.invoke('storage:set-templates', data),
+  getRecipes:    ()       => ipcRenderer.invoke('storage:get-recipes'),
+  setRecipes:    (data)   => ipcRenderer.invoke('storage:set-recipes', data),
   getDayNotes:   ()       => ipcRenderer.invoke('storage:get-daynotes'),
   setDayNotes:   (data)   => ipcRenderer.invoke('storage:set-daynotes', data),
   getSyncLog:    ()       => ipcRenderer.invoke('storage:get-synclog'),
