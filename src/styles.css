@@ -652,7 +652,10 @@ tbody tr:hover .row-acts { opacity:1; }
   background:var(--bg2); border:1px solid var(--border2); border-radius:var(--rl);
   width:540px; max-width:100%; max-height:90vh; overflow-y:auto;
   animation:mup .2s cubic-bezier(0,0,.2,1);
+  scrollbar-width:thin; scrollbar-color:var(--border) transparent;
 }
+.modal::-webkit-scrollbar{width:4px;}
+.modal::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
 @keyframes mup { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
 .modal-hdr {
   padding:18px 22px 14px; display:flex; align-items:center; justify-content:space-between;
@@ -666,7 +669,7 @@ tbody tr:hover .row-acts { opacity:1; }
 }
 .modal-close:hover, .modal-x:hover { color:var(--text); background:var(--bg3); }
 .modal-body { padding:16px 22px 22px; }
-.modal-ftr { display:flex; gap:8px; justify-content:flex-end; padding:12px 22px 18px; border-top:1px solid var(--border); }
+.modal-ftr { display:flex; gap:8px; justify-content:flex-end; padding:12px 22px 18px; border-top:1px solid var(--border); position:sticky; bottom:0; background:var(--bg2); z-index:2; }
 
 /* ── Food DB variant tag ── */
 .db-variant-tag { display:inline-block; font-size:10px; color:var(--text3); background:var(--bg3); border:1px solid var(--border); border-radius:4px; padding:1px 5px; margin-top:2px; font-family:var(--fm); }
@@ -770,7 +773,10 @@ tbody tr:hover .row-acts { opacity:1; }
   position:absolute; top:calc(100% + 4px); left:0; right:0;
   background:var(--bg2); border:1px solid var(--border2); border-radius:8px;
   z-index:600; max-height:210px; overflow-y:auto; display:none; box-shadow:var(--sh);
+  scrollbar-width:thin; scrollbar-color:var(--border) transparent;
 }
+.ac-list::-webkit-scrollbar{width:3px;}
+.ac-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 .ac-list.open { display:block; }
 .ac-item {
   padding:8px 12px; font-size:13px; cursor:pointer; transition:background var(--tr);

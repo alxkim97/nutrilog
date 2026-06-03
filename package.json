@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.6.9",
-  "description": "NutriLog v2.6.9 — 8 appearance variants, popup from top bar + sidebar",
+  "version": "2.7.0",
+  "description": "NutriLog v2.7.0 — batch-weight recipes with gram-based logging",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

@@ -2475,13 +2475,14 @@ function renderRecipes(){
   }
   el.innerHTML=list.map(r=>{
     const tot=recipeTotal(r);
+    const bw=r.batchWeight||0;
+    const meta=bw>0
+      ?`${r.ingredients.length} ingredients · ${bw}g batch &nbsp;·&nbsp; Per 100g: ${Math.round(tot.kcal/bw*100)} kcal · P${(tot.protein/bw*100).toFixed(1)}g F${(tot.fat/bw*100).toFixed(1)}g C${(tot.carbs/bw*100).toFixed(1)}g`
+      :`${r.ingredients.length} ingredients &nbsp;·&nbsp; ${Math.round(tot.kcal)} kcal · P${tot.protein.toFixed(1)}g F${tot.fat.toFixed(1)}g C${tot.carbs.toFixed(1)}g <span style="font-size:10px;color:var(--text3)">whole recipe</span>`;
     return `<div class="recipe-row">
       <div class="recipe-info">
         <div class="recipe-name">${esc(r.name)}</div>
-        <div class="recipe-meta">${r.ingredients.length} ingredients · ${r.servings} serving${r.servings!==1?'s':''}
-          &nbsp;·&nbsp;${Math.round(tot.kcal/r.servings)} kcal&nbsp;·&nbsp;P${(tot.protein/r.servings).toFixed(1)}g F${(tot.fat/r.servings).toFixed(1)}g C${(tot.carbs/r.servings).toFixed(1)}g
-          <span style="font-size:10px;color:var(--text3)"> per serving</span>
-        </div>
+        <div class="recipe-meta">${meta}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
         <button class="btn btn-ghost" onclick="logRecipePrompt('${r.id}')" style="font-size:11px;height:26px;padding:0 10px;">+ Log</button>
@@ -2505,7 +2506,7 @@ function openRecipeEditor(id){
   const r=id?_recipes[id]:null;
   _recipeDraftIngredients=r?r.ingredients.map(i=>({...i})):[];
   document.getElementById('recipeName').value=r?r.name:'';
-  document.getElementById('recipeServings').value=r?r.servings:1;
+  document.getElementById('recipeBatchWeight').value=r&&r.batchWeight?r.batchWeight:'';
   renderRecipeDraftIngredients();
   document.getElementById('recipeModal').classList.add('open');
 }
@@ -2513,6 +2514,7 @@ function closeRecipeModal(){
   document.getElementById('recipeModal').classList.remove('open');
   _editingRecipeId=null;_recipeDraftIngredients=[];
   _recipeAcMatch=null;_recipeAcIdx=-1;recipeAcHide();
+  document.getElementById('recipeBatchWeight').value='';
 }
 function renderRecipeDraftIngredients(){
   const el=document.getElementById('recipeDraftIngredients');
@@ -2536,9 +2538,15 @@ function updateRecipeTotals(){
     kcal:a.kcal+(i.kcal||0),protein:a.protein+(i.protein||0),
     fat:a.fat+(i.fat||0),carbs:a.carbs+(i.carbs||0),fiber:a.fiber+(i.fiber||0)
   }),{kcal:0,protein:0,fat:0,carbs:0,fiber:0});
-  const srv=Math.max(1,+document.getElementById('recipeServings')?.value||1);
+  const bw=+(document.getElementById('recipeBatchWeight')?.value||0);
   const el=document.getElementById('recipeTotals');
-  if(el)el.textContent=`Total: ${Math.round(tot.kcal)} kcal · P${tot.protein.toFixed(1)}g F${tot.fat.toFixed(1)}g C${tot.carbs.toFixed(1)}g — Per serving (÷${srv}): ${Math.round(tot.kcal/srv)} kcal · P${(tot.protein/srv).toFixed(1)}g`;
+  if(!el)return;
+  const base=`Total: ${Math.round(tot.kcal)} kcal · P${tot.protein.toFixed(1)}g F${tot.fat.toFixed(1)}g C${tot.carbs.toFixed(1)}g`;
+  if(bw>0){
+    el.textContent=base+` — Per 100g: ${Math.round(tot.kcal/bw*100)} kcal · P${(tot.protein/bw*100).toFixed(1)}g F${(tot.fat/bw*100).toFixed(1)}g C${(tot.carbs/bw*100).toFixed(1)}g`;
+  } else {
+    el.textContent=base;
+  }
 }
 /* ── Recipe ingredient autocomplete ── */
 function recipeAcSearch(q){
@@ -2622,9 +2630,9 @@ function saveRecipe(){
   const name=document.getElementById('recipeName').value.trim();
   if(!name){toast('Recipe needs a name','err');return;}
   if(!_recipeDraftIngredients.length){toast('Add at least one ingredient','err');return;}
-  const servings=Math.max(1,+document.getElementById('recipeServings').value||1);
+  const batchWeight=+(document.getElementById('recipeBatchWeight').value)||0;
   const id=_editingRecipeId||'r_'+Date.now();
-  _recipes[id]={id,name,servings,ingredients:[..._recipeDraftIngredients],updatedAt:new Date().toISOString()};
+  _recipes[id]={id,name,batchWeight,ingredients:[..._recipeDraftIngredients],updatedAt:new Date().toISOString()};
   saveRecipes();
   closeRecipeModal();
   renderRecipes();
@@ -2640,29 +2648,39 @@ function deleteRecipe(id){
 function logRecipePrompt(id){
   const r=_recipes[id];if(!r)return;
   const tot=recipeTotal(r);
-  const perSrv=srv=>({
-    kcal:Math.round(tot.kcal/r.servings*srv*10)/10,
-    protein:Math.round(tot.protein/r.servings*srv*100)/100,
-    fat:Math.round(tot.fat/r.servings*srv*100)/100,
-    carbs:Math.round(tot.carbs/r.servings*srv*100)/100,
-    fiber:Math.round(tot.fiber/r.servings*srv*100)/100,
-  });
-  // Pre-fill meal form with recipe as a single composite entry
-  const m=perSrv(1);
+  const bw=r.batchWeight||0;
   document.getElementById('f-name').value=r.name;
-  document.getElementById('f-kcal').value=m.kcal;
-  document.getElementById('f-protein').value=m.protein;
-  document.getElementById('f-fat').value=m.fat;
-  document.getElementById('f-carbs').value=m.carbs;
-  document.getElementById('f-fiber').value=m.fiber;
-  document.getElementById('f-serving').value=1;
-  document.getElementById('f-unit').value='serving';
   document.getElementById('f-time').value=nowTime();
-  // Switch to Today and open meal form
+  if(bw>0){
+    // Gram-based: set per-100g as baseServingRef so onServingChange scales correctly
+    const ref={serving:100,kcal:+(tot.kcal/bw*100).toFixed(1),protein:+(tot.protein/bw*100).toFixed(2),fat:+(tot.fat/bw*100).toFixed(2),carbs:+(tot.carbs/bw*100).toFixed(2),fiber:+(tot.fiber/bw*100).toFixed(2)};
+    const defAmt=Math.max(50,Math.min(500,Math.round(bw*0.1/10)*10))||350;
+    baseServingRef=ref;
+    document.getElementById('f-serving').value=defAmt;
+    document.getElementById('f-unit').value='g';
+    document.getElementById('f-kcal').value=f1(ref.kcal*defAmt/100);
+    document.getElementById('f-protein').value=f1(ref.protein*defAmt/100);
+    document.getElementById('f-fat').value=f1(ref.fat*defAmt/100);
+    document.getElementById('f-carbs').value=f1(ref.carbs*defAmt/100);
+    document.getElementById('f-fiber').value=f1(ref.fiber*defAmt/100);
+    const note=document.getElementById('recalcNote');const baseSpan=document.getElementById('recalcBase');
+    if(note)note.style.display='block';
+    if(baseSpan)baseSpan.textContent=`100g → ${f1(ref.kcal)} kcal (batch: ${bw}g)`;
+    toast(`Adjust grams — batch is ${bw}g total`,'ok');
+  } else {
+    baseServingRef=null;
+    document.getElementById('f-kcal').value=f1(tot.kcal);
+    document.getElementById('f-protein').value=f1(tot.protein);
+    document.getElementById('f-fat').value=f1(tot.fat);
+    document.getElementById('f-carbs').value=f1(tot.carbs);
+    document.getElementById('f-fiber').value=f1(tot.fiber);
+    document.getElementById('f-serving').value=1;
+    document.getElementById('f-unit').value='serving';
+    toast('Recipe pre-filled — adjust servings in the form','ok');
+  }
   const todayNav=document.getElementById('nav-today');
   if(todayNav)showPage('today',todayNav);
   document.getElementById('mealModal').classList.add('open');
-  toast(`Recipe pre-filled — adjust servings in the form`,'ok');
 }
 function saveFoodLib(){
   Store.set('nutrilog_foodlib', foodLib).catch(e=>{console.error('Food library save failed',e);toast('Save failed — check disk space','err');});
@@ -2685,7 +2703,11 @@ function acSearch(q){
   const recipeMatches=Object.values(_recipes)
     .filter(r=>r.name.toLowerCase().includes(ql))
     .slice(0,2)
-    .map(r=>{const tot=recipeTotal(r);const ps=1/r.servings;
+    .map(r=>{const tot=recipeTotal(r);const bw=r.batchWeight||0;
+      if(bw>0){return {name:r.name+'  🍳',kcal:+(tot.kcal/bw*100).toFixed(1),protein:+(tot.protein/bw*100).toFixed(1),
+        fat:+(tot.fat/bw*100).toFixed(1),carbs:+(tot.carbs/bw*100).toFixed(1),fiber:+(tot.fiber/bw*100).toFixed(1),
+        serving:100,unit:'g',_isRecipe:true,_recipeId:r.id};}
+      const ps=1/(r.servings||1);
       return {name:r.name+'  🍳',kcal:Math.round(tot.kcal*ps),protein:+(tot.protein*ps).toFixed(1),
         fat:+(tot.fat*ps).toFixed(1),carbs:+(tot.carbs*ps).toFixed(1),fiber:+(tot.fiber*ps).toFixed(1),
         serving:1,unit:'serving',_isRecipe:true,_recipeId:r.id};});
