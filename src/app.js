@@ -905,7 +905,8 @@ function queueAutoSave(){
 let meals=[];
 let foodLib=[];
 let histIdx={};
-let _deletedDates=new Set(); // dates intentionally deleted — prevents cloud from restoring them
+let _deletedDates=new Set();
+let _achQueue=[],_achShowing=false,_achCheckins=[]; // dates intentionally deleted — prevents cloud from restoring them
 
 async function addDeletedDate(ds){
   _deletedDates.add(ds);
@@ -942,6 +943,148 @@ let dbMultiSel=new Set();
 // analysis
 let analysisPeriod=7;
 let chartInstances={};
+
+/* ═══ ACHIEVEMENTS ═══ */
+function _achStreak(daySet){
+  const days=[...daySet].sort();
+  let best=0,run=0,prev=null;
+  days.forEach(ds=>{
+    const d=new Date(ds+'T12:00');
+    if(prev){run=Math.round((d-prev)/86400000)===1?run+1:1;}else run=1;
+    if(run>best)best=run;
+    prev=d;
+  });
+  return best;
+}
+function getAchievementDefs(){
+  const allDays=Object.keys(histIdx);
+  const totalDays=allDays.length;
+  const allMeals=allDays.flatMap(d=>histIdx[d]||[]);
+  const totalMeals=allMeals.length;
+  const uniqueFoods=new Set(allMeals.map(m=>m.name));
+  const bestStreak=_achStreak(new Set(allDays));
+  // Calorie target days (within ±10%)
+  const tgtKcal=TGT.kcal||2500;
+  const calDaySet=new Set(allDays.filter(d=>{const t=totals(histIdx[d]||[]);return t.kcal>=tgtKcal*.9&&t.kcal<=tgtKcal*1.1;}));
+  const bestCalStreak=_achStreak(calDaySet);
+  // Protein target days
+  const tgtProt=TGT_MIN.protein||TGT.protein*.9;
+  const protDaySet=new Set(allDays.filter(d=>totals(histIdx[d]||[]).protein>=tgtProt));
+  const bestProtStreak=_achStreak(protDaySet);
+  // Fiber target days
+  const tgtFib=TGT_MIN.fiber||25;
+  const fibDaySet=new Set(allDays.filter(d=>totals(histIdx[d]||[]).fiber>=tgtFib));
+  const bestFibStreak=_achStreak(fibDaySet);
+  // Perfect day: calorie + protein both on target
+  const hasPerfect=allDays.some(d=>calDaySet.has(d)&&protDaySet.has(d));
+  // Grand slam: kcal + protein + fiber all on target same day
+  const hasGrand=allDays.some(d=>calDaySet.has(d)&&protDaySet.has(d)&&fibDaySet.has(d));
+  const recipeCount=Object.keys(_recipes||{}).length;
+  const checkinCount=_achCheckins.length;
+  const uniqueFoodsInLib=foodLib.filter(f=>f._custom).length;
+  return[
+    // Logging milestones
+    {icon:'🌱',name:'First Bite',    desc:'Log your first meal',                        u:totalMeals>=1},
+    {icon:'📅',name:'Week Logger',   desc:'Log food on 7 different days',               u:totalDays>=7},
+    {icon:'📆',name:'Month Logger',  desc:'Log food on 30 different days',              u:totalDays>=30},
+    {icon:'🗓️',name:'Century Logger',desc:'Log food on 100 different days',             u:totalDays>=100},
+    {icon:'🏅',name:'Year-Round',    desc:'Log food on 365 different days',             u:totalDays>=365},
+    // Consecutive day streaks
+    {icon:'⚡',name:'3-Day Streak',  desc:'Log meals 3 days in a row',                 u:bestStreak>=3},
+    {icon:'🔥',name:'Week Warrior',  desc:'Log meals 7 days in a row',                 u:bestStreak>=7},
+    {icon:'🌟',name:'Fortnight',     desc:'Log meals 14 days straight',                u:bestStreak>=14},
+    {icon:'🏔️',name:'Month Strong',  desc:'Log meals 30 days in a row',                u:bestStreak>=30},
+    // Calorie target
+    {icon:'🎯',name:'On Target',     desc:'Hit calorie target (±10%) for one day',     u:calDaySet.size>=1},
+    {icon:'🗓️',name:'Cal Week',      desc:'Hit calorie target 7 days in a row',        u:bestCalStreak>=7},
+    // Protein
+    {icon:'💪',name:'Protein Hit',   desc:'Hit protein target 3 days in a row',        u:bestProtStreak>=3},
+    {icon:'🥩',name:'Protein Warrior',desc:'Hit protein target 7 days in a row',       u:bestProtStreak>=7},
+    // Fiber
+    {icon:'🌾',name:'Fiber Streak',  desc:'Hit fiber target 5 days in a row',          u:bestFibStreak>=5},
+    {icon:'🫚',name:'Fiber Master',  desc:'Hit fiber target 14 days in a row',         u:bestFibStreak>=14},
+    // Perfect days
+    {icon:'⚖️',name:'Macro Balance', desc:'Hit calorie + protein targets the same day',u:hasPerfect},
+    {icon:'🏆',name:'Grand Slam',    desc:'Hit kcal, protein, and fiber the same day', u:hasGrand},
+    // Food variety
+    {icon:'🔍',name:'Explorer',      desc:'Log 10 unique food items',                  u:uniqueFoods.size>=10},
+    {icon:'📚',name:'Foodie',        desc:'Log 25 unique food items',                  u:uniqueFoods.size>=25},
+    {icon:'🌍',name:'World Palate',  desc:'Log 50 unique food items',                  u:uniqueFoods.size>=50},
+    {icon:'🍽️',name:'Culinary Master',desc:'Log 100 unique food items',               u:uniqueFoods.size>=100},
+    // Total meals
+    {icon:'🍴',name:'50 Meals',      desc:'Log 50 meals total',                        u:totalMeals>=50},
+    {icon:'📊',name:'100 Meals',     desc:'Log 100 meals total',                       u:totalMeals>=100},
+    {icon:'🌟',name:'500 Meals',     desc:'Log 500 meals total',                       u:totalMeals>=500},
+    // Recipes
+    {icon:'👨‍🍳',name:'Home Chef',     desc:'Create your first recipe',                  u:recipeCount>=1},
+    {icon:'🍲',name:'Meal Prepper',  desc:'Create 5 recipes',                          u:recipeCount>=5},
+    // Check-ins
+    {icon:'📋',name:'First Check-in',desc:'Complete your first body check-in',         u:checkinCount>=1},
+    {icon:'📊',name:'Scale Tracker', desc:'Complete 10 check-ins',                     u:checkinCount>=10},
+    {icon:'🏆',name:'Committed',     desc:'Complete 25 check-ins',                     u:checkinCount>=25},
+    // Food library
+    {icon:'🧑‍🔬',name:'Food Scientist',desc:'Add 10 custom foods to the database',      u:uniqueFoodsInLib>=10},
+  ];
+}
+function renderAchievements(){
+  const el=document.getElementById('ach-grid');if(!el)return;
+  const defs=getAchievementDefs();
+  defs.sort((a,b)=>(b.u?1:0)-(a.u?1:0));
+  el.innerHTML=defs.map(a=>`<div class="ach-card ${a.u?'unlocked':'locked'}" title="${a.desc}"><div class="ach-icon">${a.icon}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`).join('');
+  const poppedRaw=localStorage.getItem('nutrilog_ach_popped');
+  const viewed=new Set(JSON.parse(localStorage.getItem('nutrilog_ach_viewed')||'[]'));
+  const newCount=defs.filter(a=>a.u&&!viewed.has(a.name)).length;
+  const lbl=document.getElementById('ach-new-label');
+  if(lbl){lbl.textContent=newCount?`· ${newCount} new!`:'';lbl.style.display=newCount?'':'none';}
+}
+function updateAchBadge(){
+  const defs=getAchievementDefs();
+  const viewed=new Set(JSON.parse(localStorage.getItem('nutrilog_ach_viewed')||'[]'));
+  const count=defs.filter(a=>a.u&&!viewed.has(a.name)).length;
+  const badge=document.getElementById('nav-ach-badge');
+  if(badge){badge.textContent=count;badge.style.display=count>0?'inline':'none';}
+}
+function markAchievementsViewed(){
+  const defs=getAchievementDefs();
+  const viewed=new Set(JSON.parse(localStorage.getItem('nutrilog_ach_viewed')||'[]'));
+  defs.filter(a=>a.u).forEach(a=>viewed.add(a.name));
+  localStorage.setItem('nutrilog_ach_viewed',JSON.stringify([...viewed]));
+  updateAchBadge();
+}
+function checkNewAchievements(){
+  const defs=getAchievementDefs();
+  const poppedRaw=localStorage.getItem('nutrilog_ach_popped');
+  const firstRun=poppedRaw===null;
+  const popped=new Set(JSON.parse(poppedRaw||'[]'));
+  const viewed=new Set(JSON.parse(localStorage.getItem('nutrilog_ach_viewed')||'[]'));
+  const unlocked=defs.filter(a=>a.u);
+  if(firstRun){
+    unlocked.forEach(a=>{popped.add(a.name);viewed.add(a.name);});
+    localStorage.setItem('nutrilog_ach_popped',JSON.stringify([...popped]));
+    localStorage.setItem('nutrilog_ach_viewed',JSON.stringify([...viewed]));
+  } else {
+    const newPops=unlocked.filter(a=>!popped.has(a.name));
+    if(newPops.length){
+      newPops.forEach(a=>popped.add(a.name));
+      localStorage.setItem('nutrilog_ach_popped',JSON.stringify([...popped]));
+      _achQueue.push(...newPops);
+      if(!_achShowing)showNextAchPopup();
+    }
+  }
+  updateAchBadge();
+}
+function showNextAchPopup(){
+  if(!_achQueue.length){_achShowing=false;return;}
+  _achShowing=true;
+  const a=_achQueue.shift();
+  document.getElementById('ach-popup')?.remove();
+  const el=document.createElement('div');
+  el.id='ach-popup';
+  el.innerHTML=`<div class="ach-pop-label">✨ Achievement Unlocked</div><div class="ach-pop-body"><div class="ach-pop-icon">${a.icon}</div><div><div class="ach-pop-title">${a.name}</div><div class="ach-pop-sub">${a.desc}</div></div></div>`;
+  document.body.appendChild(el);
+  el.onclick=()=>{el.classList.add('ach-out');setTimeout(()=>{el.remove();showNextAchPopup();},450);};
+  setTimeout(()=>{if(!el.classList.contains('ach-out')){el.classList.add('ach-out');setTimeout(()=>{el.remove();showNextAchPopup();},450);}},4500);
+}
 
 /* ═══ INIT ═══ */
 document.addEventListener('DOMContentLoaded',async ()=>{
@@ -1008,6 +1151,8 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   updateCalc();
   updateMacroCalc();
   updateGoalFields();
+  _achCheckins=await loadCheckins().catch(()=>[]);
+  checkNewAchievements();
   // Check for existing Supabase session.
   // Timeout after 3s — if network is dead, auto-skip to local-only mode.
   if(supa){
@@ -1112,7 +1257,7 @@ function showPage(name,el){
   if(name==='foods'){renderFoodDb();}
   if(name==='analysis'){renderAnalysis();}
   if(name==='projection'){renderProjection();}
-  if(name==='settings'){renderStatsDashboard();}
+  if(name==='settings'){renderStatsDashboard();renderAchievements();markAchievementsViewed();}
 }
 
 /* ═══ RINGS ═══ */
@@ -1801,9 +1946,11 @@ async function saveWeightLog(){
   const cks=await loadCheckins();
   cks.push({date:new Date().toISOString(),weight:val,mood:'good',notes:'Quick log'});
   await Store.set('nutrilog_checkins',cks).catch(e=>{console.error('Checkins save failed',e);toast('Save failed — check disk space','err');});
+  _achCheckins=cks;
   closeWeightLog();
   renderWeightWidget();
   toast('Weight logged: '+val+' kg','ok');
+  checkNewAchievements();
 }
 
 /* ── Keyboard shortcuts panel ── */
@@ -2283,6 +2430,7 @@ function submitForm(){
     if(document.getElementById('f-savelib').checked)
       addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
     closeModal();render();
+    checkNewAchievements();
   }
 }
 
@@ -2313,6 +2461,7 @@ function submitAndStay(){
     addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
   queueAutoSave();
   render();
+  checkNewAchievements();
   // Clear form and stay open for next entry; preserve the just-logged time
   clearForm();
   document.getElementById('f-time').value=entry.time;
@@ -4588,6 +4737,7 @@ async function saveCheckin(){
   const cks=await loadCheckins();
   cks.push(entry);
   await Store.set(CHECKIN_KEY,cks);
+  _achCheckins=cks;
   closeCheckin();
   // If weight changed meaningfully, suggest updating settings
   const settingsW=+document.getElementById('s-weight').value;
@@ -4604,6 +4754,7 @@ async function saveCheckin(){
   } else {
     toast('Check-in saved ✓','ok');
   }
+  checkNewAchievements();
 }
 document.getElementById('checkinOverlay').addEventListener('click',function(e){if(e.target===this)closeCheckin();});
 

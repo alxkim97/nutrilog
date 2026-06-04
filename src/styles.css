@@ -1273,3 +1273,24 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
 .recipe-info { flex:1;min-width:0; }
 .recipe-name { font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px; }
 .recipe-meta { font-size:11px;color:var(--text3);font-family:var(--fm); }
+
+/* ── ACHIEVEMENTS ── */
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:10px;margin-top:12px;}
+.ach-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;transition:all .2s;cursor:default;}
+.ach-card.unlocked{border-color:var(--accent);background:var(--accent-dim);}
+.ach-card.locked{opacity:.32;filter:grayscale(.5);}
+.ach-icon{font-size:1.75rem;margin-bottom:6px;}
+.ach-name{font-size:.72rem;font-weight:600;color:var(--text);margin-bottom:2px;}
+.ach-desc{font-size:.61rem;color:var(--text3);line-height:1.35;}
+/* Popup */
+#ach-popup{position:fixed;bottom:80px;right:24px;width:290px;background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);border:1px solid var(--accent);border-radius:14px;padding:16px 18px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.5),0 0 24px var(--accent-dim);animation:ach-in .45s cubic-bezier(.175,.885,.32,1.275) forwards;cursor:pointer;}
+#ach-popup.ach-out{animation:ach-out .45s ease forwards;}
+@keyframes ach-in{from{opacity:0;transform:translateY(60px) scale(.85)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ach-out{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(60px) scale(.85)}}
+#ach-popup .ach-pop-label{font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+#ach-popup .ach-pop-body{display:flex;align-items:center;gap:12px;}
+#ach-popup .ach-pop-icon{font-size:2.5rem;line-height:1;flex-shrink:0;}
+#ach-popup .ach-pop-title{font-weight:700;font-size:.9375rem;color:var(--text);margin-bottom:3px;}
+#ach-popup .ach-pop-sub{font-size:.69rem;color:var(--text2);line-height:1.35;}
+/* Nav badge */
+.nav-ach-badge{background:var(--red);color:#fff;border-radius:10px;font-size:.58rem;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;margin-left:auto;display:none;line-height:1.4;}
