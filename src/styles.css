@@ -698,6 +698,8 @@ tbody tr:hover .row-acts { opacity:1; }
   border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow);
 }
 .ff input[type=number], .ff input[type=time] { font-family:var(--fm); }
+body:not(.light) input[type=time]::-webkit-calendar-picker-indicator,
+body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.7;cursor:pointer;}
 .ff textarea { resize:vertical; min-height:54px; }
 .frow { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
 .frow .ff { margin-bottom:0; }

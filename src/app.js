@@ -2313,9 +2313,9 @@ function submitAndStay(){
     addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
   queueAutoSave();
   render();
-  // Clear form and stay open for next entry
+  // Clear form and stay open for next entry; preserve the just-logged time
   clearForm();
-  document.getElementById('f-time').value=nowTime();
+  document.getElementById('f-time').value=entry.time;
   document.getElementById('f-name').focus();
   toast(name+' added — enter next item','ok');
 }
@@ -4209,9 +4209,18 @@ function updateFatHint(cholMgmt){
 function onCholesterolToggle(){
   const on=document.getElementById('s-cholesterol-mgmt')?.checked;
   updateFatHint(on);
-  // Trigger macro recalc with new fat mode
-  if(!_macroCustomized)updateCalc();
-  markMTDirty();
+  if(!_macroCustomized){
+    updateCalc();
+  } else {
+    // Update fat streak bounds even when macros are custom-set
+    const kcal=+(document.getElementById('s-kcal-display')?.value||0)||TGT.kcal||2546;
+    const fatMinEl=document.getElementById('s-fat-min');
+    const fatMaxEl=document.getElementById('s-fat-max');
+    if(fatMinEl)fatMinEl.value=on?45:Math.round(kcal*0.20/9);
+    if(fatMaxEl)fatMaxEl.value=on?65:Math.round(kcal*0.35/9);
+    markMTDirty();
+    updateMacroCalc();
+  }
 }
 function onMacroManualEdit(){
   _macroCustomized=true;

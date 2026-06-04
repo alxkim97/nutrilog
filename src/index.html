@@ -1739,7 +1739,7 @@
       <div class="frow">
         <div class="ff"><label>Log Date</label>
           <input type="date" id="f-logdate" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fb);font-size:13px;border-radius:8px;padding:8px 10px;outline:none;width:100%;transition:border-color var(--tr);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" onchange="onLogDateChange()"></div>
-        <div class="ff"><label>Time</label>
+        <div class="ff"><label style="display:flex;justify-content:space-between;align-items:center;">Time <span onclick="document.getElementById('f-time').value=nowTime()" style="cursor:pointer;color:var(--accent);font-size:10px;font-weight:500;text-transform:none;letter-spacing:0">↺ now</span></label>
           <input type="time" id="f-time" step="300"></div>
       </div>
       <div id="f-prelog-notice" style="display:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--accent);margin-bottom:8px;">
