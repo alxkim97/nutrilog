@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.7.0",
-  "description": "NutriLog v2.7.0 — batch-weight recipes with gram-based logging",
+  "version": "2.8.0",
+  "description": "NutriLog v2.8.0 — achievements, history % fix, UX improvements",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
