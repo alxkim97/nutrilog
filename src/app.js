@@ -3272,7 +3272,7 @@ function renderHistDetail(ds){
       </div>
       <textarea class="day-note-input" id="dayNoteInput" placeholder="e.g. gym day, cheat day, sick, busy at work…" oninput="saveDayNote('${ds}')">${esc(dayNotes[ds]||'')}</textarea>
     </div>
-    <div class="hist-cards">${mCards.map(m=>{const pct=Math.min(Math.round(+m.val/m.tgt*100),100);return`<div class="hist-card"><div class="hist-card-lbl">${m.lbl}</div><div class="hist-card-val" style="color:${m.col}">${m.val}<span style="font-size:12px;font-weight:400;color:var(--text3)"> ${m.unit}</span></div><div class="hist-card-sub">${pct}% of target</div><div class="hist-bar-wrap"><div class="hist-bar-fill" style="width:${pct}%;background:${m.col}"></div></div></div>`;}).join('')}</div>
+    <div class="hist-cards">${mCards.map(m=>{const pct=Math.round(+m.val/m.tgt*100);const barW=Math.min(pct,100);const subCol=pct>100?m.col:'var(--text3)';return`<div class="hist-card"><div class="hist-card-lbl">${m.lbl}</div><div class="hist-card-val" style="color:${m.col}">${m.val}<span style="font-size:12px;font-weight:400;color:var(--text3)"> ${m.unit}</span></div><div class="hist-card-sub" style="color:${subCol}">${pct}% of target</div><div class="hist-bar-wrap"><div class="hist-bar-fill" style="width:${barW}%;background:${m.col}"></div></div></div>`;}).join('')}</div>
     <div class="tcard">
       <div class="tcard-toolbar"><div class="tcard-title">${entries.length} entries · ${label}${isToday?' (Today)':''}</div></div>
       <table>
