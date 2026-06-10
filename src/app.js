@@ -1153,6 +1153,9 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   updateGoalFields();
   _achCheckins=await loadCheckins().catch(()=>[]);
   checkNewAchievements();
+  // Always archive any stale session from a previous day before touching Supabase.
+  // Must run even in offline/local-only mode so yesterday's data isn't silently dropped.
+  await maybeArchiveStaleSession().catch(e=>console.warn('Stale archive failed',e));
   // Check for existing Supabase session.
   // Timeout after 3s — if network is dead, auto-skip to local-only mode.
   if(supa){
