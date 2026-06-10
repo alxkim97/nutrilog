@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.8.0",
-  "description": "NutriLog v2.8.0 — achievements, history % fix, UX improvements",
+  "version": "2.8.1",
+  "description": "NutriLog v2.8.1 — fix stale session archive on offline startup",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
