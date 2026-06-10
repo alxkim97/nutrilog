@@ -42,6 +42,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addEggImages:   ()      => ipcRenderer.invoke('egg:add'),
   deleteEggImage: (name)  => ipcRenderer.invoke('egg:delete', name),
 
+  // ── In-app updates ──
+  checkForUpdate:  ()    => ipcRenderer.invoke('app:check-update'),
+  downloadUpdate:  ()    => ipcRenderer.invoke('app:download-update'),
+  installUpdate:   ()    => ipcRenderer.invoke('app:install-update'),
+  onUpdateStatus:  (cb)  => ipcRenderer.on('update:status', (_, data) => cb(data)),
+
   // ── Menu events → renderer ──
   onMenuSave:       (cb) => ipcRenderer.on('menu:save',         () => cb()),
   onMenuExport:     (cb) => ipcRenderer.on('menu:export',       (_, p) => cb(p)),

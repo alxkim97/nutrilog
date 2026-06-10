@@ -1236,6 +1236,23 @@
           </div>
         </div>
       </div>
+      <div class="settings-section" style="grid-column:1/-1" id="update-section">
+        <div class="settings-title">App Updates</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+          <div>
+            <div class="srow-label">Version: <span id="update-version-label" style="color:var(--text2);">—</span></div>
+            <div class="srow-sub" id="update-status-text" style="margin-top:3px;">Click "Check" to look for a newer version</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <button id="update-check-btn" class="btn btn-ghost" onclick="checkForUpdates()">Check for Updates</button>
+            <button id="update-download-btn" class="btn btn-accent" onclick="startDownloadUpdate()" style="display:none">Download</button>
+            <button id="update-install-btn" class="btn btn-accent" onclick="installAndRestart()" style="display:none">Restart &amp; Install</button>
+          </div>
+        </div>
+        <div id="update-progress-wrap" style="display:none;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">
+          <div id="update-progress-fill" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s ease"></div>
+        </div>
+      </div>
       <div class="settings-section" style="grid-column:1/-1">
         <div class="settings-title" style="display:flex;align-items:center;gap:8px;">Achievements <span id="ach-new-label" style="font-size:11px;font-weight:500;color:var(--accent);display:none;"></span></div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px;">Unlock badges for nutrition consistency, milestones, and more</div>

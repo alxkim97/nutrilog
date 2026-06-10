@@ -1096,12 +1096,18 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   calY=now.getFullYear(); calM=now.getMonth();
   document.getElementById('datePill').textContent=
     now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  // Version label in sidebar footer
+  // Version label in sidebar footer + update section
   if(IS_ELECTRON&&window.electronAPI?.getVersion){
     window.electronAPI.getVersion().then(v=>{
       const el=document.getElementById('appVersionLabel');
       if(el)el.textContent='v'+v;
+      const ul=document.getElementById('update-version-label');
+      if(ul)ul.textContent='v'+v;
     }).catch(()=>{});
+  }
+  // Register update status listener
+  if(IS_ELECTRON&&window.electronAPI?.onUpdateStatus){
+    window.electronAPI.onUpdateStatus(handleUpdateStatus);
   }
   // Restore persisted theme + variant before first render to avoid flash
   const _savedTheme=localStorage.getItem('nutrilog_theme');
@@ -5845,6 +5851,64 @@ let _eggPinned=false;
 let _eggIntervalId=null;
 let _eggPhotos=[]; // loaded dynamically from file system (falls back to _EGG_PHOTOS)
 let _eggCached=false; // true after first full load+decode — reused on subsequent opens
+
+/* ── In-app update ── */
+function handleUpdateStatus(data){
+  const statusEl=document.getElementById('update-status-text');
+  const checkBtn=document.getElementById('update-check-btn');
+  const dlBtn=document.getElementById('update-download-btn');
+  const installBtn=document.getElementById('update-install-btn');
+  const progressWrap=document.getElementById('update-progress-wrap');
+  const progressFill=document.getElementById('update-progress-fill');
+  if(!statusEl)return;
+  dlBtn.style.display='none';
+  installBtn.style.display='none';
+  progressWrap.style.display='none';
+  checkBtn.disabled=false;
+  if(data.status==='checking'){
+    statusEl.textContent='Checking for updates…';
+    checkBtn.disabled=true;
+  } else if(data.status==='available'){
+    statusEl.textContent='v'+data.version+' is available';
+    dlBtn.style.display='';
+  } else if(data.status==='current'){
+    statusEl.textContent='Up to date';
+  } else if(data.status==='downloading'){
+    statusEl.textContent='Downloading… '+data.percent+'%';
+    progressWrap.style.display='';
+    progressFill.style.width=data.percent+'%';
+    checkBtn.disabled=true;
+  } else if(data.status==='downloaded'){
+    statusEl.textContent='v'+data.version+' is ready to install';
+    progressWrap.style.display='none';
+    installBtn.style.display='';
+  } else if(data.status==='error'){
+    statusEl.textContent='Could not check for updates';
+  }
+}
+async function checkForUpdates(){
+  if(!IS_ELECTRON||!window.electronAPI?.checkForUpdate)return;
+  document.getElementById('update-status-text').textContent='Checking…';
+  document.getElementById('update-check-btn').disabled=true;
+  const res=await window.electronAPI.checkForUpdate().catch(()=>null);
+  if(res?.skipped){
+    document.getElementById('update-status-text').textContent='Updates disabled in dev mode';
+    document.getElementById('update-check-btn').disabled=false;
+  }
+}
+async function startDownloadUpdate(){
+  if(!IS_ELECTRON||!window.electronAPI?.downloadUpdate)return;
+  document.getElementById('update-download-btn').style.display='none';
+  document.getElementById('update-status-text').textContent='Starting download…';
+  await window.electronAPI.downloadUpdate().catch(()=>{
+    document.getElementById('update-status-text').textContent='Download failed';
+    document.getElementById('update-check-btn').disabled=false;
+  });
+}
+function installAndRestart(){
+  if(!IS_ELECTRON||!window.electronAPI?.installUpdate)return;
+  window.electronAPI.installUpdate();
+}
 
 /* ── Hidden egg-settings tap state ── */
 let _eggSetTapCount=0,_eggSetTapTimer=null;

@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeImage } = requir
 const path = require('path');
 const fs = require('fs');
 const heicConvert = require('heic-convert');
+const { autoUpdater } = require('electron-updater');
 
 // ── Keep a global reference to prevent GC ──
 let mainWindow = null;
@@ -349,6 +350,21 @@ ipcMain.handle('storage:export', (_, filePath, data) => {
 ipcMain.handle('app:get-version', () => app.getVersion());
 ipcMain.handle('app:get-data-dir', () => DATA_DIR);
 
+// ── In-app updates ──
+ipcMain.handle('app:check-update', async () => {
+  if (isDev) return { skipped: true };
+  try { await autoUpdater.checkForUpdates(); return { ok: true }; }
+  catch(e) { return { error: e.message }; }
+});
+ipcMain.handle('app:download-update', async () => {
+  if (isDev) return { skipped: true };
+  try { await autoUpdater.downloadUpdate(); return { ok: true }; }
+  catch(e) { return { error: e.message }; }
+});
+ipcMain.handle('app:install-update', () => {
+  autoUpdater.quitAndInstall();
+});
+
 // ── Easter egg image management ──
 const HEIC_EXTS = /\.(heic|heif)$/i;
 const IMG_EXTS  = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
@@ -450,6 +466,30 @@ ipcMain.handle('egg:delete', (_, name) => {
   catch(e) { return false; }
 });
 
+// ── Auto-updater setup ──
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.on('checking-for-update', () => {
+    mainWindow?.webContents.send('update:status', { status: 'checking' });
+  });
+  autoUpdater.on('update-available', info => {
+    mainWindow?.webContents.send('update:status', { status: 'available', version: info.version });
+  });
+  autoUpdater.on('update-not-available', () => {
+    mainWindow?.webContents.send('update:status', { status: 'current' });
+  });
+  autoUpdater.on('download-progress', p => {
+    mainWindow?.webContents.send('update:status', { status: 'downloading', percent: Math.round(p.percent) });
+  });
+  autoUpdater.on('update-downloaded', info => {
+    mainWindow?.webContents.send('update:status', { status: 'downloaded', version: info.version });
+  });
+  autoUpdater.on('error', e => {
+    mainWindow?.webContents.send('update:status', { status: 'error', message: e.message });
+  });
+}
+
 // ── App lifecycle ──
 app.whenReady().then(() => {
   ensureDataDir();
@@ -458,6 +498,12 @@ app.whenReady().then(() => {
   migrateFoodLibToShared();
   buildMenu();
   createWindow();
+
+  if (!isDev) {
+    setupAutoUpdater();
+    // Silent background check 4 seconds after launch
+    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 4000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
