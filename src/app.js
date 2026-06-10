@@ -562,6 +562,13 @@ async function pullFromSupabase(){
   if(_pullInProgress)return;
   _pullInProgress=true;
   try{
+    // Snapshot today's in-memory meals to v1 BEFORE any disk writes below.
+    // If the pull's merge sees empty cloud+history for today, autoLoad can still
+    // recover these meals from v1 on the next restart.
+    if(meals.length){
+      const _snapDate=todayStr();
+      await Store._localSet('nutrilog_v1',{date:_snapDate,ts:Date.now(),meals}).catch(()=>{});
+    }
     const [remSettings,remFoodLib,remHistory,remCheckins,remTemplates,remRecipes]=await Promise.all([
       sbGet('nutrilog_settings'),sbGetShared('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates'),sbGet('nutrilog_recipes')
     ]);
@@ -681,14 +688,11 @@ async function pullFromSupabase(){
     histToday.forEach(m=>{
       if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
     });
-    // Include current in-memory meals only if the stored session is from today —
-    // avoids injecting yesterday's meals into today during midnight rollover
-    {const sessOnDisk=await Store._localGet('nutrilog_v1');
-    if(sessOnDisk?.date===today&&meals.length){
-      meals.forEach(m=>{
-        if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
-      });
-    }}
+    // Merge in-memory meals unconditionally — handleDayRollover always sets meals=[]
+    // before calling pull, so in-memory can never hold yesterday's entries here.
+    meals.forEach(m=>{
+      if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
+    });
     mergedToday.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     if(mergedToday.length){
       await Store._localSet('nutrilog_v1',{date:today,ts:Date.now(),meals:mergedToday});
