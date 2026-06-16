@@ -1,8 +1,12 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const heicConvert = require('heic-convert');
-const { autoUpdater } = require('electron-updater');
+let _heicConvert;
+function getHeicConvert() {
+  if (!_heicConvert) _heicConvert = require('heic-convert');
+  return _heicConvert;
+}
+let autoUpdater;
 
 // ── Keep a global reference to prevent GC ──
 let mainWindow = null;
@@ -165,14 +169,7 @@ function buildMenu() {
         { type: 'separator' },
         {
           label: 'Export Food Log (JSON)',
-          click: async () => {
-            const { filePath } = await dialog.showSaveDialog(mainWindow, {
-              title: 'Export Food Log',
-              defaultPath: `NutriLog_export_${new Date().toISOString().slice(0,10)}.json`,
-              filters: [{ name: 'JSON', extensions: ['json'] }]
-            });
-            if (filePath) mainWindow?.webContents.send('menu:export', filePath);
-          }
+          click: () => mainWindow?.webContents.send('menu:export')
         },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' }
@@ -325,7 +322,8 @@ ipcMain.handle('profile:update-name', (_, id, name) => {
   return true;
 });
 ipcMain.handle('profile:add', (_, profile) => {
-  if (!profile?.id || _profiles.find(p => p.id === profile.id)) return false;
+  if (!profile?.id || !isSafeProfileId(profile.id)) return false;
+  if (_profiles.find(p => p.id === profile.id)) return false;
   _profiles.push({ id: profile.id, name: profile.name || profile.id });
   saveProfilesSync();
   return true;
@@ -338,8 +336,14 @@ ipcMain.handle('profile:delete', (_, id) => {
   return true;
 });
 
-// Export handler
-ipcMain.handle('storage:export', (_, filePath, data) => {
+// Export handler — dialog lives here so renderer cannot choose an arbitrary path
+ipcMain.handle('storage:export', async (_, data) => {
+  const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Food Log',
+    defaultPath: `NutriLog_export_${new Date().toISOString().slice(0,10)}.json`,
+    filters: [{ name: 'JSON', extensions: ['json'] }]
+  });
+  if (canceled || !filePath) return false;
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
     return true;
@@ -362,6 +366,7 @@ ipcMain.handle('app:download-update', async () => {
   catch(e) { return { error: e.message }; }
 });
 ipcMain.handle('app:install-update', () => {
+  if (isDev) return;
   autoUpdater.quitAndInstall();
 });
 
@@ -369,9 +374,18 @@ ipcMain.handle('app:install-update', () => {
 const HEIC_EXTS = /\.(heic|heif)$/i;
 const IMG_EXTS  = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
 
+function isSafeProfileId(id) {
+  if (typeof id !== 'string' || !id) return false;
+  if (id.includes('/') || id.includes('\\') || id.includes('..')) return false;
+  if (id.includes('\0') || id.includes(':')) return false;
+  if (id.length > 64) return false;
+  return path.resolve(DATA_DIR, 'profiles', id).startsWith(path.resolve(DATA_DIR, 'profiles'));
+}
+
 function isSafeEggName(name) {
   if (typeof name !== 'string') return false;
   if (name.includes('/') || name.includes('\\') || name.includes('..')) return false;
+  if (name.includes('\0') || name.includes(':')) return false; // null-byte + Windows ADS
   if (!IMG_EXTS.test(name)) return false;
   return path.resolve(EGGS_DIR, name).startsWith(path.resolve(EGGS_DIR));
 }
@@ -381,7 +395,7 @@ async function processEggImage(srcBuf, isHeic) {
   let buf = srcBuf;
   // 1. Convert HEIC → JPEG
   if (isHeic) {
-    buf = Buffer.from(await heicConvert({ buffer: buf, format: 'JPEG', quality: 0.92 }));
+    buf = Buffer.from(await getHeicConvert()({ buffer: buf, format: 'JPEG', quality: 0.92 }));
   }
   // 2. Resize if wider than MAX_EGG_PX (handles large iPhone JPEGs too)
   try {
@@ -500,6 +514,7 @@ app.whenReady().then(() => {
   createWindow();
 
   if (!isDev) {
+    ({ autoUpdater } = require('electron-updater'));
     setupAutoUpdater();
     // Silent background check 4 seconds after launch
     setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 4000);

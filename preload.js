@@ -23,7 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setDayNotes:   (data)   => ipcRenderer.invoke('storage:set-daynotes', data),
   getSyncLog:    ()       => ipcRenderer.invoke('storage:get-synclog'),
   setSyncLog:    (data)   => ipcRenderer.invoke('storage:set-synclog', data),
-  exportData:    (p, d)   => ipcRenderer.invoke('storage:export', p, d),
+  exportData:    (d)      => ipcRenderer.invoke('storage:export', d),
 
   // ── App info ──
   getVersion:    ()       => ipcRenderer.invoke('app:get-version'),
@@ -46,14 +46,46 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdate:  ()    => ipcRenderer.invoke('app:check-update'),
   downloadUpdate:  ()    => ipcRenderer.invoke('app:download-update'),
   installUpdate:   ()    => ipcRenderer.invoke('app:install-update'),
-  onUpdateStatus:  (cb)  => ipcRenderer.on('update:status', (_, data) => cb(data)),
+  onUpdateStatus:  (cb) => {
+    const h = (_, data) => cb(data);
+    ipcRenderer.on('update:status', h);
+    return () => ipcRenderer.removeListener('update:status', h);
+  },
 
   // ── Menu events → renderer ──
-  onMenuSave:       (cb) => ipcRenderer.on('menu:save',         () => cb()),
-  onMenuExport:     (cb) => ipcRenderer.on('menu:export',       (_, p) => cb(p)),
-  onMenuNav:        (cb) => ipcRenderer.on('menu:nav',          (_, p) => cb(p)),
-  onMenuTheme:      (cb) => ipcRenderer.on('menu:theme',        () => cb()),
-  onMenuPushCloud:  (cb) => ipcRenderer.on('menu:push-cloud',   () => cb()),
-  onMenuPullCloud:  (cb) => ipcRenderer.on('menu:pull-cloud',   () => cb()),
-  onBeforeQuit:     (cb) => ipcRenderer.on('app:before-quit',   () => cb()),
+  onMenuSave: (cb) => {
+    const h = () => cb();
+    ipcRenderer.on('menu:save', h);
+    return () => ipcRenderer.removeListener('menu:save', h);
+  },
+  onMenuExport: (cb) => {
+    const h = () => cb();
+    ipcRenderer.on('menu:export', h);
+    return () => ipcRenderer.removeListener('menu:export', h);
+  },
+  onMenuNav: (cb) => {
+    const h = (_, p) => cb(p);
+    ipcRenderer.on('menu:nav', h);
+    return () => ipcRenderer.removeListener('menu:nav', h);
+  },
+  onMenuTheme: (cb) => {
+    const h = () => cb();
+    ipcRenderer.on('menu:theme', h);
+    return () => ipcRenderer.removeListener('menu:theme', h);
+  },
+  onMenuPushCloud: (cb) => {
+    const h = () => cb();
+    ipcRenderer.on('menu:push-cloud', h);
+    return () => ipcRenderer.removeListener('menu:push-cloud', h);
+  },
+  onMenuPullCloud: (cb) => {
+    const h = () => cb();
+    ipcRenderer.on('menu:pull-cloud', h);
+    return () => ipcRenderer.removeListener('menu:pull-cloud', h);
+  },
+  onBeforeQuit: (cb) => {
+    const h = () => cb();
+    ipcRenderer.on('app:before-quit', h);
+    return () => ipcRenderer.removeListener('app:before-quit', h);
+  },
 });
