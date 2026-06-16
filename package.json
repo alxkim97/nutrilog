@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.8.2",
-  "description": "NutriLog v2.8.2 — fix today's meals wiped on Supabase pull race condition",
+  "version": "2.9.0",
+  "description": "NutriLog v2.9.0 — security fixes, recipe batch weight auto-fill, Add Another for past/future dates",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
