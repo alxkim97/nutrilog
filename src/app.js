@@ -573,7 +573,15 @@ async function pullFromSupabase(){
       sbGet('nutrilog_settings'),sbGetShared('nutrilog_food_library'),sbGetHistory(),sbGet('nutrilog_checkins'),sbGet('nutrilog_templates'),sbGet('nutrilog_recipes')
     ]);
     if(remSettings){await Store._localSet('nutrilog_settings',remSettings);}
-    if(remFoodLib) {await Store._localSet('nutrilog_foodlib',remFoodLib);}
+    if(remFoodLib) {
+      // Merge by name — local wins on conflicts so on-disk corrections survive a pull;
+      // cloud-only items (logged from another device) are still added in.
+      const localFoodLib=await Store._localGet('nutrilog_foodlib')||[];
+      const localNames=new Set(localFoodLib.map(f=>f.name));
+      const mergedLib=[...localFoodLib];
+      remFoodLib.forEach(f=>{ if(!localNames.has(f.name)) mergedLib.push(f); });
+      await Store._localSet('nutrilog_foodlib',mergedLib);
+    }
     if(remHistory) {
       const localHistory=await Store._localGet('nutrilog_history')||{};
       const today=todayStr();
@@ -684,13 +692,16 @@ async function pullFromSupabase(){
     const today=todayStr();
     const todayMeals=await sbGetSessions(today);
     const histToday=histIdx[today]||[];
-    const mergedToday=[...(todayMeals||[])];
+    // In-memory meals are the freshest copy (most recently edited on this device) — start
+    // there so local edits always win on a name+time match. History and cloud only
+    // contribute entries genuinely missing locally (e.g. logged from another device).
+    // handleDayRollover always sets meals=[] before calling pull, so in-memory can never
+    // hold yesterday's entries here.
+    const mergedToday=[...meals];
     histToday.forEach(m=>{
       if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
     });
-    // Merge in-memory meals unconditionally — handleDayRollover always sets meals=[]
-    // before calling pull, so in-memory can never hold yesterday's entries here.
-    meals.forEach(m=>{
+    (todayMeals||[]).forEach(m=>{
       if(!mergedToday.some(x=>x.name===m.name&&x.time===m.time)) mergedToday.push(m);
     });
     mergedToday.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
@@ -2873,7 +2884,7 @@ function logRecipePrompt(id){
   if(bw>0){
     // Gram-based: set per-100g as baseServingRef so onServingChange scales correctly
     const ref={serving:100,kcal:+(tot.kcal/bw*100).toFixed(1),protein:+(tot.protein/bw*100).toFixed(2),fat:+(tot.fat/bw*100).toFixed(2),carbs:+(tot.carbs/bw*100).toFixed(2),fiber:+(tot.fiber/bw*100).toFixed(2)};
-    const defAmt=Math.max(50,Math.min(500,Math.round(bw*0.1/10)*10))||350;
+    const defAmt=250; // middle of typical 200-400g serving range
     baseServingRef=ref;
     document.getElementById('f-serving').value=defAmt;
     document.getElementById('f-unit').value='g';
@@ -5619,7 +5630,7 @@ window.addEventListener('resize',()=>{
   clearTimeout(_trendResizeTimer);
   _trendResizeTimer=setTimeout(()=>{
     const canvas=document.getElementById('trendCanvas');
-    if(canvas&&canvas.offsetParent!==null)renderWeekly();
+    if(canvas&&canvas.offsetParent!==null)renderWeeklySummary();
   },200);
 });
 
