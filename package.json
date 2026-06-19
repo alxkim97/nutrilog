@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.9.0",
-  "description": "NutriLog v2.9.0 — security fixes, recipe batch weight auto-fill, Add Another for past/future dates",
+  "version": "2.9.1",
+  "description": "NutriLog v2.9.1 — XSS escaping fixes (profile/food names), sandboxed renderer, food database corrections",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

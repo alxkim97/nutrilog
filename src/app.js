@@ -186,7 +186,7 @@ function updateProfileToggle(){
   const container=document.getElementById('profileToggle');
   if(container){
     container.innerHTML=_profiles.map(p=>
-      `<button class="profile-btn${p.id===_activeProfile?' active':''}" onclick="switchProfile('${p.id}')">${p.name}</button>`
+      `<button class="profile-btn${p.id===_activeProfile?' active':''}" onclick="switchProfile('${p.id}')">${esc(p.name)}</button>`
     ).join('');
   }
   // Topbar pill removed — sidebar toggle is sufficient
@@ -199,10 +199,10 @@ function renderProfileSettings(){
   el.innerHTML=_profiles.map(p=>`
     <div class="srow" style="gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
       <div style="flex:1;">
-        <div class="srow-label">${p.name}${p.id===_activeProfile?' <span style="color:var(--accent);font-size:10px;font-family:var(--fm);">● active</span>':''}</div>
-        <div class="srow-sub" style="font-family:var(--fm);">id: ${p.id}</div>
+        <div class="srow-label">${esc(p.name)}${p.id===_activeProfile?' <span style="color:var(--accent);font-size:10px;font-family:var(--fm);">● active</span>':''}</div>
+        <div class="srow-sub" style="font-family:var(--fm);">id: ${esc(p.id)}</div>
       </div>
-      <input type="text" value="${p.name}" maxlength="20"
+      <input type="text" value="${esc(p.name)}" maxlength="20"
         style="width:110px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:8px;font-size:12px;outline:none;text-align:right;"
         onchange="renameProfile('${p.id}',this.value)">
       ${_profiles.length>1?`<button class="btn btn-ghost danger" onclick="deleteProfile('${p.id}')" style="padding:5px 10px;font-size:12px;" title="Delete profile">✕</button>`:''}
@@ -5024,8 +5024,8 @@ function renderTplMealPicker(){
   list.innerHTML=items.map((f,i)=>`
     <button onclick="addTplMealFromLib(${foodLib.indexOf(f)})" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;text-align:left;cursor:pointer;transition:border-color .15s;font-family:var(--fb);"
       onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
-      <div style="font-size:12px;font-weight:600;color:var(--text);">${f.name}</div>
-      <div style="font-size:10px;color:var(--text3);">${f.serving} ${f.unit} · ${f.kcal} kcal · ${f.protein}g P · ${f.fat}g F · ${f.carbs}g C</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text);">${esc(f.name)}</div>
+      <div style="font-size:10px;color:var(--text3);">${f.serving} ${esc(f.unit)} · ${f.kcal} kcal · ${f.protein}g P · ${f.fat}g F · ${f.carbs}g C</div>
     </button>`).join('');
 }
 
@@ -5638,7 +5638,7 @@ window.addEventListener('resize',()=>{
 function pnum(v){const n=parseFloat((v||'0').toString().replace(',','.').trim());return isNaN(n)?0:Math.round(n*10)/10;}
 function pn(v){return(v||'').toString().trim();}
 function f1(v){const n=Math.round(+v*10)/10;return n%1===0?String(n):n.toFixed(1);}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function nowTime(){const n=new Date();return pad(n.getHours())+':'+pad(n.getMinutes());}
 function pad(n){return String(n).padStart(2,'0');}
 function pad2(n){return String(n).padStart(2,'0');}
