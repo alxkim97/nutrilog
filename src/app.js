@@ -2788,6 +2788,8 @@ function recipeAcSearch(q){
   const ql=qt.toLowerCase();
   const startsWith=[],contains=[];
   for(const f of foodLib){const n=f.name.toLowerCase();if(n.startsWith(ql))startsWith.push(f);else if(n.includes(ql))contains.push(f);}
+  const byUses=(a,b)=>(b._uses||0)-(a._uses||0);
+  startsWith.sort(byUses);contains.sort(byUses);
   const matches=[...startsWith,...contains].slice(0,10);
   if(!matches.length){list.classList.remove('open');list.innerHTML='';return;}
   list.innerHTML=matches.map((f,i)=>`<div class="ac-item" onmousedown="recipeAcPick(${i})">
@@ -2917,18 +2919,24 @@ function saveFoodLib(){
   document.getElementById('dbBadge').textContent=foodLib.length;
 }
 function addToLib(e){
-  if(!foodLib.find(f=>f.name.toLowerCase()===e.name.toLowerCase())){
-    foodLib.unshift(e);if(foodLib.length>500)foodLib=foodLib.slice(0,500);saveFoodLib();
+  const existing=foodLib.find(f=>f.name.toLowerCase()===e.name.toLowerCase());
+  if(existing){
+    existing._uses=(existing._uses||0)+1;
+  } else {
+    e._uses=1;
+    foodLib.unshift(e);if(foodLib.length>500)foodLib=foodLib.slice(0,500);
   }
+  saveFoodLib();
 }
 function acSearch(q){
   acIdx=-1;const list=document.getElementById('acList');
   if(!q){acHide();return;}
   const ql=q.toLowerCase();
   const all=foodLib.filter(f=>f.name.toLowerCase().includes(ql));
-  const startsWith=all.filter(f=>f.name.toLowerCase().startsWith(ql));
-  const contains=all.filter(f=>!f.name.toLowerCase().startsWith(ql));
-  const foodMatches=[...startsWith,...contains].slice(0,6);
+  const byUses=(a,b)=>(b._uses||0)-(a._uses||0);
+  const startsWith=all.filter(f=>f.name.toLowerCase().startsWith(ql)).sort(byUses);
+  const contains=all.filter(f=>!f.name.toLowerCase().startsWith(ql)).sort(byUses);
+  const foodMatches=[...startsWith,...contains].slice(0,8);
   // Include matching recipes (marked with _isRecipe)
   const recipeMatches=Object.values(_recipes)
     .filter(r=>r.name.toLowerCase().includes(ql))
