@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.9.2",
-  "description": "NutriLog v2.9.2 — frequency-based food search ranking, usage tracking on log",
+  "version": "2.9.3",
+  "description": "NutriLog v2.9.3 — dedupe recipe/food-library matches in Add Meal autocomplete",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

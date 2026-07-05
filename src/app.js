@@ -2937,9 +2937,13 @@ function acSearch(q){
   const startsWith=all.filter(f=>f.name.toLowerCase().startsWith(ql)).sort(byUses);
   const contains=all.filter(f=>!f.name.toLowerCase().startsWith(ql)).sort(byUses);
   const foodMatches=[...startsWith,...contains].slice(0,8);
-  // Include matching recipes (marked with _isRecipe)
+  // Include matching recipes (marked with _isRecipe), but skip any recipe that
+  // already has a cached Food Library entry under the same base name — showing
+  // both is redundant since the library row already represents this recipe.
+  const stripEmoji=s=>s.replace(/\s*🍳\s*$/,'').trim().toLowerCase();
+  const cachedNames=new Set(all.map(f=>stripEmoji(f.name)));
   const recipeMatches=Object.values(_recipes)
-    .filter(r=>r.name.toLowerCase().includes(ql))
+    .filter(r=>r.name.toLowerCase().includes(ql) && !cachedNames.has(stripEmoji(r.name)))
     .slice(0,2)
     .map(r=>{const tot=recipeTotal(r);const bw=r.batchWeight||0;
       if(bw>0){return {name:r.name+'  🍳',kcal:+(tot.kcal/bw*100).toFixed(1),protein:+(tot.protein/bw*100).toFixed(1),
