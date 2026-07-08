@@ -209,6 +209,7 @@
     <div class="nav-item" id="nav-analysis" onclick="showPage('analysis',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Analysis
+      <span class="nav-ach-badge" id="nav-ach-badge"></span>
     </div>
     <div class="nav-item" id="nav-projection" onclick="showPage('projection',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><polyline points="2 20 22 20"/></svg>
@@ -227,7 +228,6 @@
     <div class="nav-item" id="nav-settings" onclick="showPage('settings',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       Settings
-      <span class="nav-ach-badge" id="nav-ach-badge"></span>
     </div>
   </nav>
   <div class="sidebar-appear-btn" onclick="toggleAppearPopup(event)" data-trigger="sidebar" title="Change appearance">
@@ -1252,11 +1252,6 @@
         <div id="update-progress-wrap" style="display:none;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">
           <div id="update-progress-fill" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s ease"></div>
         </div>
-      </div>
-      <div class="settings-section" style="grid-column:1/-1">
-        <div class="settings-title" style="display:flex;align-items:center;gap:8px;">Achievements <span id="ach-new-label" style="font-size:11px;font-weight:500;color:var(--accent);display:none;"></span></div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px;">Unlock badges for nutrition consistency, milestones, and more</div>
-        <div class="ach-grid" id="ach-grid"></div>
       </div>
       <div class="settings-section danger-section" style="grid-column:1/-1;border:1.5px solid var(--red);">
         <div class="settings-title" style="color:var(--red)">Danger Zone</div>

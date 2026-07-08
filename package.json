@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.9.3",
-  "description": "NutriLog v2.9.3 — dedupe recipe/food-library matches in Add Meal autocomplete",
+  "version": "2.9.4",
+  "description": "NutriLog v2.9.4 — fix Clear All History not deleting cloud data, fix duplicate/dead Achievements system",
   "main": "main.js",
   "scripts": {
     "start": "electron .",

@@ -923,8 +923,8 @@ let histIdx={};
 let _deletedDates=new Set();
 let _achQueue=[],_achShowing=false,_achCheckins=[]; // dates intentionally deleted — prevents cloud from restoring them
 
-async function addDeletedDate(ds){
-  _deletedDates.add(ds);
+async function addDeletedDates(dsList){
+  dsList.forEach(ds=>_deletedDates.add(ds));
   // Prune entries older than 60 days to keep settings lean
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-60);
   const cutoffStr=cutoff.toISOString().slice(0,10);
@@ -933,7 +933,19 @@ async function addDeletedDate(ds){
     const s=await Store.get('nutrilog_settings')||{};
     s.deletedDates=[..._deletedDates];
     await Store.set('nutrilog_settings',s);
-  }catch(e){console.warn('addDeletedDate error',e);}
+  }catch(e){console.warn('addDeletedDates error',e);}
+}
+async function addDeletedDate(ds){ return addDeletedDates([ds]); }
+
+// Bulk cloud wipe used by "Clear ALL history" — unlike sbDeleteDate (single date),
+// this issues one delete per table instead of N round-trips. Today's session row is
+// intentionally excluded so the in-progress, unsaved daily log survives.
+async function sbDeleteAllHistory(){
+  if(!_syncEnabled||!_supaUser)return;
+  try{
+    await supa.from('nutrilog_history').delete().eq('user_id',_supaUser.id).eq('profile_id',_activeProfile);
+    await supa.from('nutrilog_sessions').delete().eq('user_id',_supaUser.id).eq('profile_id',_activeProfile).lt('date',todayStr());
+  }catch(e){console.warn('sbDeleteAllHistory',e);}
 }
 let dayNotes={};  // {dateStr: "note text"}
 let calY,calM;
@@ -960,98 +972,8 @@ let analysisPeriod=7;
 let chartInstances={};
 
 /* ═══ ACHIEVEMENTS ═══ */
-function _achStreak(daySet){
-  const days=[...daySet].sort();
-  let best=0,run=0,prev=null;
-  days.forEach(ds=>{
-    const d=new Date(ds+'T12:00');
-    if(prev){run=Math.round((d-prev)/86400000)===1?run+1:1;}else run=1;
-    if(run>best)best=run;
-    prev=d;
-  });
-  return best;
-}
-function getAchievementDefs(){
-  const allDays=Object.keys(histIdx);
-  const totalDays=allDays.length;
-  const allMeals=allDays.flatMap(d=>histIdx[d]||[]);
-  const totalMeals=allMeals.length;
-  const uniqueFoods=new Set(allMeals.map(m=>m.name));
-  const bestStreak=_achStreak(new Set(allDays));
-  // Calorie target days (within ±10%)
-  const tgtKcal=TGT.kcal||2500;
-  const calDaySet=new Set(allDays.filter(d=>{const t=totals(histIdx[d]||[]);return t.kcal>=tgtKcal*.9&&t.kcal<=tgtKcal*1.1;}));
-  const bestCalStreak=_achStreak(calDaySet);
-  // Protein target days
-  const tgtProt=TGT_MIN.protein||TGT.protein*.9;
-  const protDaySet=new Set(allDays.filter(d=>totals(histIdx[d]||[]).protein>=tgtProt));
-  const bestProtStreak=_achStreak(protDaySet);
-  // Fiber target days
-  const tgtFib=TGT_MIN.fiber||25;
-  const fibDaySet=new Set(allDays.filter(d=>totals(histIdx[d]||[]).fiber>=tgtFib));
-  const bestFibStreak=_achStreak(fibDaySet);
-  // Perfect day: calorie + protein both on target
-  const hasPerfect=allDays.some(d=>calDaySet.has(d)&&protDaySet.has(d));
-  // Grand slam: kcal + protein + fiber all on target same day
-  const hasGrand=allDays.some(d=>calDaySet.has(d)&&protDaySet.has(d)&&fibDaySet.has(d));
-  const recipeCount=Object.keys(_recipes||{}).length;
-  const checkinCount=_achCheckins.length;
-  const uniqueFoodsInLib=foodLib.filter(f=>f._custom).length;
-  return[
-    // Logging milestones
-    {icon:'🌱',name:'First Bite',    desc:'Log your first meal',                        u:totalMeals>=1},
-    {icon:'📅',name:'Week Logger',   desc:'Log food on 7 different days',               u:totalDays>=7},
-    {icon:'📆',name:'Month Logger',  desc:'Log food on 30 different days',              u:totalDays>=30},
-    {icon:'🗓️',name:'Century Logger',desc:'Log food on 100 different days',             u:totalDays>=100},
-    {icon:'🏅',name:'Year-Round',    desc:'Log food on 365 different days',             u:totalDays>=365},
-    // Consecutive day streaks
-    {icon:'⚡',name:'3-Day Streak',  desc:'Log meals 3 days in a row',                 u:bestStreak>=3},
-    {icon:'🔥',name:'Week Warrior',  desc:'Log meals 7 days in a row',                 u:bestStreak>=7},
-    {icon:'🌟',name:'Fortnight',     desc:'Log meals 14 days straight',                u:bestStreak>=14},
-    {icon:'🏔️',name:'Month Strong',  desc:'Log meals 30 days in a row',                u:bestStreak>=30},
-    // Calorie target
-    {icon:'🎯',name:'On Target',     desc:'Hit calorie target (±10%) for one day',     u:calDaySet.size>=1},
-    {icon:'🗓️',name:'Cal Week',      desc:'Hit calorie target 7 days in a row',        u:bestCalStreak>=7},
-    // Protein
-    {icon:'💪',name:'Protein Hit',   desc:'Hit protein target 3 days in a row',        u:bestProtStreak>=3},
-    {icon:'🥩',name:'Protein Warrior',desc:'Hit protein target 7 days in a row',       u:bestProtStreak>=7},
-    // Fiber
-    {icon:'🌾',name:'Fiber Streak',  desc:'Hit fiber target 5 days in a row',          u:bestFibStreak>=5},
-    {icon:'🫚',name:'Fiber Master',  desc:'Hit fiber target 14 days in a row',         u:bestFibStreak>=14},
-    // Perfect days
-    {icon:'⚖️',name:'Macro Balance', desc:'Hit calorie + protein targets the same day',u:hasPerfect},
-    {icon:'🏆',name:'Grand Slam',    desc:'Hit kcal, protein, and fiber the same day', u:hasGrand},
-    // Food variety
-    {icon:'🔍',name:'Explorer',      desc:'Log 10 unique food items',                  u:uniqueFoods.size>=10},
-    {icon:'📚',name:'Foodie',        desc:'Log 25 unique food items',                  u:uniqueFoods.size>=25},
-    {icon:'🌍',name:'World Palate',  desc:'Log 50 unique food items',                  u:uniqueFoods.size>=50},
-    {icon:'🍽️',name:'Culinary Master',desc:'Log 100 unique food items',               u:uniqueFoods.size>=100},
-    // Total meals
-    {icon:'🍴',name:'50 Meals',      desc:'Log 50 meals total',                        u:totalMeals>=50},
-    {icon:'📊',name:'100 Meals',     desc:'Log 100 meals total',                       u:totalMeals>=100},
-    {icon:'🌟',name:'500 Meals',     desc:'Log 500 meals total',                       u:totalMeals>=500},
-    // Recipes
-    {icon:'👨‍🍳',name:'Home Chef',     desc:'Create your first recipe',                  u:recipeCount>=1},
-    {icon:'🍲',name:'Meal Prepper',  desc:'Create 5 recipes',                          u:recipeCount>=5},
-    // Check-ins
-    {icon:'📋',name:'First Check-in',desc:'Complete your first body check-in',         u:checkinCount>=1},
-    {icon:'📊',name:'Scale Tracker', desc:'Complete 10 check-ins',                     u:checkinCount>=10},
-    {icon:'🏆',name:'Committed',     desc:'Complete 25 check-ins',                     u:checkinCount>=25},
-    // Food library
-    {icon:'🧑‍🔬',name:'Food Scientist',desc:'Add 10 custom foods to the database',      u:uniqueFoodsInLib>=10},
-  ];
-}
-function renderAchievements(){
-  const el=document.getElementById('ach-grid');if(!el)return;
-  const defs=getAchievementDefs();
-  defs.sort((a,b)=>(b.u?1:0)-(a.u?1:0));
-  el.innerHTML=defs.map(a=>`<div class="ach-card ${a.u?'unlocked':'locked'}" title="${a.desc}"><div class="ach-icon">${a.icon}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`).join('');
-  const poppedRaw=localStorage.getItem('nutrilog_ach_popped');
-  const viewed=new Set(JSON.parse(localStorage.getItem('nutrilog_ach_viewed')||'[]'));
-  const newCount=defs.filter(a=>a.u&&!viewed.has(a.name)).length;
-  const lbl=document.getElementById('ach-new-label');
-  if(lbl){lbl.textContent=newCount?`· ${newCount} new!`:'';lbl.style.display=newCount?'':'none';}
-}
+// NOTE: getAchievementDefs() is defined further down, next to renderAchievements()
+// (they share the same achievement list — see that function for the full def build).
 function updateAchBadge(){
   const defs=getAchievementDefs();
   const viewed=new Set(JSON.parse(localStorage.getItem('nutrilog_ach_viewed')||'[]'));
@@ -1279,9 +1201,9 @@ function showPage(name,el){
   document.getElementById('pageTitle').textContent=PAGE_TITLES[name]||name;
   if(name==='history'){renderCalendar();}
   if(name==='foods'){renderFoodDb();}
-  if(name==='analysis'){renderAnalysis();}
+  if(name==='analysis'){renderAnalysis();markAchievementsViewed();} // renderAnalysis() renders the achievement grid
   if(name==='projection'){renderProjection();}
-  if(name==='settings'){renderStatsDashboard();renderAchievements();markAchievementsViewed();}
+  if(name==='settings'){renderStatsDashboard();}
 }
 
 /* ═══ RINGS ═══ */
@@ -2638,9 +2560,18 @@ function confirmClearAll(){showConf('Clear all meals?',"Remove all entries from 
 
 async function clearAllHistory(){
   showConf('Clear ALL history?','This permanently deletes every saved day. Today\'s unsaved log is not affected.','Delete All',async()=>{
+    const datesToDelete=Object.keys(histIdx);
     histIdx={};
     // Re-seed with empty (no LOG_SEED — user explicitly cleared)
     await Store.set('nutrilog_history',{}).catch(e=>console.warn('History clear failed',e));
+    if(datesToDelete.length){
+      // Without this, the next cloud pull would resurrect every "deleted" day from
+      // Supabase (Store.set's upsert is a no-op on an empty object — it never issues
+      // a DELETE). Mark the dates so a pull can't restore them, and wipe the cloud
+      // rows directly so they're gone even if this device never pulls again.
+      await addDeletedDates(datesToDelete);
+      await sbDeleteAllHistory();
+    }
     toast('All history deleted','info');
     if(document.getElementById('page-history').classList.contains('active')){
       selDate=null; renderCalendar();
@@ -3855,10 +3786,7 @@ function renderAnalysis(){
 /* ── Achievements ── */
 let _prevUnlocked=new Set(); // track previously unlocked to detect newly earned
 
-function renderAchievements(){
-  const el=document.getElementById('achievement-grid');
-  if(!el)return;
-
+function getAchievementDefs(){
   // Gather all history including live today
   const liveHist={...histIdx};
   const todayDs=todayStr();
@@ -3924,7 +3852,7 @@ function renderAchievements(){
     if(['breakfast','lunch','dinner','snack'].every(c=>cats.has(c)))allCatDays++;
   });
 
-  const defs=[
+  return[
     // ── Logging milestones ──
     {icon:'🏁',name:'First Log',      desc:'Log your first meal',                u:totalDays>=1},
     {icon:'📝',name:'10 Days',        desc:'Log meals on 10 different days',      u:totalDays>=10,  prog:`${Math.min(totalDays,10)}/10`},
@@ -3973,6 +3901,12 @@ function renderAchievements(){
     {icon:'🏆',name:'Dedicated',      desc:'Complete 20 weight check-ins',        u:totalCheckins>=20, prog:`${Math.min(totalCheckins,20)}/20`},
     {icon:'🔬',name:'Body Scientist', desc:'Complete 50 weight check-ins',        u:totalCheckins>=50, prog:`${Math.min(totalCheckins,50)}/50`},
   ];
+}
+
+function renderAchievements(){
+  const el=document.getElementById('achievement-grid');
+  if(!el)return;
+  const defs=getAchievementDefs();
 
   // Detect newly unlocked — show a toast for each
   const nowUnlocked=new Set(defs.filter(a=>a.u).map(a=>a.name));
