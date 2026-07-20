@@ -1196,8 +1196,10 @@ const PAGE_TITLES={today:'Today',history:'History',analysis:'Analysis',projectio
 function showPage(name,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  el.classList.add('active');
+  document.querySelectorAll('.nav-item, .bnav-item, .bnav-more-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll(`[data-page="${name}"]`).forEach(n=>n.classList.add('active'));
+  document.getElementById('bnavMoreBtn')?.classList.toggle('active',['analysis','foods','references','settings'].includes(name));
+  document.getElementById('bnavMoreMenu')?.classList.remove('open');
   document.getElementById('pageTitle').textContent=PAGE_TITLES[name]||name;
   if(name==='history'){renderCalendar();}
   if(name==='foods'){renderFoodDb();}
@@ -3111,6 +3113,19 @@ document.addEventListener('click',function(e){
   if(ew&&!ew.contains(e.target))document.getElementById('exportMenu').style.display='none';
   const mw=document.getElementById('moreMenuWrapper');
   if(mw&&!mw.contains(e.target))document.getElementById('moreMenu').style.display='none';
+});
+
+function toggleBottomNavMore(e){
+  if(e)e.stopPropagation();
+  const m=document.getElementById('bnavMoreMenu');
+  m.classList.toggle('open');
+}
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('bnavMoreMenu');
+  const btn=document.getElementById('bnavMoreBtn');
+  if(menu&&menu.classList.contains('open')&&!menu.contains(e.target)&&!(btn&&btn.contains(e.target))){
+    menu.classList.remove('open');
+  }
 });
 
 function exportExcel(range){

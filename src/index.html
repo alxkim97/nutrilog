@@ -197,35 +197,35 @@
   <div class="profile-toggle" id="profileToggle"></div>
   <nav class="sidenav">
     <div class="nav-section">Views</div>
-    <div class="nav-item active" id="nav-today" onclick="showPage('today',this)">
+    <div class="nav-item active" id="nav-today" data-page="today" onclick="showPage('today',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Today
       <span class="nav-pill" id="todayBadge">0</span>
     </div>
-    <div class="nav-item" id="nav-history" onclick="showPage('history',this)">
+    <div class="nav-item" id="nav-history" data-page="history" onclick="showPage('history',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       History
     </div>
-    <div class="nav-item" id="nav-analysis" onclick="showPage('analysis',this)">
+    <div class="nav-item" id="nav-analysis" data-page="analysis" onclick="showPage('analysis',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Analysis
       <span class="nav-ach-badge" id="nav-ach-badge"></span>
     </div>
-    <div class="nav-item" id="nav-projection" onclick="showPage('projection',this)">
+    <div class="nav-item" id="nav-projection" data-page="projection" onclick="showPage('projection',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><polyline points="2 20 22 20"/></svg>
       Projection
     </div>
     <div class="nav-section">Data</div>
-    <div class="nav-item" id="nav-foods" onclick="showPage('foods',this)">
+    <div class="nav-item" id="nav-foods" data-page="foods" onclick="showPage('foods',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
       Food Database
       <span class="nav-pill" id="dbBadge">0</span>
     </div>
-    <div class="nav-item" id="nav-references" onclick="showPage('references',this)">
+    <div class="nav-item" id="nav-references" data-page="references" onclick="showPage('references',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
       References
     </div>
-    <div class="nav-item" id="nav-settings" onclick="showPage('settings',this)">
+    <div class="nav-item" id="nav-settings" data-page="settings" onclick="showPage('settings',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       Settings
     </div>
@@ -432,6 +432,7 @@
           <button class="btn btn-ghost danger" onclick="deleteLogSelected()" style="height:28px;font-size:11px;padding:0 10px">Delete</button>
           <button class="btn btn-ghost" onclick="clearLogSel()" style="height:28px;font-size:11px;padding:0 10px">Clear</button>
         </div>
+        <div class="tcard-scroll">
         <table>
           <thead><tr>
             <th class="chk" id="logChkHead" style="display:none"><input type="checkbox" id="logChkAll" onchange="logSelectAll(this.checked)" style="cursor:pointer;accent-color:var(--accent)"></th>
@@ -448,6 +449,7 @@
           </tr></thead>
           <tbody id="logBody"></tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
@@ -654,6 +656,7 @@
           <button class="btn btn-ghost danger" onclick="deleteDbSelected()" style="height:28px;font-size:11px;padding:0 10px">Delete</button>
           <button class="btn btn-ghost" onclick="clearDbSel()" style="height:28px;font-size:11px;padding:0 10px">Clear</button>
         </div>
+        <div class="tcard-scroll">
         <table>
           <thead><tr>
             <th class="chk" id="dbChkHead" style="display:none"><input type="checkbox" id="dbChkAll" onchange="dbSelectAll(this.checked)" style="cursor:pointer;accent-color:var(--accent)"></th>
@@ -670,6 +673,7 @@
           </tr></thead>
           <tbody id="dbBody"></tbody>
         </table>
+        </div>
       </div>
     </div>
 
@@ -2234,6 +2238,47 @@
     </button>
   </div>
 </div>
+
+  <!-- Mobile bottom tab bar (phone-width browser only; hidden on Electron desktop) -->
+  <nav id="bottomNav" class="bottom-nav">
+    <div class="bnav-item active" data-page="today" onclick="showPage('today',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Today</span>
+    </div>
+    <div class="bnav-item" data-page="history" onclick="showPage('history',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>History</span>
+    </div>
+    <div class="bnav-fab" onclick="openAddModal()" title="Add Meal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <div class="bnav-item" data-page="projection" onclick="showPage('projection',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><polyline points="2 20 22 20"/></svg>
+      <span>Projection</span>
+    </div>
+    <div class="bnav-item" id="bnavMoreBtn" onclick="toggleBottomNavMore(event)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      <span>More</span>
+    </div>
+  </nav>
+  <div id="bnavMoreMenu" class="bnav-more-menu">
+    <div class="bnav-more-item" data-page="analysis" onclick="showPage('analysis',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analysis
+    </div>
+    <div class="bnav-more-item" data-page="foods" onclick="showPage('foods',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Food Database
+    </div>
+    <div class="bnav-more-item" data-page="references" onclick="showPage('references',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+      References
+    </div>
+    <div class="bnav-more-item" data-page="settings" onclick="showPage('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

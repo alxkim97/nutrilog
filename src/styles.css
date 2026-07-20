@@ -411,6 +411,44 @@ input, select, textarea { font-family:var(--fb); }
 .nav-item.active .nav-pill {
   background:var(--accent-dim); border-color:var(--accent-dim); color:var(--accent);
 }
+
+/* ── BOTTOM TAB BAR (mobile browser only, see @media(max-width:780px)) ── */
+.bottom-nav {
+  display:none; position:fixed; left:0; right:0; bottom:0; z-index:500;
+  align-items:center; justify-content:space-around;
+  background:var(--bg2); border-top:1px solid var(--border);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  box-shadow:0 -4px 20px rgba(0,0,0,.25);
+}
+.bnav-item {
+  display:flex; flex-direction:column; align-items:center; gap:2px; flex:1;
+  font-size:10px; font-weight:600; color:var(--text3); cursor:pointer;
+  padding:5px 4px; border-radius:8px; user-select:none;
+}
+.bnav-item svg { width:20px; height:20px; opacity:.7; }
+.bnav-item.active { color:var(--accent); }
+.bnav-item.active svg { opacity:1; }
+.bnav-fab {
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:46px; height:46px; margin-top:-22px; border-radius:50%;
+  background:var(--accent); color:#fff; border:3px solid var(--bg2);
+  box-shadow:0 4px 14px var(--accent-dim); cursor:pointer;
+}
+.bnav-fab svg { width:22px; height:22px; }
+.bnav-more-menu {
+  display:none; position:fixed; right:10px; z-index:499;
+  background:var(--bg2); border:1px solid var(--border2); border-radius:14px;
+  padding:8px; min-width:190px; box-shadow:var(--sh);
+  opacity:0; transform:translateY(8px); pointer-events:none; transition:opacity .15s, transform .15s;
+}
+.bnav-more-menu.open { opacity:1; transform:translateY(0); pointer-events:auto; }
+.bnav-more-item {
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px;
+  font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; user-select:none;
+}
+.bnav-more-item svg { width:16px; height:16px; opacity:.65; flex-shrink:0; }
+.bnav-more-item:hover, .bnav-more-item.active { background:var(--accent-glow); color:var(--accent); }
+.bnav-more-item.active svg { opacity:1; }
 .profile-toggle {
   display:flex; flex-wrap:wrap; gap:4px; padding:8px 10px; flex-shrink:0;
   border-bottom:1px solid var(--border);
@@ -571,6 +609,7 @@ input, select, textarea { font-family:var(--fb); }
 
 /* ── TABLE CARD ── */
 .tcard { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); overflow:hidden; box-shadow:var(--sh); }
+.tcard-scroll { overflow-x:auto; }
 .tcard-toolbar { padding:10px 14px; border-bottom:1px solid var(--border);
   display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .tcard-title { font-size:13px; font-weight:600; flex:1; }
@@ -1038,11 +1077,12 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
 
 /* ── ANALYSIS PAGE ── */
 .analysis-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-.analysis-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:20px 22px; box-shadow:var(--sh); }
+.analysis-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:20px 22px; box-shadow:var(--sh); overflow:hidden; max-width:100%; }
 .analysis-card.full { grid-column:1/-1; }
 .analysis-card-title { font-family:var(--fd); font-size:17px; margin-bottom:4px; }
 .analysis-card-sub { font-size:11px; color:var(--text3); font-family:var(--fm); margin-bottom:16px; }
-.chart-wrap { position:relative; }
+.chart-wrap { position:relative; max-width:100%; }
+.chart-wrap canvas { max-width:100%; }
 .avg-row { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); font-size:13px; }
 .avg-row:last-child { border-bottom:none; }
 .avg-lbl { flex:1; color:var(--text2); }
@@ -1294,3 +1334,58 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
 #ach-popup .ach-pop-sub{font-size:.69rem;color:var(--text2);line-height:1.35;}
 /* Nav badge */
 .nav-ach-badge{background:var(--red);color:#fff;border-radius:10px;font-size:.58rem;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;margin-left:auto;display:none;line-height:1.4;}
+
+/* ══ MOBILE BROWSER LAYOUT (phone-width viewports, browser access only — ══
+   Electron desktop window is always wider than this breakpoint) ══════════ */
+@media (max-width: 780px) {
+  body {
+    display:flex; flex-direction:column;
+    height:auto; min-height:100vh; overflow:visible;
+  }
+  #topbar {
+    height:auto; min-height:58px; flex-wrap:wrap; row-gap:8px; padding:10px 14px;
+  }
+  .topbar-left, .topbar-right { flex-wrap:wrap; }
+  #sidebar {
+    width:100%; height:auto; max-height:none; overflow:visible;
+    border-right:none; border-bottom:1px solid var(--border);
+  }
+  /* The bottom tab bar (+ its More menu) is now the only mobile nav —
+     the old vertical nav list and the PC-oriented topbar actions
+     (Export, bulk-action More menu, the redundant Add Meal button —
+     the FAB covers that) are hidden to get straight to content. */
+  .sidenav { display:none; }
+  /* These carry an inline display:inline-flex, so !important is needed to win. */
+  #topbar .btn-accent, #exportDropWrapper, #moreMenuWrapper { display:none !important; }
+
+  #main { padding:16px; padding-bottom:76px; overflow-y:visible; overflow-x:hidden; }
+
+  .bottom-nav { display:flex; }
+  .bnav-more-menu { display:block; bottom:70px; }
+
+  /* Today page */
+  .rings-row { grid-template-columns:repeat(2,1fr); gap:10px; }
+  .ring-card { padding:14px 10px 12px; }
+  .ring-wrap { width:110px; height:110px; }
+  .ring-val { font-size:20px; }
+  .macro-grid { grid-template-columns:repeat(2,1fr); }
+  .kcal-bar { flex-wrap:wrap; row-gap:12px; }
+  .kcal-left, .kcal-mid, .kcal-right { flex:1 1 100%; min-width:0; }
+  .weekly-grid { grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+  .weekly-summary { padding:16px 12px; }
+  /* renderStreaks() sets an inline grid-template-columns forcing N equal
+     columns (repeat(3,1fr) etc.) that doesn't shrink for narrow viewports —
+     !important is needed to win over that inline style. */
+  #todayWidgets { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) !important; }
+
+  /* History */
+  .hist-layout { grid-template-columns:1fr; }
+  .hist-cards { grid-template-columns:repeat(2,1fr); }
+
+  /* Settings / Analysis */
+  .settings-grid, .analysis-grid { grid-template-columns:1fr; }
+  .frow, .frow3 { grid-template-columns:1fr; }
+
+  /* Easter-egg lightbox — only unsafe fixed-width overlay left in the sheet */
+  #eggOverlay { width:94vw; height:80vh; }
+}
