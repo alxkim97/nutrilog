@@ -1,0 +1,11 @@
+{
+  "installCommand": "echo \"static site — no install needed\"",
+  "buildCommand": "echo \"static site — no build needed\"",
+  "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/", "destination": "/src/index.html" },
+    { "source": "/app.js", "destination": "/src/app.js" },
+    { "source": "/styles.css", "destination": "/src/styles.css" },
+    { "source": "/vendor/:path*", "destination": "/src/vendor/:path*" }
+  ]
+}
