@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 let _heicConvert;
@@ -10,6 +10,10 @@ let autoUpdater;
 
 // ── Keep a global reference to prevent GC ──
 let mainWindow = null;
+let tray = null;
+// Closing the window hides it to the tray instead of quitting — actual quit
+// only happens via the tray's Quit item or the app menu, which set this first.
+let isQuitting = false;
 const isDev = process.argv.includes('--dev');
 
 // ── Data directory: use userData so it survives app updates ──
@@ -130,7 +134,35 @@ function createWindow() {
     if (isDev) mainWindow.webContents.openDevTools();
   });
 
+  mainWindow.on('close', (e) => {
+    if (isQuitting) return;
+    e.preventDefault();
+    mainWindow.hide();
+  });
+
   mainWindow.on('closed', () => { mainWindow = null; });
+}
+
+// ── System tray (keeps the app running in the background, like a pinboard app) ──
+function createTray() {
+  const trayIcon = nativeImage.createFromPath(
+    path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
+  );
+  tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
+  tray.setToolTip('NutriLog');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Open NutriLog', click: () => showMainWindow() },
+    { type: 'separator' },
+    { label: 'Quit NutriLog', click: () => { isQuitting = true; app.quit(); } },
+  ]));
+  tray.on('click', () => showMainWindow());
+}
+
+function showMainWindow() {
+  if (!mainWindow) { createWindow(); return; }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
 }
 
 // ── Application menu ──
@@ -512,6 +544,7 @@ app.whenReady().then(() => {
   migrateFoodLibToShared();
   buildMenu();
   createWindow();
+  createTray();
 
   if (!isDev) {
     ({ autoUpdater } = require('electron-updater'));
@@ -520,9 +553,7 @@ app.whenReady().then(() => {
     setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 4000);
   }
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+  app.on('activate', () => showMainWindow());
 });
 
 app.on('window-all-closed', () => {
@@ -531,5 +562,6 @@ app.on('window-all-closed', () => {
 
 // Auto-save on quit
 app.on('before-quit', () => {
+  isQuitting = true;
   mainWindow?.webContents.send('app:before-quit');
 });

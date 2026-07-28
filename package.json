@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.9.4",
-  "description": "NutriLog v2.9.4 — fix Clear All History not deleting cloud data, fix duplicate/dead Achievements system",
+  "version": "2.9.5",
+  "description": "NutriLog v2.9.5 — run in the background: closing the window now minimizes to the system tray instead of quitting",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
