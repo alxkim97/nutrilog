@@ -16,6 +16,16 @@ let tray = null;
 let isQuitting = false;
 const isDev = process.argv.includes('--dev');
 
+// ── Single instance lock — launching a second copy (easy to do by accident now
+// that the app lives in the tray) focuses the existing window instead of opening
+// a duplicate, which would fight the first instance over local data files. ──
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => showMainWindow());
+}
+
 // ── Data directory: use userData so it survives app updates ──
 const DATA_DIR = path.join(app.getPath('userData'), 'NutriLogData');
 const PROFILES_FILE = path.join(DATA_DIR, 'profiles.json');

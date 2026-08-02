@@ -827,8 +827,24 @@ if (IS_ELECTRON) {
     window.electronAPI.onMenuPullCloud(() => pullFromSupabase());
 }
 
+// Hiding the window to the tray (or minimizing) makes Electron report the page as
+// hidden via the standard Page Visibility API — same signal a background browser
+// tab gets. The periodic pushes below check document.hidden before writing, so a
+// desktop instance left open in the tray stops overwriting cloud data with its
+// stale in-memory copy. On resume, pull first so mobile-logged entries merge in
+// before anything gets pushed back out.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && _supaUser) {
+    pullFromSupabase().catch(e => console.warn('Resume sync failed', e));
+  }
+});
+
 /* ── Periodic background sync every 5 minutes ── */
 setInterval(async()=>{
+  // Skip while hidden (tray/minimized) — pushing stale in-memory state would
+  // clobber anything logged from another device (e.g. nutrilog-simple) while
+  // this instance sat idle. Resumes automatically via the visibilitychange pull.
+  if(document.hidden)return;
   if(!_syncEnabled||!_supaUser||_periodicSyncRunning)return;
   _periodicSyncRunning=true;
   try{
@@ -877,9 +893,22 @@ let _cloudDirty=false; // true when local meals are ahead of cloud
 // Runs unconditionally — does NOT rely on _cloudDirty or _syncEnabled flags so it
 // cannot be silenced by a failed-but-resolved Promise clearing the flag prematurely.
 setInterval(async()=>{
-  if(!meals.length||!_supaUser||_rolloverInProgress)return;
+  // Same reasoning as the 5-minute sync above — don't push stale state while hidden.
+  if(document.hidden)return;
+  if(!_supaUser||_rolloverInProgress)return;
   const today=todayStr();
   try{
+    // Pull the cloud's current copy and merge in anything not already here (e.g.
+    // logged from nutrilog-simple) BEFORE pushing back out. Without this, being
+    // open and visible is just as capable of clobbering a mobile-logged entry as
+    // being hidden was — visibility alone only stopped the hidden-instance case.
+    const {data:cloudRow}=await supa.from('nutrilog_sessions').select('meals').eq('user_id',_supaUser.id).eq('profile_id',_activeProfile).eq('date',today).single();
+    let mergedIn=false;
+    (cloudRow?.meals||[]).forEach(m=>{
+      if(!meals.some(x=>x.name===m.name&&x.time===m.time)){meals.push(m);mergedIn=true;}
+    });
+    if(mergedIn)render();
+    if(!meals.length)return;
     const snap=[...meals]; // snapshot so concurrent adds don't mutate mid-push
     const {error:e1}=await supa.from('nutrilog_sessions')
       .upsert({user_id:_supaUser.id,profile_id:_activeProfile,date:today,meals:snap,updated_at:new Date().toISOString()},{onConflict:'user_id,profile_id,date'});
@@ -2557,7 +2586,7 @@ function openEdit(i){
   document.getElementById('mealOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('f-name').focus(),80);
 }
-function delMeal(i){showConf('Delete entry?','Remove "'+meals[i].name+'" from today\'s log.','Delete',()=>{pushUndo('Delete "'+meals[i].name+'"');meals.splice(i,1);render();toast('Entry removed — Undo available','info');});}
+function delMeal(i){showConf('Delete entry?','Remove "'+meals[i].name+'" from today\'s log.','Delete',()=>{pushUndo('Delete "'+meals[i].name+'"');meals.splice(i,1);render();queueAutoSave();toast('Entry removed — Undo available','info');});}
 function confirmClearAll(){showConf('Clear all meals?',"Remove all entries from today's log.",'Clear All',async()=>{pushUndo('Clear today');meals=[];render();queueAutoSave();if(_supaUser)sbSetSession(todayStr(),[]).catch(()=>{});toast('Log cleared — Undo available','info');});}
 
 async function clearAllHistory(){
@@ -3666,7 +3695,14 @@ function delHistEntry(ds,i){
       await sbDeleteDate(ds);
     }
     await Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
-    if(ds===todayStr()){meals=histIdx[ds]||[];render();}
+    if(ds===todayStr()){
+      meals=histIdx[ds]||[];
+      render();
+      // Store.set('nutrilog_history',...) above does NOT touch nutrilog_sessions —
+      // leaving it stale would let the 30s safety-net's pull-and-merge (which reads
+      // specifically from nutrilog_sessions) resurrect the entry just deleted here.
+      if(_supaUser)sbSetSession(ds,meals).catch(e=>console.warn('Session sync failed',e));
+    }
     toast('Entry deleted','info');
     renderHistDetail(ds);
     renderCalendar();
@@ -4732,7 +4768,7 @@ async function openCheckin(){
       const sign=weightChg>0?'+':'';
       html+=` · Scale change: <strong style="color:${weightChg<=0?'var(--green)':'var(--orange)'}">${sign}${weightChg}kg</strong>`;
     }
-    if(prev.notes)html+=`<br><span style="color:var(--text3)">Note: ${prev.notes}</span>`;
+    if(prev.notes)html+=`<br><span style="color:var(--text3)">Note: ${esc(prev.notes)}</span>`;
     prevEl.innerHTML=html;
     prevEl.style.display='block';
   } else {prevEl.style.display='none';}

@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.9.5",
-  "description": "NutriLog v2.9.5 — run in the background: closing the window now minimizes to the system tray instead of quitting",
+  "version": "2.9.7",
+  "description": "NutriLog v2.9.7 — fix deleted entries being resurrected by cloud sync; fix background instance overwriting mobile-logged entries; prevent duplicate app instances; fix stored XSS in check-in notes",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
