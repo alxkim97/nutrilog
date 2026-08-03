@@ -633,6 +633,9 @@ tbody tr { border-bottom:1px solid var(--border); transition:background var(--tr
 tbody tr:last-child { border-bottom:none; }
 tbody tr:hover { background:var(--bg3); }
 tbody tr.row-selected { background:var(--accent-glow); }
+tbody tr.row-pending { background:repeating-linear-gradient(135deg,rgba(240,160,48,.07) 0 10px,transparent 10px 20px); cursor:pointer; }
+tbody tr.row-pending:hover { background-color:rgba(240,160,48,.1); }
+tbody tr.row-pending td.nr { color:var(--text3); }
 td { padding:10px 12px; font-size:13px; vertical-align:middle; }
 td.nr { font-family:var(--fm); font-size:12px; color:var(--text2); }
 td.tc { font-family:var(--fm); font-size:11px; color:var(--text3); }
@@ -992,6 +995,10 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
   width:3px; height:3px; border-radius:50%; background:var(--accent);
 }
 .cal-day.dim { opacity:.25; }
+.cal-day.has-pending { border:1px dashed var(--yellow); }
+.cal-day.has-pending::before {
+  content:'⏳'; position:absolute; top:-3px; right:-3px; font-size:7px; line-height:1;
+}
 .day-dot { position:absolute; bottom:1px; left:50%; transform:translateX(-50%);
   width:3px; height:3px; border-radius:50%; background:var(--green); }
 .day-dot.streak-green { background:var(--green); box-shadow:0 0 3px var(--green); }

@@ -261,7 +261,7 @@ async function switchProfile(id){
     buildRings();buildSidebarRows();render();
     updateCalc();updateMacroCalc();
     renderStatsDashboard();
-    renderQuickTemplates();renderRecentMeals();
+    renderQuickTemplates();renderRecentMeals();renderTplSuggestion();renderPendingWidget();
     toast('Switched to '+name,'ok');
     // Pull cloud data for the new profile — local files are empty on first switch
     if(_supaUser&&_syncEnabled){
@@ -521,11 +521,11 @@ async function sbSetSession(date,mealsArr){
 async function sbGetHistory(){
   if(!_syncEnabled||!_supaUser)return null;
   try{
-    const {data,error}=await supa.from('nutrilog_history').select('date,meals').eq('user_id',_supaUser.id).eq('profile_id',_activeProfile);
+    const {data,error}=await supa.from('nutrilog_history').select('date,meals,updated_at').eq('user_id',_supaUser.id).eq('profile_id',_activeProfile);
     if(error)throw error;
     if(!data?.length)return null;
-    const h={};data.forEach(r=>{h[r.date]=r.meals;});
-    return h;
+    const h={},meta={};data.forEach(r=>{h[r.date]=r.meals;meta[r.date]=r.updated_at;});
+    return {data:h,meta};
   }catch(e){return null;}
 }
 
@@ -584,34 +584,55 @@ async function pullFromSupabase(){
     }
     if(remHistory) {
       const localHistory=await Store._localGet('nutrilog_history')||{};
+      const localMeta=await Store._localGet('nutrilog_history_meta')||{};
       const today=todayStr();
-      // Merge strategy: cloud is the base (covers dates only on cloud).
-      // For any date where local has data, local wins completely — no appending
-      // from cloud. This prevents sync artifacts (same food, different timestamp)
-      // from creating duplicates. Cloud-only dates are kept as-is.
-      const merged={...remHistory};
+      // Merge strategy: cloud is the base (covers dates only on cloud, and wins
+      // by default). For a date where local ALSO has data, we compare recency —
+      // local only wins if it was touched (touchHistDate) more recently than the
+      // cloud row's own updated_at, or if cloud has nothing for that date at all.
+      // This replaces an earlier "local always wins" rule that could silently
+      // clobber a genuine edit pushed from another device. We still don't
+      // *append*/union past-date entries here — exactly one side's whole array
+      // wins per date — which is what originally prevented sync from creating
+      // duplicate entries (same food re-appearing with a different timestamp);
+      // that protection is preserved, only the winner-picking is now recency-based.
+      const merged={...remHistory.data};
+      const localWinDates=[];
       Object.keys(localHistory).forEach(date=>{
         if(date===today)return;
-        if(localHistory[date]?.length) merged[date]=localHistory[date];
+        if(!localHistory[date]?.length)return;
+        const cloudHasNothing=!remHistory.data[date]?.length;
+        const localTs=localMeta[date]?new Date(localMeta[date]).getTime():0;
+        const remoteTs=remHistory.meta[date]?new Date(remHistory.meta[date]).getTime():0;
+        if(cloudHasNothing||localTs>remoteTs){
+          merged[date]=localHistory[date];
+          localWinDates.push(date);
+        }
       });
       delete merged[today]; // don't persist today in history.json (prevents stale push)
       // NOTE: do NOT merge nutrilog_sessions for past dates here — sessions and history
       // share the same meals but may have different timestamps, causing duplicates.
       // nutrilog_history is the single source of truth for all past dates.
       // Remove intentionally deleted dates — prevents other devices from restoring them
-      _deletedDates.forEach(d=>delete merged[d]);
+      _deletedDates.forEach(d=>{delete merged[d];const i=localWinDates.indexOf(d);if(i>=0)localWinDates.splice(i,1);});
       await Store._localSet('nutrilog_history',merged);
       Object.assign(histIdx,merged);
       // Restore pre-logged meals for today in memory only (cloud + local, deduplicated)
-      const cloudToday=remHistory[today]||[];
+      const cloudToday=remHistory.data[today]||[];
       const localToday=localHistory[today]||[];
       const todayPreLogged=[...cloudToday];
       localToday.forEach(m=>{
         if(!todayPreLogged.some(x=>x.name===m.name&&x.time===m.time)) todayPreLogged.push(m);
       });
       if(todayPreLogged.length) histIdx[today]=todayPreLogged;
-      // Push merged result back (deletions included — overwrites stale cloud data)
-      if(Object.keys(merged).length) await sbSetHistory(merged);
+      // Only push back dates where local actually won — re-pushing cloud-sourced
+      // dates unchanged would bump their updated_at for no reason, which could
+      // make a third device wrongly prefer this "freshly touched" copy over its
+      // own legitimately newer edit on its next pull.
+      if(localWinDates.length){
+        const toPush={};localWinDates.forEach(d=>{toPush[d]=merged[d];});
+        await sbSetHistory(toPush);
+      }
       // Ensure deleted dates are removed from Supabase too (propagates deletion to cloud)
       if(_deletedDates.size) await Promise.all([..._deletedDates].map(d=>sbDeleteDate(d)));
     }
@@ -736,6 +757,8 @@ async function pullFromSupabase(){
     // Explicitly refresh widgets that derive from synced data
     renderQuickTemplates();
     renderRecentMeals();
+    renderTplSuggestion();
+    renderPendingWidget();
     setTimeout(()=>{if(typeof clearDirty==='function')clearDirty();},50);
   }catch(e){
     console.warn('pullFromSupabase error',e);
@@ -751,7 +774,7 @@ async function pullFromSupabase(){
 const Store = {
   _localGet(key){
     if(IS_ELECTRON){
-      const map={'nutrilog_v1':()=>window.electronAPI.getSession(),'nutrilog_settings':()=>window.electronAPI.getSettings(),'nutrilog_foodlib':()=>window.electronAPI.getFoodLib(),'nutrilog_history':()=>window.electronAPI.getHistory(),'nutrilog_checkins':()=>window.electronAPI.getCheckins?.()??Promise.resolve(null),'nutrilog_templates':()=>window.electronAPI.getTemplates?.()??Promise.resolve(null),'nutrilog_recipes':()=>window.electronAPI.getRecipes?.()??Promise.resolve({}),'nutrilog_daynotes':()=>window.electronAPI.getDayNotes?.()??Promise.resolve({}),'nutrilog_synclog':()=>window.electronAPI.getSyncLog?.()??Promise.resolve([])};
+      const map={'nutrilog_v1':()=>window.electronAPI.getSession(),'nutrilog_settings':()=>window.electronAPI.getSettings(),'nutrilog_foodlib':()=>window.electronAPI.getFoodLib(),'nutrilog_history':()=>window.electronAPI.getHistory(),'nutrilog_history_meta':()=>window.electronAPI.getHistoryMeta?.()??Promise.resolve({}),'nutrilog_tpl_dismissed':()=>window.electronAPI.getTplDismissed?.()??Promise.resolve([]),'nutrilog_checkins':()=>window.electronAPI.getCheckins?.()??Promise.resolve(null),'nutrilog_templates':()=>window.electronAPI.getTemplates?.()??Promise.resolve(null),'nutrilog_recipes':()=>window.electronAPI.getRecipes?.()??Promise.resolve({}),'nutrilog_daynotes':()=>window.electronAPI.getDayNotes?.()??Promise.resolve({}),'nutrilog_synclog':()=>window.electronAPI.getSyncLog?.()??Promise.resolve([])};
       return map[key]?map[key]():Promise.resolve(null);
     }
     const raw=localStorage.getItem(key);
@@ -759,7 +782,7 @@ const Store = {
   },
   _localSet(key,value){
     if(IS_ELECTRON){
-      const map={'nutrilog_v1':(v)=>window.electronAPI.setSession(v),'nutrilog_settings':(v)=>window.electronAPI.setSettings(v),'nutrilog_foodlib':(v)=>window.electronAPI.setFoodLib(v),'nutrilog_history':(v)=>window.electronAPI.setHistory(v),'nutrilog_checkins':(v)=>window.electronAPI.setCheckins?.(v)??Promise.resolve(),'nutrilog_templates':(v)=>window.electronAPI.setTemplates?.(v)??Promise.resolve(),'nutrilog_recipes':(v)=>window.electronAPI.setRecipes?.(v)??Promise.resolve(),'nutrilog_daynotes':(v)=>window.electronAPI.setDayNotes?.(v)??Promise.resolve(),'nutrilog_synclog':(v)=>window.electronAPI.setSyncLog?.(v)??Promise.resolve()};
+      const map={'nutrilog_v1':(v)=>window.electronAPI.setSession(v),'nutrilog_settings':(v)=>window.electronAPI.setSettings(v),'nutrilog_foodlib':(v)=>window.electronAPI.setFoodLib(v),'nutrilog_history':(v)=>window.electronAPI.setHistory(v),'nutrilog_history_meta':(v)=>window.electronAPI.setHistoryMeta?.(v)??Promise.resolve(),'nutrilog_tpl_dismissed':(v)=>window.electronAPI.setTplDismissed?.(v)??Promise.resolve(),'nutrilog_checkins':(v)=>window.electronAPI.setCheckins?.(v)??Promise.resolve(),'nutrilog_templates':(v)=>window.electronAPI.setTemplates?.(v)??Promise.resolve(),'nutrilog_recipes':(v)=>window.electronAPI.setRecipes?.(v)??Promise.resolve(),'nutrilog_daynotes':(v)=>window.electronAPI.setDayNotes?.(v)??Promise.resolve(),'nutrilog_synclog':(v)=>window.electronAPI.setSyncLog?.(v)??Promise.resolve()};
       return map[key]?map[key](value):Promise.resolve();
     }
     localStorage.setItem(key,JSON.stringify(value));
@@ -807,6 +830,21 @@ const Store = {
     }
   }
 };
+
+// Records "this past date was just edited on this device" so a later cloud pull
+// can tell a genuine local edit apart from a merely-cached copy of what the
+// cloud already has, and arbitrate by recency instead of always trusting
+// whichever side happens to run the merge. Call after any local mutation to
+// histIdx[ds] for a date other than today (today has its own always-union
+// merge path in pullFromSupabase and doesn't need this).
+async function touchHistDate(ds){
+  if(!ds||ds===todayStr())return;
+  try{
+    const meta=(await Store._localGet('nutrilog_history_meta'))||{};
+    meta[ds]=new Date().toISOString();
+    await Store._localSet('nutrilog_history_meta',meta);
+  }catch(e){console.warn('touchHistDate failed',e);}
+}
 
 if (IS_ELECTRON) {
   window.electronAPI.onMenuSave(() => saveSession());
@@ -1119,6 +1157,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   await indexHistory();
   render();
   renderStatsDashboard();
+  renderTplSuggestion(); // once per session — not hooked into render() itself, which fires far too often for a full history scan
   await autoLoad();
   updateCalc();
   updateMacroCalc();
@@ -1397,6 +1436,7 @@ function render(){
   renderWeeklySummary();
   renderWeekBudget();
   renderRecentMeals();
+  renderPendingWidget();
   renderDailySummary();
   renderSparklines();
   const n=meals.length;
@@ -1974,26 +2014,32 @@ function renderRecentMeals(){
   const widget=document.getElementById('recentMealsWidget');
   const list=document.getElementById('recentMealsList');
   if(!widget||!list)return;
-  const recent=[]; const seen=new Set();
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()));}
-  days.forEach(ds=>{
-    const src=ds===todayStr()?meals:(histIdx[ds]||[]);
-    [...src].reverse().forEach(m=>{
+  // Frequency-based: tally every logged occurrence (all history + today's
+  // in-progress entries) by name+serving+unit, keep the most recent copy of
+  // each for its nutrition snapshot, then surface the most-repeated foods —
+  // not just whatever was logged most recently.
+  const counts=new Map(); // key -> {count, meal}
+  const tally=arr=>{
+    arr.forEach(m=>{
       const key=m.name+'|'+m.serving+'|'+m.unit;
-      if(!seen.has(key)&&recent.length<6){seen.add(key);recent.push({...m});}
+      const entry=counts.get(key);
+      if(entry){entry.count++;entry.meal=m;}
+      else counts.set(key,{count:1,meal:m});
     });
-  });
-  if(!recent.length||_wHide.recent){widget.style.display='none';renderHiddenRestoreBar();return;}
+  };
+  Object.keys(histIdx).forEach(ds=>tally(histIdx[ds]||[]));
+  tally(meals);
+  const frequent=[...counts.values()].sort((a,b)=>b.count-a.count).slice(0,6);
+  if(!frequent.length||_wHide.recent){widget.style.display='none';renderHiddenRestoreBar();return;}
   widget.style.display='block';
-  list.innerHTML=recent.map((m,i)=>`
+  list.innerHTML=frequent.map(({meal:m,count},i)=>`
     <button onclick="quickLogMeal(${i})" title="Add to today" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left;transition:border-color var(--tr);display:flex;flex-direction:column;gap:2px;min-width:140px;max-width:200px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
       <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">${esc(m.name)}</div>
-      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">${Math.round(m.kcal)} kcal · ${m.protein}g P · ${m.serving} ${esc(m.unit)}</div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">${Math.round(m.kcal)} kcal · ${m.protein}g P · ${m.serving} ${esc(m.unit)} · ×${count}</div>
       <div style="font-size:9px;color:var(--accent);margin-top:2px;font-family:var(--fm);">+ Add</div>
     </button>`).join('');
   // Store refs for quickLogMeal
-  window._recentMeals=recent;
+  window._recentMeals=frequent.map(e=>e.meal);
 }
 function quickLogMeal(i){
   const m=window._recentMeals?.[i];
@@ -2005,6 +2051,112 @@ function quickLogMeal(i){
   renderRecentMeals();
   queueAutoSave();
   toast(m.name+' added','ok');
+}
+
+/* ── Auto-suggest new templates from recurring (date,category) food combos ──
+   Same signature-counting approach used for manual template design, just run
+   automatically: group logged meals by (date,category), count how often the
+   exact same set of foods repeats within a recent window, and surface the
+   most-repeated combo that isn't already a saved template and hasn't been
+   dismissed before. Deliberately NOT auto-created — always a one-click
+   confirm, since the name/composition is worth a glance before saving. */
+const TPL_SUGGEST_WINDOW_DAYS=60;
+const TPL_SUGGEST_THRESHOLD=4;
+let _currentTplSuggestion=null; // {signature, cat, names, meals}
+function _comboSignature(cat,names){ return cat+'::'+[...names].sort().join(' + '); }
+function _existingTemplateSignatures(){
+  return new Set(Object.values(mealTemplates).map(t=>{
+    const cat=t.meals?.[0]?.cat||'breakfast';
+    return _comboSignature(cat,t.meals.map(m=>m.name));
+  }));
+}
+async function findTemplateSuggestion(){
+  const dismissed=new Set((await Store._localGet('nutrilog_tpl_dismissed'))||[]);
+  const templated=_existingTemplateSignatures();
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-TPL_SUGGEST_WINDOW_DAYS);
+  const cutoffStr=cutoff.getFullYear()+'-'+pad2(cutoff.getMonth()+1)+'-'+pad2(cutoff.getDate());
+  const groups=new Map(); // signature -> {cat, names, count, lastMeals, lastDate}
+  Object.keys(histIdx).forEach(ds=>{
+    if(ds<cutoffStr||ds===todayStr())return;
+    const byCat=new Map();
+    (histIdx[ds]||[]).forEach(m=>{
+      const cat=m.cat||'uncategorized';
+      if(!byCat.has(cat))byCat.set(cat,[]);
+      byCat.get(cat).push(m);
+    });
+    byCat.forEach((ms,cat)=>{
+      if(ms.length<2)return; // single-item "combos" are already covered by Quick-Log Frequent
+      const sig=_comboSignature(cat,ms.map(m=>m.name));
+      const g=groups.get(sig);
+      if(g){g.count++;if(ds>g.lastDate){g.lastMeals=ms;g.lastDate=ds;}}
+      else groups.set(sig,{cat,names:ms.map(m=>m.name),count:1,lastMeals:ms,lastDate:ds});
+    });
+  });
+  const candidates=[...groups.entries()]
+    .filter(([sig,g])=>g.count>=TPL_SUGGEST_THRESHOLD&&!templated.has(sig)&&!dismissed.has(sig))
+    .sort((a,b)=>b[1].count-a[1].count);
+  return candidates.length?{signature:candidates[0][0],...candidates[0][1]}:null;
+}
+async function renderTplSuggestion(){
+  const widget=document.getElementById('tplSuggestWidget');
+  const text=document.getElementById('tplSuggestText');
+  if(!widget||!text)return;
+  _currentTplSuggestion=await findTemplateSuggestion();
+  if(!_currentTplSuggestion){widget.style.display='none';return;}
+  const {names,count,cat}=_currentTplSuggestion;
+  text.innerHTML=`You've logged <strong>${names.map(esc).join(' + ')}</strong> together ${count} times in the last ${TPL_SUGGEST_WINDOW_DAYS} days (${esc(cat)}) — save it as a template?`;
+  widget.style.display='block';
+}
+async function dismissTplSuggestion(){
+  if(!_currentTplSuggestion)return;
+  const dismissed=new Set((await Store._localGet('nutrilog_tpl_dismissed'))||[]);
+  dismissed.add(_currentTplSuggestion.signature);
+  await Store._localSet('nutrilog_tpl_dismissed',[...dismissed]);
+  document.getElementById('tplSuggestWidget').style.display='none';
+  _currentTplSuggestion=null;
+}
+async function saveTplSuggestion(){
+  if(!_currentTplSuggestion)return;
+  const {names,cat,lastMeals}=_currentTplSuggestion;
+  const id='tpl_'+Date.now();
+  const label=cat.charAt(0).toUpperCase()+cat.slice(1);
+  mealTemplates[id]={
+    id,
+    name:label+': '+names.join(' + '),
+    meals:lastMeals.map(m=>({...m})),
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString()
+  };
+  await saveTemplates();
+  if(!tplOrder.includes(id)){tplOrder.push(id);saveTplOrder();}
+  document.getElementById('tplSuggestWidget').style.display='none';
+  _currentTplSuggestion=null;
+  renderQuickTemplates();
+  toast('Template saved — edit the name anytime in Food Database → Templates','ok');
+}
+
+/* ── Unresolved placeholder ("Log Later") reminder widget ── */
+function getPendingEntries(){
+  const today=todayStr();
+  const out=[]; // {ds, isToday}
+  meals.forEach(m=>{if(m.pending)out.push({ds:today,isToday:true});});
+  Object.keys(histIdx).forEach(ds=>{
+    if(ds===today)return; // today is read from `meals` above, not histIdx, to avoid double count
+    (histIdx[ds]||[]).forEach(m=>{if(m.pending)out.push({ds,isToday:false});});
+  });
+  return out;
+}
+function renderPendingWidget(){
+  const widget=document.getElementById('pendingEntriesWidget');
+  const text=document.getElementById('pendingEntriesText');
+  if(!widget||!text)return;
+  const pending=getPendingEntries();
+  if(!pending.length){widget.style.display='none';return;}
+  const days=new Set(pending.map(p=>p.ds));
+  const dayWord=days.size===1?'day':'days';
+  const entryWord=pending.length===1?'entry':'entries';
+  text.textContent=`${pending.length} unresolved ${entryWord} across ${days.size} ${dayWord} — tap into any of them to fill in the real item.`;
+  widget.style.display='block';
 }
 
 /* ── meal multi-select state ── */
@@ -2146,20 +2298,21 @@ function renderTable(){
     const sel=logMultiSel.has(ri);
     const cc=catCls(m.cat);
     const pBar=(v,t,col)=>`<div class="macro-bar-mini" style="width:${Math.min((+v||0)/(t||1)*100,100).toFixed(1)}%;background:${col}"></div>`;
-    return `<tr data-ri="${ri}" data-cat="${cc}" class="${sel?'row-selected':''}">
+    const pend=!!m.pending;
+    return `<tr data-ri="${ri}" data-cat="${cc}" class="${sel?'row-selected':''}${pend?' row-pending':''}" ${pend?'onclick="if(event.target.closest(\'.row-acts\')||event.target.closest(\'.chk\'))return;openEdit('+ri+')" title="Tap to fill in the real item"':''}>
       ${showChk?`<td class="chk"><input type="checkbox" ${sel?'checked':''} onchange="logToggle(${ri},this.checked)" style="cursor:pointer;accent-color:var(--accent)"></td>`:''}
       <td class="cat-strip ${cc}"></td>
       <td class="tc">${m.time||'—'}</td>
       <td><span class="badge ${cc}">${CAT_ICON[m.cat]||'🍽️'} ${CAT[m.cat]||m.cat||'—'}</span></td>
       <td>
-        <div class="food-name">${esc(m.name)}</div>
-        <div class="sub">${m.serving} ${esc(m.unit)}${m.notes?' · '+esc(m.notes):''}</div>
+        <div class="food-name">${pend?'⏳ ':''}${esc(m.name)}</div>
+        <div class="sub">${pend?'Unresolved — tap to fill in':(m.serving+' '+esc(m.unit)+(m.notes?' · '+esc(m.notes):''))}</div>
       </td>
-      <td class="nr ck meal-kcal-cell">${f1(m.kcal)}${pBar(m.kcal,TGT.kcal,'var(--mk)')}</td>
-      <td class="nr cp">${f1(m.protein)}g${pBar(m.protein,TGT.protein,'var(--mp)')}</td>
-      <td class="nr cf">${f1(m.fat)}g${pBar(m.fat,TGT.fat,'var(--mf)')}</td>
-      <td class="nr cc">${f1(m.carbs)}g${pBar(m.carbs,TGT.carbs,'var(--mc)')}</td>
-      <td class="nr cfi">${f1(m.fiber)}g${pBar(m.fiber,TGT.fiber,'var(--mfi)')}</td>
+      <td class="nr ck meal-kcal-cell">${pend?'–':f1(m.kcal)+pBar(m.kcal,TGT.kcal,'var(--mk)')}</td>
+      <td class="nr cp">${pend?'–':f1(m.protein)+'g'+pBar(m.protein,TGT.protein,'var(--mp)')}</td>
+      <td class="nr cf">${pend?'–':f1(m.fat)+'g'+pBar(m.fat,TGT.fat,'var(--mf)')}</td>
+      <td class="nr cc">${pend?'–':f1(m.carbs)+'g'+pBar(m.carbs,TGT.carbs,'var(--mc)')}</td>
+      <td class="nr cfi">${pend?'–':f1(m.fiber)+'g'+pBar(m.fiber,TGT.fiber,'var(--mfi)')}</td>
       <td class="ac"><div class="row-acts">
         <button class="act-btn" onclick="openEdit(${ri})">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2206,9 +2359,11 @@ function closeModal(){
   if(unitEl)unitEl.disabled=false;
   document.getElementById('mealSaveBtn').onclick=()=>submitMeal();
   _histEditDs=null; _histEditIdx=null;
-  // Restore Add Another button for normal add mode
+  // Restore Add Another / Log Later buttons for normal add mode
   const aaBtn=document.getElementById('addAnotherBtn');
   if(aaBtn)aaBtn.style.display='';
+  const llBtn=document.getElementById('logLaterBtn');
+  if(llBtn)llBtn.style.display='';
 }
 function clearForm(){
   ['f-name','f-serving','f-kcal','f-protein','f-fat','f-carbs','f-fiber','f-notes'].forEach(id=>document.getElementById(id).value='');
@@ -2396,6 +2551,7 @@ function submitForm(){
       if(!h[logDate])h[logDate]=[];
       h[logDate].push({...entry,date:logDate});
       histIdx[logDate]=h[logDate];
+      touchHistDate(logDate);
       Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     });
     if(document.getElementById('f-savelib').checked)
@@ -2438,6 +2594,7 @@ function submitAndStay(){
       if(!h[logDate])h[logDate]=[];
       h[logDate].push({...entry,date:logDate});
       histIdx[logDate]=h[logDate];
+      touchHistDate(logDate);
       Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     });
     if(document.getElementById('f-savelib').checked)
@@ -2463,6 +2620,46 @@ function submitAndStay(){
     document.getElementById('f-name').focus();
     toast(name+' added — enter next item','ok');
   }
+}
+
+/* ── Placeholder ("Log Later") entries ──
+   For the "ate something outside, don't know the exact item/macros right now"
+   case — captures just category + time (+ optional rough name) in one tap, with
+   zero contribution to kcal/macro totals so an unresolved day visibly looks
+   incomplete rather than silently reading as "0 extra calories, all good".
+   Resolving one later is just editing it like any normal entry — filling in
+   real macros through the existing edit flow clears the `pending` flag
+   naturally, since the resubmitted entry object doesn't carry it forward. */
+function submitPlaceholder(){
+  const logDate=document.getElementById('f-logdate').value||todayStr();
+  const rawName=document.getElementById('f-name').value.trim();
+  const name=rawName||'⏳ Unlogged item';
+  const entry={
+    cat:selCat, name,
+    time:document.getElementById('f-time').value||nowTime(),
+    serving:0, unit:'',
+    kcal:0, protein:0, fat:0, carbs:0, fiber:0,
+    notes:document.getElementById('f-notes').value.trim(),
+    pending:true
+  };
+  if(logDate!==todayStr()){
+    Store.get('nutrilog_history').then(h=>{
+      h=h||{};
+      if(!h[logDate])h[logDate]=[];
+      h[logDate].push({...entry,date:logDate});
+      histIdx[logDate]=h[logDate];
+      touchHistDate(logDate);
+      Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
+    });
+    toast(name+' placeholder logged for '+logDate+' — tap it later to fill in details','ok');
+    closeModal();queueAutoSave();renderCalendar();
+  } else {
+    pushUndo('Add placeholder "'+name+'"');
+    meals.push(entry);
+    toast('Placeholder added to '+CAT[selCat]+' — tap it later to fill in details','ok');
+    closeModal();render();queueAutoSave();
+  }
+  renderPendingWidget();
 }
 
 function submitPaste(){
@@ -2539,6 +2736,7 @@ function submitPaste(){
         const existing=new Set(h[date].map(e=>e.name+'|'+e.time+'|'+(e.serving||'')));
         h[date]=[...h[date],...entries.filter(e=>!existing.has(e.name+'|'+e.time+'|'+(e.serving||'')))];
         histIdx[date]=h[date];
+        touchHistDate(date);
       }
       Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     });
@@ -2560,6 +2758,7 @@ function openEdit(i){
   document.getElementById('mealTitle').textContent='Edit Entry';
   document.getElementById('mealSaveBtn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Save Changes';
   const _aaBtn=document.getElementById('addAnotherBtn');if(_aaBtn)_aaBtn.style.display='none';
+  const _llBtn=document.getElementById('logLaterBtn');if(_llBtn)_llBtn.style.display='none';
   setCat(m.cat||'breakfast');
   document.getElementById('f-name').value=m.name;
   document.getElementById('f-time').value=m.time||'';
@@ -3086,6 +3285,104 @@ function bulkSetDbType(){
 }
 function delDb(i){showConf('Delete food item?','Remove "'+foodLib[i].name+'" from the database?','Delete',()=>{foodLib.splice(i,1);saveFoodLib();renderFoodDb();toast('Removed','info');});}
 
+/* ── Merge duplicate food-library entries ──
+   Fixes naming drift (the same real food logged under several slightly
+   different Food Database entries over time), which fragments frequency
+   counts, streaks, and the quick-log/template-suggestion features. Merging
+   relabels every past log entry that matches a non-canonical name — the
+   calories/macros as originally logged are left untouched, only the name
+   is unified — so historical daily totals never change, just how entries
+   group together in stats. */
+let _mergeFoodItems=[]; // snapshot of selected foodLib entries when the modal opened
+function openMergeFoods(){
+  if(dbMultiSel.size<2){toast('Select 2 or more items to merge','err');return;}
+  _mergeFoodItems=[...dbMultiSel].map(i=>foodLib[i]).filter(Boolean);
+  const choices=document.getElementById('mergeFoodsChoices');
+  choices.innerHTML=_mergeFoodItems.map((f,i)=>`
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+      <input type="radio" name="mergeCanonical" value="${i}" ${i===0?'checked':''} onchange="updateMergePreview()">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.name)}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">${f.serving} ${esc(f.unit)} · ${f.kcal} kcal</div>
+      </div>
+    </label>`).join('');
+  document.getElementById('mergeFoodsOverlay').classList.add('open');
+  updateMergePreview();
+}
+function closeMergeFoods(){
+  document.getElementById('mergeFoodsOverlay').classList.remove('open');
+  _mergeFoodItems=[];
+}
+function _mergeCountMatches(names){
+  let count=0; const dateSet=new Set();
+  Object.keys(histIdx).forEach(ds=>{
+    (histIdx[ds]||[]).forEach(m=>{ if(names.has(m.name)){count++;dateSet.add(ds);} });
+  });
+  meals.forEach(m=>{ if(names.has(m.name))count++; });
+  return {count,dates:dateSet.size};
+}
+function updateMergePreview(){
+  const sel=document.querySelector('input[name="mergeCanonical"]:checked');
+  const idx=sel?+sel.value:0;
+  const canonical=_mergeFoodItems[idx];
+  const otherNames=new Set(_mergeFoodItems.filter((_,i)=>i!==idx).map(f=>f.name));
+  const {count,dates}=_mergeCountMatches(otherNames);
+  const el=document.getElementById('mergeFoodsPreview');
+  if(!canonical){el.textContent='';return;}
+  el.textContent=count
+    ? `Will relabel ${count} past log ${count===1?'entry':'entries'} across ${dates} day${dates===1?'':'s'} to "${canonical.name}".`
+    : `No past log entries found under the other name${otherNames.size===1?'':'s'} — only the Food Database entries will be merged.`;
+}
+async function executeMergeFoods(){
+  const sel=document.querySelector('input[name="mergeCanonical"]:checked');
+  if(!sel||!_mergeFoodItems.length){closeMergeFoods();return;}
+  const idx=+sel.value;
+  const canonical=_mergeFoodItems[idx];
+  const others=_mergeFoodItems.filter((_,i)=>i!==idx);
+  const otherNames=new Set(others.map(f=>f.name));
+  if(!otherNames.size){closeMergeFoods();return;}
+
+  // Snapshot everything touched, for undo
+  const histSnap=JSON.parse(JSON.stringify(histIdx));
+  const foodLibSnap=JSON.parse(JSON.stringify(foodLib));
+  const templatesSnap=JSON.parse(JSON.stringify(mealTemplates));
+  const touchedDates=[];
+
+  Object.keys(histIdx).forEach(ds=>{
+    let changed=false;
+    (histIdx[ds]||[]).forEach(m=>{ if(otherNames.has(m.name)){m.name=canonical.name;changed=true;} });
+    if(changed)touchedDates.push(ds);
+  });
+  let todayChanged=false;
+  meals.forEach(m=>{ if(otherNames.has(m.name)){m.name=canonical.name;todayChanged=true;} });
+
+  let tplsChanged=false;
+  Object.values(mealTemplates).forEach(t=>{
+    (t.meals||[]).forEach(m=>{ if(otherNames.has(m.name)){m.name=canonical.name;tplsChanged=true;} });
+  });
+
+  const today=todayStr();
+  const pastTouched=touchedDates.filter(d=>d!==today);
+  const h=(await Store.get('nutrilog_history'))||{};
+  pastTouched.forEach(ds=>{ h[ds]=histIdx[ds]; touchHistDate(ds); });
+  await Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
+  if(todayChanged)queueAutoSave();
+  if(tplsChanged)await saveTemplates();
+
+  foodLib=foodLib.filter(f=>f===canonical||!otherNames.has(f.name));
+  saveFoodLib();
+
+  // Undo reuses the same stack/button the template-apply undo already uses
+  _histUndoStack.push({label:'Merge foods into "'+canonical.name+'"',snapshot:histSnap,dates:pastTouched,foodLibSnap,templatesSnap});
+  if(_histUndoStack.length>10)_histUndoStack.shift();
+
+  closeMergeFoods();
+  clearDbSel();
+  renderFoodDb();
+  render();
+  toast(`Merged ${others.length} item${others.length===1?'':'s'} into "${canonical.name}" — Undo available in History`,'ok');
+}
+
 /* Food DB import/export */
 function exportFoodDb(){
   const tsv=['Food Item\tVariant\tType\tServing\tUnit\tCalories\tProtein\tFat\tCarbs\tFiber',
@@ -3366,9 +3663,10 @@ function renderCalendar(){
     const ds=calY+'-'+pad2(calM+1)+'-'+pad2(day);
     const isToday=calY===now.getFullYear()&&calM===now.getMonth()&&day===now.getDate();
     const hasData=!!histIdx[ds];
+    const hasPending=hasData&&histIdx[ds].some(m=>m.pending);
     const isSel=selDate===ds;
     const isMultiSel=histMultiSel.has(ds);
-    let cls='cal-day'+(isToday?' today':'')+(hasData?' has-data':'')+(isSel&&!histMultiMode?' selected':'')+(isMultiSel?' multi-sel':'');
+    let cls='cal-day'+(isToday?' today':'')+(hasData?' has-data':'')+(hasPending?' has-pending':'')+(isSel&&!histMultiMode?' selected':'')+(isMultiSel?' multi-sel':'');
     const d=div(cls);
     d.textContent=day;
     if(hasData){
@@ -3424,16 +3722,16 @@ function renderHistDetail(ds){
   const _hPBar=(v,t,col)=>`<div class="macro-bar-mini" style="width:${Math.min((+v||0)/(t||1)*100,100).toFixed(1)}%;background:${col}"></div>`;
   const _hCC=c=>['breakfast','lunch','dinner','snack'].includes(c)?c:'snack';
   const rows=sorted.length
-    ? sorted.map(({e,i})=>{const cc=_hCC(e.cat);return`<tr data-cat="${cc}">
+    ? sorted.map(({e,i})=>{const cc=_hCC(e.cat);const pend=!!e.pending;return`<tr data-cat="${cc}" class="${pend?'row-pending':''}" ${pend?`onclick="if(event.target.closest('.row-acts'))return;openHistEdit('${ds}',${i})" title="Tap to fill in the real item"`:''}>
         <td class="cat-strip ${cc}"></td>
         <td class="tc">${e.time||'—'}</td>
         <td><span class="badge ${cc}">${CAT_ICON[e.cat]||'🍽️'} ${CAT[e.cat]||e.cat||'—'}</span></td>
-        <td><div class="food-name">${esc(e.name)}</div><div class="sub">${e.serving} ${esc(e.unit)}${e.notes?' · '+esc(e.notes):''}</div></td>
-        <td class="nr ck meal-kcal-cell">${f1(e.kcal)}${_hPBar(e.kcal,TGT.kcal,'var(--mk)')}</td>
-        <td class="nr cp">${f1(e.protein)}g${_hPBar(e.protein,TGT.protein,'var(--mp)')}</td>
-        <td class="nr cf">${f1(e.fat)}g${_hPBar(e.fat,TGT.fat,'var(--mf)')}</td>
-        <td class="nr cc">${f1(e.carbs)}g${_hPBar(e.carbs,TGT.carbs,'var(--mc)')}</td>
-        <td class="nr cfi">${f1(e.fiber)}g${_hPBar(e.fiber,TGT.fiber,'var(--mfi)')}</td>
+        <td><div class="food-name">${pend?'⏳ ':''}${esc(e.name)}</div><div class="sub">${pend?'Unresolved — tap to fill in':(e.serving+' '+esc(e.unit)+(e.notes?' · '+esc(e.notes):''))}</div></td>
+        <td class="nr ck meal-kcal-cell">${pend?'–':f1(e.kcal)+_hPBar(e.kcal,TGT.kcal,'var(--mk)')}</td>
+        <td class="nr cp">${pend?'–':f1(e.protein)+'g'+_hPBar(e.protein,TGT.protein,'var(--mp)')}</td>
+        <td class="nr cf">${pend?'–':f1(e.fat)+'g'+_hPBar(e.fat,TGT.fat,'var(--mf)')}</td>
+        <td class="nr cc">${pend?'–':f1(e.carbs)+'g'+_hPBar(e.carbs,TGT.carbs,'var(--mc)')}</td>
+        <td class="nr cfi">${pend?'–':f1(e.fiber)+'g'+_hPBar(e.fiber,TGT.fiber,'var(--mfi)')}</td>
         <td class="ac"><div class="row-acts">
           <button class="act-btn" onclick="openHistEdit('${ds}',${i})" title="Edit entry">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -3526,6 +3824,7 @@ function openHistEdit(ds,i){
   document.getElementById('mealSaveBtn').innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Save Changes';
   document.getElementById('mealSaveBtn').onclick=()=>submitHistEntry();
   const _aaBtn2=document.getElementById('addAnotherBtn');if(_aaBtn2)_aaBtn2.style.display='none';
+  const _llBtn2=document.getElementById('logLaterBtn');if(_llBtn2)_llBtn2.style.display='none';
   setCat(e.cat||'breakfast');
   document.getElementById('f-name').value=e.name;
   document.getElementById('f-time').value=e.time||'';
@@ -3580,6 +3879,7 @@ async function submitHistEntry(){
     toast(name+' added to '+ds,'ok');
   }
   histIdx[ds]=h[ds];
+  touchHistDate(ds);
   // If editing today, also update live meals array
   if(ds===todayStr()){
     meals=h[ds].map(e=>({...e}));
@@ -3640,6 +3940,7 @@ async function executeCopyDay(){
     const h=(await Store.get('nutrilog_history'))||{};
     h[target]=[...(h[target]||[]),...copies];
     histIdx[target]=h[target];
+    touchHistDate(target);
     await Store.set('nutrilog_history',h);
     if(selDate===target)renderHistDetail(target);
     renderCalendar();
@@ -3693,6 +3994,8 @@ function delHistEntry(ds,i){
       delete h[ds];
       await addDeletedDate(ds); // log deletion so other devices honour it
       await sbDeleteDate(ds);
+    } else {
+      touchHistDate(ds);
     }
     await Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     if(ds===todayStr()){
@@ -3845,7 +4148,12 @@ function getAchievementDefs(){
 
   const loggedDates=Object.keys(liveHist).filter(d=>(liveHist[d]||[]).length>0).sort();
   const totalDays=loggedDates.length;
-  const totalEntries=Object.values(liveHist).reduce((a,e)=>a+(e?.length||0),0);
+  // Unresolved "Log Later" placeholders aren't real logged food yet — exclude them
+  // from entry/food-variety/category achievements so those can't be earned from
+  // empty stubs. Streaks/totalDays still count a day with one, since filing a
+  // placeholder is still engaging with the tracker that day.
+  const realEntries=arr=>(arr||[]).filter(e=>!e.pending);
+  const totalEntries=Object.values(liveHist).reduce((a,e)=>a+realEntries(e).length,0);
   const totalCheckins=getCheckins().length;
   const totalFoods=(typeof foodLib!=='undefined'?foodLib:[]).length;
 
@@ -3878,7 +4186,7 @@ function getAchievementDefs(){
   });
 
   // Unique food names logged
-  const uniqueFoods=new Set(Object.values(liveHist).flat().map(e=>e.name)).size;
+  const uniqueFoods=new Set(Object.values(liveHist).flatMap(realEntries).map(e=>e.name)).size;
 
   // Fiber target streak
   let bestFiberStreak=0,fiberRun=0;
@@ -3899,7 +4207,7 @@ function getAchievementDefs(){
   // Days with all 4 meal categories logged
   let allCatDays=0;
   loggedDates.forEach(d=>{
-    const cats=new Set((liveHist[d]||[]).map(e=>e.cat));
+    const cats=new Set(realEntries(liveHist[d]).map(e=>e.cat));
     if(['breakfast','lunch','dinner','snack'].every(c=>cats.has(c)))allCatDays++;
   });
 
@@ -5170,6 +5478,7 @@ async function applyTplToDate(dateStr,overrides={},skipHistUndo=false){
     if(!h[dateStr])h[dateStr]=[];
     h[dateStr].push(...newMeals);
     histIdx[dateStr]=h[dateStr];
+    touchHistDate(dateStr);
     await Store.set('nutrilog_history',h);
     if(!skipHistUndo)toast('Applied to '+dateStr+' — Undo: tap to revert','ok');
   }
@@ -5177,11 +5486,25 @@ async function applyTplToDate(dateStr,overrides={},skipHistUndo=false){
 
 async function undoTplHistoryApply(){
   if(!_histUndoStack.length){toast('Nothing to undo','err');return;}
-  const {label,snapshot}=_histUndoStack.pop();
+  const {label,snapshot,single,start,end,dates,foodLibSnap,templatesSnap}=_histUndoStack.pop();
   // Restore histIdx and persist
   Object.keys(histIdx).forEach(k=>delete histIdx[k]);
   Object.assign(histIdx,snapshot);
   await Store.set('nutrilog_history',snapshot);
+  // Only the date(s) this undo actually reverted count as freshly locally
+  // edited — touching every date in the snapshot would flag the user's
+  // entire history as "just modified" and defeat the sync fix below.
+  if(single){touchHistDate(single);}
+  else if(start&&end){
+    const cur=new Date(start);const endD=new Date(end);
+    while(cur<=endD){touchHistDate(cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate()));cur.setDate(cur.getDate()+1);}
+  } else if(dates){
+    dates.forEach(d=>touchHistDate(d));
+  }
+  // Food-merge undos also carry a food-library / templates snapshot to fully revert
+  if(foodLibSnap){foodLib=foodLibSnap;saveFoodLib();renderFoodDb();}
+  if(templatesSnap){mealTemplates=templatesSnap;await saveTemplates();}
+  render();
   toast('Undone: '+label,'ok');
 }
 
@@ -5523,7 +5846,16 @@ function renderNutritionInsights(){
     const avg=kcals.reduce((a,b)=>a+b,0)/kcals.length;
     const std=Math.sqrt(kcals.reduce((a,b)=>a+(b-avg)**2,0)/kcals.length);
     if(std<150)insights.push({type:'good',icon:'📊',title:'Very consistent calorie intake this week',desc:`Standard deviation of only ${std.toFixed(0)} kcal — predictable intake aids body composition.`});
-    else if(std>500)insights.push({type:'info',icon:'📊',title:'High calorie variability this week',desc:`${std.toFixed(0)} kcal std dev — large swings can make fat loss harder to predict.`});
+    else if(std>500){
+      // Unresolved "Log Later" placeholders read as 0 kcal until filled in, which
+      // can make an otherwise-normal day look like a low-calorie outlier and
+      // inflate this stat — call that out instead of just reporting the raw number.
+      const pendingDays=recent7.filter(d=>(liveHist[d]||[]).some(m=>m.pending));
+      const desc=pendingDays.length
+        ? `${std.toFixed(0)} kcal std dev — but ${pendingDays.length} of those day${pendingDays.length===1?'':'s'} ${pendingDays.length===1?'has':'have'} unresolved "Log Later" entries pulling the numbers down artificially. Resolve them in History for a truer picture.`
+        : `${std.toFixed(0)} kcal std dev — large swings can make fat loss harder to predict.`;
+      insights.push({type:'info',icon:'📊',title:'High calorie variability this week',desc});
+    }
   }
 
   // 5. Fat target frequently exceeded

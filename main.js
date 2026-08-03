@@ -329,6 +329,16 @@ ipcMain.handle('storage:set-foodlib', (_, data) => writeJSON(SHARED_FOODLIB_FILE
 ipcMain.handle('storage:get-history', () => readJSON(profileDataFile('history'), {}));
 ipcMain.handle('storage:set-history', (_, data) => writeJSON(profileDataFile('history'), data));
 
+// History meta — per-date "last locally modified" timestamps, used to arbitrate
+// which side (this device vs. cloud) wins a past date during sync merge.
+ipcMain.handle('storage:get-history-meta', () => readJSON(profileDataFile('history_meta'), {}));
+ipcMain.handle('storage:set-history-meta', (_, data) => writeJSON(profileDataFile('history_meta'), data));
+
+// Dismissed template suggestions — recurring meal combos the user said "no" to,
+// so the auto-suggest feature doesn't keep re-prompting for the same one.
+ipcMain.handle('storage:get-tpl-dismissed', () => readJSON(profileDataFile('tpl_suggest_dismissed'), []));
+ipcMain.handle('storage:set-tpl-dismissed', (_, data) => writeJSON(profileDataFile('tpl_suggest_dismissed'), data));
+
 // Check-ins (weekly progress)
 ipcMain.handle('storage:get-checkins', () => readJSON(profileDataFile('checkins'), []));
 ipcMain.handle('storage:set-checkins', (_, data) => writeJSON(profileDataFile('checkins'), data));
