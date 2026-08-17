@@ -2,48 +2,25 @@
 
 Personal macro tracker desktop application.
 
-## Quick Start
+## npm Commands
+
+| Command | What it does |
+|---|---|
+| `npm install` | Install dependencies (once, or after pulling changes) |
+| `npm run dev` | Run with DevTools open |
+| `npm start` | Launch the app normally |
+| `npm run build:win` | Build Windows installer → `dist/NutriLog Setup 1.0.0.exe` |
+| `npm run build:mac` | Build macOS installer → `dist/NutriLog-1.0.0.dmg` (must run on macOS) |
+| `npm run build:linux` | Build Linux AppImage → `dist/NutriLog-1.0.0.AppImage` |
+| `npm run publish` | Build + publish an auto-update release |
+
+There's no plain `npm run build` — pick the platform-specific one. See the
+full [npm cheat sheet](../../NPM-CHEATSHEET.md) for how this compares to
+other projects.
 
 ### Prerequisites
 - **Node.js** v18 or later — https://nodejs.org
 - **npm** (comes with Node.js)
-
-### Install & Run
-
-```bash
-# 1. Install dependencies (first time only, ~2 min)
-npm install
-
-# 2. Launch the app
-npm start
-```
-
-That's it. The app opens in its own window.
-
----
-
-## Building Installers
-
-### Windows (.exe installer)
-```bash
-npm run build:win
-```
-Output: `dist/NutriLog Setup 1.0.0.exe`
-
-### macOS (.dmg)
-```bash
-npm run build:mac
-```
-Output: `dist/NutriLog-1.0.0.dmg`
-
-### Linux (.AppImage)
-```bash
-npm run build:linux
-```
-Output: `dist/NutriLog-1.0.0.AppImage`
-
-> **Note:** Building for Windows requires running on Windows or using a CI service.
-> Building for macOS requires running on macOS (Apple code-signing).
 
 ---
 
@@ -96,15 +73,6 @@ nutrilog-electron/
 ├── src/
 │   └── index.html   # The full app (self-contained)
 └── dist/            # Built installers (after npm run build:*)
-```
-
----
-
-## Development
-
-```bash
-# Run with DevTools open
-npm run dev
 ```
 
 ---
