@@ -11,6 +11,7 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 const supa = (typeof supabase !== 'undefined') ? supabase.createClient(SUPA_URL, SUPA_KEY) : null;
 let _supaUser = null;
 let _syncEnabled = false;
+let _appVersion = 'web';
 let _profiles = [{ id: 'alex', name: 'Alex' }];
 let _activeProfile = 'alex';
 let _activeProfileName = 'Alex';
@@ -370,7 +371,7 @@ async function appendSyncLog(entry){
   try{
     let log=[];
     try{ const d=await Store._localGet('nutrilog_synclog'); log=Array.isArray(d)?d:[]; }catch{}
-    log.unshift({...entry, appVer:'1.6.0'}); // newest first
+    log.unshift({...entry, appVer:_appVersion}); // newest first
     if(log.length>200)log=log.slice(0,200);  // cap at 200 entries
     await Store._localSet('nutrilog_synclog',log);
   }catch(e){console.warn('appendSyncLog failed',e);}
@@ -379,6 +380,7 @@ async function appendSyncLog(entry){
 /* ── Force Push: push ALL local data up to Supabase ── */
 async function forcePushToCloud(){
   if(!_syncEnabled||!_supaUser){toast('Not signed in','err');return;}
+  await ensureSupaSession();
   setSyncBadge('syncing','Pushing…');
   let failures=0;
   try{
@@ -454,6 +456,20 @@ function showSyncMenu(){
 }
 
 /* ── Supabase data layer ── */
+// supabase-js's autoRefreshToken timer doesn't reliably fire in this Electron renderer
+// (window can sit hidden/throttled for hours), so the access token silently expires and
+// writes start failing RLS with a stale token. getSession() re-checks expiry and
+// transparently refreshes when needed — call it before any push so long-idle sessions
+// self-heal instead of requiring a manual sign-out/sign-in.
+async function ensureSupaSession(){
+  if(!supa)return false;
+  try{
+    const {data:{session}}=await supa.auth.getSession();
+    if(session?.user){_supaUser=session.user;return true;}
+  }catch(e){console.warn('Session refresh check failed',e);}
+  return false;
+}
+
 async function sbGet(table){
   if(!_syncEnabled||!_supaUser)return null;
   try{
@@ -562,6 +578,7 @@ async function pullFromSupabase(){
   if(_pullInProgress)return;
   _pullInProgress=true;
   try{
+    await ensureSupaSession();
     // Snapshot today's in-memory meals to v1 BEFORE any disk writes below.
     // If the pull's merge sees empty cloud+history for today, autoLoad can still
     // recover these meals from v1 on the next restart.
@@ -795,6 +812,7 @@ const Store = {
     await this._localSet(key,value);
     // Push to Supabase in background
     if(_syncEnabled){
+      await ensureSupaSession();
       setSyncBadge('syncing','Saving…');
       let ok=false;
       try{
@@ -886,6 +904,7 @@ setInterval(async()=>{
   if(!_syncEnabled||!_supaUser||_periodicSyncRunning)return;
   _periodicSyncRunning=true;
   try{
+    await ensureSupaSession();
     // Use in-memory meals[], not disk — disk may lag behind by up to 1.5s (auto-save debounce)
     if(meals.length){
       const d=todayStr();
@@ -936,6 +955,7 @@ setInterval(async()=>{
   if(!_supaUser||_rolloverInProgress)return;
   const today=todayStr();
   try{
+    await ensureSupaSession();
     // Pull the cloud's current copy and merge in anything not already here (e.g.
     // logged from nutrilog-simple) BEFORE pushing back out. Without this, being
     // open and visible is just as capable of clobbering a mobile-logged entry as
@@ -1099,6 +1119,7 @@ document.addEventListener('DOMContentLoaded',async ()=>{
   // Version label in sidebar footer + update section
   if(IS_ELECTRON&&window.electronAPI?.getVersion){
     window.electronAPI.getVersion().then(v=>{
+      _appVersion=v;
       const el=document.getElementById('appVersionLabel');
       if(el)el.textContent='v'+v;
       const ul=document.getElementById('update-version-label');
