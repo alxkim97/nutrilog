@@ -405,7 +405,7 @@ async function forcePushToCloud(){
     if(sett&&!await sbSet('nutrilog_settings',sett))failures++;
     // Food library — shared across profiles
     const fl=await Store._localGet('nutrilog_foodlib');
-    if(fl&&!await sbSetShared('nutrilog_food_library',fl))failures++;
+    if(fl&&!await sbSetSharedFoodLibMerged(fl))failures++;
     // Templates
     const tmpl=await Store._localGet('nutrilog_templates');
     if(tmpl&&!await sbSet('nutrilog_templates',tmpl))failures++;
@@ -510,6 +510,29 @@ async function sbSetShared(table,value){
     appendSyncLog({type:'push_fail',table,error:e?.message||String(e),at:new Date().toISOString()});
     return false;
   }
+}
+
+// The shared food library is one JSON blob per row, so a plain push overwrites the whole
+// list — a device that hasn't pulled a teammate's new item yet would silently erase it on
+// its next save. Pull-before-push and union by name (never drop, local wins on name clash)
+// so no device's push can delete another device's addition.
+async function sbSetSharedFoodLibMerged(localList){
+  if(!_syncEnabled||!_supaUser)return false;
+  try{
+    const cloudList=await sbGetShared('nutrilog_food_library')||[];
+    const localNames=new Set(localList.map(f=>f.name));
+    const merged=[...localList];
+    let gainedCloudOnly=false;
+    cloudList.forEach(f=>{ if(!localNames.has(f.name)){ merged.push(f); gainedCloudOnly=true; } });
+    const ok=await sbSetShared('nutrilog_food_library',merged);
+    if(ok&&gainedCloudOnly){
+      // Surface items another device added, right now, instead of waiting for the next pull.
+      foodLib=merged;
+      await Store._localSet('nutrilog_foodlib',merged);
+      const b=document.getElementById('dbBadge'); if(b)b.textContent=foodLib.length;
+    }
+    return ok;
+  }catch(e){console.warn('sbSetSharedFoodLibMerged',e);return false;}
 }
 
 async function sbGetSessions(date){
@@ -817,7 +840,7 @@ const Store = {
       let ok=false;
       try{
         if(key==='nutrilog_settings')       ok=await sbSet('nutrilog_settings',value);
-        else if(key==='nutrilog_foodlib')   ok=await sbSetShared('nutrilog_food_library',value);
+        else if(key==='nutrilog_foodlib')   ok=await sbSetSharedFoodLibMerged(value);
         else if(key==='nutrilog_history')   ok=await sbSetHistory(value);
         else if(key==='nutrilog_checkins')  ok=await sbSet('nutrilog_checkins',value);
         else if(key==='nutrilog_templates') ok=await sbSet('nutrilog_templates',value);
