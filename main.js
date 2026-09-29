@@ -162,6 +162,7 @@ function createTray() {
   tray.setToolTip('NutriLog');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Open NutriLog', click: () => showMainWindow() },
+    { label: 'Check for Updates', click: () => checkForUpdatesManual() },
     { type: 'separator' },
     { label: 'Quit NutriLog', click: () => { isQuitting = true; app.quit(); } },
   ]));
@@ -533,9 +534,14 @@ ipcMain.handle('egg:delete', (_, name) => {
 });
 
 // ── Auto-updater setup ──
+// true only while a check was kicked off by the tray's "Check for Updates" item, which has
+// no Settings-page UI to report back to — so it gets a dialog either way. Background/startup
+// checks and the Settings-page button stay silent unless an update is actually found; the
+// Settings page already shows its own status text for those.
+let _manualUpdateCheck = false;
 function setupAutoUpdater() {
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.on('checking-for-update', () => {
     mainWindow?.webContents.send('update:status', { status: 'checking' });
   });
@@ -544,16 +550,36 @@ function setupAutoUpdater() {
   });
   autoUpdater.on('update-not-available', () => {
     mainWindow?.webContents.send('update:status', { status: 'current' });
+    if (_manualUpdateCheck) {
+      _manualUpdateCheck = false;
+      dialog.showMessageBox(mainWindow || undefined, { type: 'info', title: 'NutriLog', message: "You're up to date.", buttons: ['OK'] });
+    }
   });
   autoUpdater.on('download-progress', p => {
     mainWindow?.webContents.send('update:status', { status: 'downloading', percent: Math.round(p.percent) });
   });
   autoUpdater.on('update-downloaded', info => {
     mainWindow?.webContents.send('update:status', { status: 'downloaded', version: info.version });
+    _manualUpdateCheck = false;
+    dialog.showMessageBox(mainWindow || undefined, {
+      type: 'info', title: 'NutriLog update ready',
+      message: `Version ${info.version} has been downloaded.`,
+      detail: 'Restart now to install it, or it will install automatically the next time you quit.',
+      buttons: ['Restart Now', 'Later'], defaultId: 0, cancelId: 1,
+    }).then(({ response }) => { if (response === 0) autoUpdater.quitAndInstall(); });
   });
   autoUpdater.on('error', e => {
     mainWindow?.webContents.send('update:status', { status: 'error', message: e.message });
+    if (_manualUpdateCheck) {
+      _manualUpdateCheck = false;
+      dialog.showMessageBox(mainWindow || undefined, { type: 'error', title: 'NutriLog', message: 'Could not check for updates.', detail: e.message, buttons: ['OK'] });
+    }
   });
+}
+function checkForUpdatesManual() {
+  if (isDev || !autoUpdater) return;
+  _manualUpdateCheck = true;
+  autoUpdater.checkForUpdates().catch(() => { _manualUpdateCheck = false; });
 }
 
 // ── App lifecycle ──
@@ -569,8 +595,9 @@ app.whenReady().then(() => {
   if (!isDev) {
     ({ autoUpdater } = require('electron-updater'));
     setupAutoUpdater();
-    // Silent background check 4 seconds after launch
-    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 4000);
+    // Silent background check 10s after launch, then every 4h — same cadence as pinboard/pocketdump
+    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 10_000);
+    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 4 * 60 * 60 * 1000);
   }
 
   app.on('activate', () => showMainWindow());
