@@ -1396,3 +1396,25 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
   /* Easter-egg lightbox — only unsafe fixed-width overlay left in the sheet */
   #eggOverlay { width:94vw; height:80vh; }
 }
+
+/* ══ EXPERIMENT: bold header + filled sidebar selection (branch ui/header-sidebar) ══
+   Pulled from design-skills variant E (nutrilog-p-bold), title/sidebar pieces only —
+   colors, the wordmark, the icon, and every other font are untouched. */
+@font-face { font-family:'Inter'; src:url('fonts/inter-latin-wght-normal.woff2') format('woff2'); font-weight:100 900; }
+
+#topbar { border-bottom:none !important; }
+.page-title { font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif; font-size:34px; font-weight:800; letter-spacing:-.035em; }
+.date-pill { text-transform:uppercase; letter-spacing:.02em; font-weight:600; }
+.time-pill { display:none; } /* clock hidden to match variant E — flagged in report */
+
+.logo-sub { display:none; }
+.nav-section { text-transform:none; letter-spacing:0; font-weight:600; }
+
+.nav-item.active {
+  background:var(--accent) !important; color:#0d0b1a !important;
+  border-color:transparent !important; box-shadow:none !important;
+}
+.light .nav-item.active { color:#fff !important; }
+/* .nav-pill badge would otherwise render accent-on-accent (invisible) inside the new solid fill */
+.nav-item.active .nav-pill { background:rgba(13,11,26,.14) !important; border-color:transparent !important; color:#0d0b1a !important; }
+.light .nav-item.active .nav-pill { background:rgba(255,255,255,.22) !important; color:#fff !important; }
