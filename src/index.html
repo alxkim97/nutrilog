@@ -69,7 +69,6 @@
       </div>
     </div>
     <!-- Profile pill removed — sidebar toggle is sufficient -->
-    <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleTheme()" title="Dark / Light">🌙</button>
     <!-- Local save status -->
     <div id="savePill" title="Local save status">
       <div class="sp-dot"></div>
@@ -230,20 +229,6 @@
       Settings
     </div>
   </nav>
-  <div class="sidebar-appear-btn" onclick="toggleAppearPopup(event)" data-trigger="sidebar" title="Change appearance">
-    <div style="display:flex;align-items:center;gap:7px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="13" height="13"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
-      <span style="font-size:12px;">Appearance</span>
-    </div>
-    <span class="sidebar-appear-name" id="sidebarAppearName">Aura</span>
-  </div>
-  <div class="sidebar-simple-toggle" id="sidebarSimpleToggle" onclick="toggleSimpleMode()" title="Hide advanced views for simpler experience">
-    <div style="display:flex;align-items:center;gap:7px;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="13" height="13"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      <span style="font-size:12px;">Simple Mode</span>
-    </div>
-    <span class="sidebar-simple-pill" id="sidebarSimplePill">Off</span>
-  </div>
   <div class="sidebar-footer">
     <div class="app-version" id="appVersionLabel"></div>
     <div class="ms-box">
@@ -486,8 +471,7 @@
   <!-- HISTORY -->
   <div class="page" id="page-history">
     <div class="sec-hdr">
-      <div class="sec-title">History</div>
-      <button class="btn btn-ghost" id="histMultiBtn" onclick="toggleHistMulti()" style="display:none">
+      <button class="btn btn-ghost" id="histMultiBtn" onclick="toggleHistMulti()" style="display:none;margin-left:auto">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
         Select Dates
       </button>
@@ -534,8 +518,7 @@
   <!-- ANALYSIS -->
   <div class="page" id="page-analysis">
     <div class="sec-hdr">
-      <div class="sec-title">Analysis</div>
-      <div class="period-btns">
+      <div class="period-btns" style="margin-left:auto">
         <button class="period-btn active" onclick="setAnalysisPeriod(7,this)">7d</button>
         <button class="period-btn" onclick="setAnalysisPeriod(14,this)">14d</button>
         <button class="period-btn" onclick="setAnalysisPeriod(30,this)">30d</button>
@@ -619,7 +602,6 @@
   <!-- FOOD DATABASE -->
   <div class="page" id="page-foods">
     <div class="sec-hdr" style="margin-bottom:0">
-      <div class="sec-title">Food Database</div>
       <span class="pill" id="dbCount">0 items</span>
     </div>
     <!-- Tab bar -->
@@ -734,7 +716,6 @@
 
   <!-- SETTINGS -->
   <div class="page" id="page-settings">
-    <div class="sec-hdr"><div class="sec-title">Settings</div></div>
     <div class="settings-grid">
       <!-- Stats Dashboard -->
       <div class="settings-section" style="grid-column:1/-1;" id="statsDashSection">
@@ -754,6 +735,10 @@
       <!-- Appearance -->
       <div class="settings-section" style="grid-column:1/-1">
         <div class="settings-title">Appearance</div>
+        <div class="srow" style="margin-top:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">
+          <div><div class="srow-label">Theme</div><div class="srow-sub">Switch between dark and light</div></div>
+          <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleTheme()" title="Dark / Light">🌙</button>
+        </div>
         <div style="margin-top:14px;">
           <div class="srow-label" style="margin-bottom:12px;">UI Variant <span style="font-size:10px;font-weight:400;color:var(--text3);font-family:var(--fm);">— applies to both dark &amp; light mode</span></div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;" id="variantGrid">

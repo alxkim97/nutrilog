@@ -1403,8 +1403,10 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
 @font-face { font-family:'Inter'; src:url('fonts/inter-latin-wght-normal.woff2') format('woff2'); font-weight:100 900; }
 
 #topbar { border-bottom:none !important; }
+.topbar-left { align-items:flex-end; } /* date/time were centered against a title 3x their height — sit them on its baseline instead */
 .page-title { font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif; font-size:34px; font-weight:800; letter-spacing:-.035em; }
-.date-pill { text-transform:uppercase; letter-spacing:.02em; font-weight:600; }
+.date-pill { text-transform:uppercase; letter-spacing:.02em; font-weight:600; margin-bottom:3px; }
+.time-pill { margin-bottom:1px; }
 
 .logo-sub { display:none; }
 .nav-section { text-transform:none; letter-spacing:0; font-weight:600; }
@@ -1436,3 +1438,12 @@ button:focus-visible, .nav-item:focus-visible, .bnav-item:focus-visible { box-sh
    --fm (DM Mono), a separate variable this doesn't touch, so it needs no
    explicit exclusion. The wordmark (--fd, DM Serif Display) is untouched too. ══ */
 :root { --fb:-apple-system,BlinkMacSystemFont,'Inter',sans-serif; }
+
+/* ══ EXPERIMENT: thicker progress bars, duplicate page headers removed ══
+   (branch ui/header-sidebar). History/Analysis/Food Database/Settings no
+   longer repeat the big page-title as a second "sec-title" below it; their
+   other controls (Select Dates, period buttons, item count) are unaffected,
+   just pushed to the row with margin-left:auto where they'd otherwise have
+   floated left with nothing left to follow. */
+.kcal-track { height:20px; }
+.wb-bar-wrap { height:16px; }
