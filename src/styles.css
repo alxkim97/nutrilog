@@ -1402,14 +1402,9 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
    variant p-layout). Pure re-parenting via the script at the end of
    index.html — no ids, listeners, or components touched. ══ */
 .today-main, .today-side { display:flex; flex-direction:column; gap:22px; min-width:0; }
-.weekly-title { white-space:nowrap; }
-.today-side .weekly-hdr { flex-wrap:wrap; gap:8px; }
 @media (min-width:1200px) {
   #page-today.active { display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:22px; align-items:start; }
   .today-side { position:sticky; top:0; }
-  .today-side .weekly-grid { overflow-x:auto; }
-  /* Streak + weigh-in tiles: one per row in the narrower side column */
-  .today-side #todayWidgets { display:grid !important; grid-template-columns:1fr !important; gap:10px !important; }
   .today-side #recentMealsWidget [class*="grid"], .today-side #recentMealsWidget > div > div:last-child { grid-template-columns:1fr 1fr !important; }
 }
 
