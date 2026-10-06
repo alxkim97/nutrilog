@@ -2325,6 +2325,22 @@
     </div>
   </div>
 
+  <script>
+/* Variant layout: Today = main column (what you log) + side column (context).
+   Re-parents existing nodes only; ids and listeners are unchanged. */
+(function () {
+  var page = document.getElementById('page-today');
+  if (!page) return;
+  var kids = Array.prototype.slice.call(page.children);
+  var main = document.createElement('div'); main.className = 'today-main';
+  var side = document.createElement('div'); side.className = 'today-side';
+  var SIDE = ['todayWidgets', 'recentMealsWidget', 'quickTplWidget', 'tplSuggestWidget', 'pendingEntriesWidget'];
+  kids.forEach(function (k) {
+    (SIDE.indexOf(k.id) >= 0 || k.classList.contains('weekly-summary') ? side : main).appendChild(k);
+  });
+  page.appendChild(main); page.appendChild(side);
+})();
+</script>
   <script src="app.js"></script>
 </body>
 </html>
