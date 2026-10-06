@@ -1406,6 +1406,7 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
 .page-title { font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif; font-size:34px; font-weight:800; letter-spacing:-.035em; }
 .date-pill { text-transform:uppercase; letter-spacing:.02em; font-weight:600; }
 .time-pill { display:none; } /* clock hidden to match variant E — flagged in report */
+.date-pill + span { display:none; } /* the "·" separator between date and clock — orphaned now the clock's hidden */
 
 .logo-sub { display:none; }
 .nav-section { text-transform:none; letter-spacing:0; font-weight:600; }
