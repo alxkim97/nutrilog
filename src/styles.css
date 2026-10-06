@@ -1397,17 +1397,6 @@ body:not(.light) input[type=date]::-webkit-calendar-picker-indicator{filter:inve
   #eggOverlay { width:94vw; height:80vh; }
 }
 
-/* ══ EXPERIMENT: two-column Today — Meal Log up front, graph/streaks/quick-log
-   moved to a sticky side column (branch ui/header-sidebar, from design-skills
-   variant p-layout). Pure re-parenting via the script at the end of
-   index.html — no ids, listeners, or components touched. ══ */
-.today-main, .today-side { display:flex; flex-direction:column; gap:22px; min-width:0; }
-@media (min-width:1200px) {
-  #page-today.active { display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:22px; align-items:start; }
-  .today-side { position:sticky; top:0; }
-  .today-side #recentMealsWidget [class*="grid"], .today-side #recentMealsWidget > div > div:last-child { grid-template-columns:1fr 1fr !important; }
-}
-
 /* ══ EXPERIMENT: bold header + filled sidebar selection (branch ui/header-sidebar) ══
    Pulled from design-skills variant E (nutrilog-p-bold), title/sidebar pieces only —
    colors, the wordmark, the icon, and every other font are untouched. */

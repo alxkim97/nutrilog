@@ -2325,35 +2325,6 @@
     </div>
   </div>
 
-  <script>
-/* Variant layout: Today = main column (what you log) + side column (context).
-   Re-parents existing nodes only; ids and listeners are unchanged.
-   Streaks (todayWidgets) stay parallel to the rings — pulled to run right
-   after them instead of being sent to the side column. The weekly graph
-   reverted out of the side column too, dropped to the end of main instead
-   (after Meal Log, which is the one thing staying moved up). */
-(function () {
-  var page = document.getElementById('page-today');
-  if (!page) return;
-  var kids = Array.prototype.slice.call(page.children);
-  var main = document.createElement('div'); main.className = 'today-main';
-  var side = document.createElement('div'); side.className = 'today-side';
-  var SIDE = ['recentMealsWidget', 'quickTplWidget', 'tplSuggestWidget', 'pendingEntriesWidget'];
-  var FIRST_IN_MAIN = ['ringsRow', 'sparklinesRow', 'todayWidgets'];
-  var byId = {};
-  kids.forEach(function (k) { if (k.id) byId[k.id] = k; });
-  FIRST_IN_MAIN.forEach(function (id) { if (byId[id]) main.appendChild(byId[id]); });
-  var graph = null;
-  kids.forEach(function (k) {
-    if (FIRST_IN_MAIN.indexOf(k.id) >= 0) return; // already placed above
-    if (SIDE.indexOf(k.id) >= 0) { side.appendChild(k); return; }
-    if (k.classList.contains('weekly-summary')) { graph = k; return; } // placed last, below
-    main.appendChild(k);
-  });
-  if (graph) main.appendChild(graph);
-  page.appendChild(main); page.appendChild(side);
-})();
-</script>
   <script src="app.js"></script>
 </body>
 </html>
