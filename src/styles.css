@@ -1447,3 +1447,10 @@ button:focus-visible, .nav-item:focus-visible, .bnav-item:focus-visible { box-sh
    floated left with nothing left to follow. */
 .kcal-track { height:20px; }
 .wb-bar-wrap { height:16px; }
+
+/* ══ EXPERIMENT: calorie bar + weekly summary cards felt oversized for how
+   little they hold — tighter padding, bigger calorie number to use the
+   space that frees up instead of just leaving it emptier. ══ */
+.kcal-bar { padding:12px 18px; }
+.kcal-cur { font-size:44px; }
+.weekly-summary { padding:14px 18px; }
