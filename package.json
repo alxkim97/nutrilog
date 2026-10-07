@@ -62,8 +62,7 @@
     "publish": {
       "provider": "github",
       "owner": "alxkim97",
-      "repo": "nutrilog",
-      "draft": false
+      "repo": "nutrilog"
     }
   },
   "dependencies": {
