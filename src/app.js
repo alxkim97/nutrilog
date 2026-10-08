@@ -948,7 +948,7 @@ const MACROS=[
 const MACRO_DEFAULT_ORDER=['protein','fat','carbs','fiber'];
 let macroOrder=[...MACRO_DEFAULT_ORDER]; // persisted in settings
 let streakOrder=[]; // persisted order of streak macro keys
-let _wHide={recent:false,tpl:false}; // widget visibility, persisted in settings
+let _wHide={recent:true,tpl:true}; // Quick-Log Frequent / Quick Apply Template stay hidden (never used); no restore chips
 
 function getMACROS(){ return macroOrder.map(k=>MACROS.find(m=>m.key===k)).filter(Boolean); }
 
@@ -963,6 +963,178 @@ let TGT={protein:154,fat:64,carbs:411,fiber:40,kcal:2835};
 // Streak bounds: min = lower hit threshold, max = upper hit threshold (null = no bound)
 let TGT_MIN={protein:156,fat:45,carbs:290,fiber:30,kcal:null};
 let TGT_MAX={protein:null,fat:65,carbs:380,fiber:50,kcal:null};
+
+/* ═══ DIET QUALITY — added-sugar cap, saturated-fat cap, fiber floor ═══
+   Optional per-entry / per-library-item fields, all in grams: sugar (total), addedSugar,
+   satFat. A missing field means UNKNOWN and is never coerced to 0 — dqTotals() keeps a
+   known/total count so the UI can say "3 of 9 items" instead of presenting a partial sum
+   as the whole day. nEst:true marks values that are estimates rather than label figures.
+   Fiber reuses the existing fiber target (goal) and Streak Min (floor) — no second number. */
+let DQ={addedSugarCap:25,satFatPct:10};
+// Cap nutrients shown inside a macro ring: thin inner ring + a line under the card. carbs↔added sugar, fat↔saturated fat.
+const RR2=49,RSW2=5,CIRC2=+(2*Math.PI*RR2).toFixed(2);
+const DQ_RING={carbs:{k:'addedSugar',lbl:'Added sugar'},fat:{k:'satFat',lbl:'Sat fat'}};
+const DQ_KEYS=['sugar','addedSugar','satFat'];
+const DQ_FLOOR_KEYS=new Set(['fiber']); // macros where going over the target is fine (a floor, not a cap)
+function satFatCapG(){return Math.round(DQ.satFatPct/100*(TGT.kcal||0)/9);}
+const dqNum=v=>typeof v==='number'&&isFinite(v);
+function pOpt(v){ // optional number: '' / null / garbage → null (unknown), never 0
+  const s=(v==null?'':String(v)).trim();if(s==='')return null;
+  const n=parseFloat(s.replace(',','.'));return isNaN(n)?null:Math.round(n*10)/10;
+}
+function dqExtrasOf(o){ // the optional nutrient fields present on an entry / library item
+  const x={};
+  DQ_KEYS.forEach(k=>{if(dqNum(o[k]))x[k]=o[k];});
+  if(Object.keys(x).length&&o.nEst)x.nEst=true;
+  return x;
+}
+function dqEntryValue(m,key,idx){
+  if(dqNum(m[key]))return{v:m[key],est:!!m.nEst};
+  // Sugars are carbohydrates, so a zero-carb item has zero sugar — that is known, not guessed.
+  if((key==='sugar'||key==='addedSugar')&&m.carbs===0)return{v:0,est:false};
+  if(key==='satFat'&&m.fat===0)return{v:0,est:false};
+  // Entries logged before these fields existed: fall back to the library item of the same
+  // name (same unit), rescaled by serving. Read-only — nothing is written back to the entry.
+  const f=idx&&idx.get(String(m.name||'').toLowerCase()),s=+m.serving;
+  if(f&&dqNum(f[key])&&f.unit===m.unit&&f.serving>0&&s>0)return{v:f[key]*s/f.serving,est:!!f.nEst};
+  return null;
+}
+// Entries with no usable added-sugar or sat-fat value (own field, zero-carb/zero-fat rule, or library match).
+// Shown as a small chip in the logs so they can be filled in or estimated; click opens the edit form with the extras open.
+function dqLibIdx(){const idx=new Map();foodLib.forEach(f=>{const k=String(f.name||'').toLowerCase();if(!idx.has(k))idx.set(k,f);});return idx;}
+function dqGapChip(m,idx,editCall){
+  if(m.pending)return'';
+  const miss=[];
+  if(!dqEntryValue(m,'addedSugar',idx))miss.push('added sugar');
+  if(!dqEntryValue(m,'satFat',idx))miss.push('sat fat');
+  if(!miss.length)return'';
+  return `<button class="dq-gap" title="No ${miss.join(' or ')} data yet, so this item isn't counted toward those caps. Click to add or estimate." onclick="${editCall};document.getElementById('f-more').open=true">＋ ${miss.length===2?'sugar / sat fat':miss[0]}</button>`;
+}
+// One-line added-sugar / sat-fat readout for a day's entries (History detail). Unknown is shown as unknown, never 0.
+function dqDayLine(entries){
+  if(!entries.length)return'';
+  const D=dqTotals(entries);if(!D.n)return'';
+  const part=(lbl,d,cap)=>{
+    const st=dqCapState(d.v,cap,d.known,D.n);
+    if(st==='none')return`${lbl} <span class="dq-none">no data</span>`;
+    const col=st==='over'?'dq-t-over':st==='warn'?'dq-t-warn':'';
+    return`${lbl} <strong class="${col}">${d.known<D.n?'≥ ':''}${f1(d.v)}</strong> / ${cap} g${st==='over'?` <span class="dq-t-over">+${f1(d.v-cap)} over</span>`:''}`;
+  };
+  const unk=D.n-Math.min(D.addedSugar.known,D.satFat.known);
+  return`<div class="hist-dq">${part('Added sugar',D.addedSugar,DQ.addedSugarCap)}<span class="hist-dq-sep">·</span>${part('Sat fat',D.satFat,satFatCapG())}${unk>0?`<span class="hist-dq-sep">·</span><span class="dq-note">${unk} of ${D.n} items missing data</span>`:''}</div>`;
+}
+// Analysis: average added sugar / sat fat per logged day against the caps, using only days that have any data.
+function dqAvgRows(days){
+  const rows=[];
+  [['Added sugar','addedSugar',DQ.addedSugarCap],['Sat fat','satFat',satFatCapG()]].forEach(([lbl,k,cap])=>{
+    let sum=0,withData=0;
+    days.forEach(d=>{const D=dqTotals(d.entries||[]);if(D[k].known>0){sum+=D[k].v;withData++;}});
+    if(!withData)return;
+    const avg=sum/withData,col=avg>cap?'var(--c-redline)':avg>=cap*0.8?'var(--c-warn)':'var(--green)';
+    rows.push({lbl,val:f1(avg),tgt:cap,unit:'g',col,note:withData<days.length?' · '+withData+'/'+days.length+' days':''});
+  });
+  return rows;
+}
+function dqTotals(list){
+  const src=(list||meals).filter(m=>!m.pending);
+  const idx=new Map();
+  foodLib.forEach(f=>{const k=String(f.name||'').toLowerCase();if(!idx.has(k))idx.set(k,f);});
+  const out={n:src.length,ratio:{sugar:0,carbs:0,known:0}};
+  DQ_KEYS.forEach(k=>{out[k]={v:0,known:0,est:false};});
+  src.forEach(m=>{
+    const got={};
+    DQ_KEYS.forEach(k=>{
+      const x=dqEntryValue(m,k,idx);if(!x)return;
+      out[k].v+=x.v;out[k].known++;if(x.est)out[k].est=true;got[k]=x.v;
+    });
+    // Sugar share of carbs: total sugar if known, else added sugar (a lower bound), and only
+    // over entries where sugar is known — so the carbs side isn't inflated by unknown items.
+    const sg=got.sugar!=null?got.sugar:got.addedSugar;
+    if(sg!=null){out.ratio.sugar+=sg;out.ratio.carbs+=(+m.carbs||0);out.ratio.known++;}
+  });
+  return out;
+}
+// none = no data · over > warn (≥80% of cap) > partial (under so far, but some items unknown) > ok
+function dqCapState(v,cap,known,n){
+  if(known===0)return'none';
+  if(v>cap)return'over';            // a partial sum already over the cap is definitely over
+  if(v>=cap*0.8)return'warn';
+  return known<n?'partial':'ok';
+}
+function dqVerdict(T,D){
+  const carbMax=TGT_MAX.carbs!=null?TGT_MAX.carbs:TGT.carbs;
+  const carbsOver=T.carbs>carbMax;
+  const st=dqCapState(D.addedSugar.v,DQ.addedSugarCap,D.addedSugar.known,D.n);
+  const carbTxt=carbsOver?'Carbs over budget':'Carbs in range';
+  if(D.n===0)return{cls:'neutral',txt:'Nothing logged yet',carbsOver,sugar:st};
+  if(st==='over')return{cls:'bad',txt:carbTxt+' · sugar over cap',carbsOver,sugar:st};
+  if(carbsOver){
+    const tail=st==='warn'?' · sugar near cap':st==='partial'?' · sugar unconfirmed':st==='none'?' · no sugar data':'';
+    return{cls:st==='warn'?'bad':'warn',txt:carbTxt+tail,carbsOver,sugar:st};
+  }
+  if(st==='warn')return{cls:'warn',txt:'Carbs in range · sugar near cap',carbsOver,sugar:st};
+  if(st==='partial')return{cls:'neutral',txt:`Carbs in range · sugar unconfirmed (${D.addedSugar.known} of ${D.n} items known)`,carbsOver,sugar:st};
+  if(st==='none')return{cls:'neutral',txt:'Carbs in range · no added-sugar data yet',carbsOver,sugar:st};
+  return{cls:'good',txt:'Carbs and sugar within limits',carbsOver,sugar:st};
+}
+function renderDietQuality(){
+  const D=dqTotals();
+  Object.keys(DQ_RING).forEach(key=>{
+    const {k,lbl}=DQ_RING[key],d=D[k],cap=k==='addedSugar'?DQ.addedSugarCap:satFatCapG();
+    const ring=document.getElementById('dqr_'+key),line=document.getElementById('rdq_'+key);
+    if(!ring||!line)return;
+    const st=dqCapState(d.v,cap,d.known,D.n);
+    const pct=st==='none'?0:Math.min(d.v/cap,1);
+    ring.style.strokeDashoffset=(CIRC2*(1-pct)).toFixed(2);
+    // Normal state: a lighter tint of the host ring's own colour; amber/red stay as the warning signal.
+    const host=getMACROS().find(x=>x.key===key);
+    ring.style.stroke=st==='over'?'var(--c-redline)':st==='warn'?'var(--c-warn)':`color-mix(in srgb, ${host?host.col:'var(--green)'} 55%, white)`;
+    const partial=d.known<D.n;
+    const r=D.ratio,share=(key==='carbs'&&r.known&&r.carbs>0)?Math.min(Math.round(r.sugar/r.carbs*100),100):null;
+    // One compact chip beside the min/max range so the card stays the same height as Protein/Fiber.
+    let h=st==='none'
+      ?`${lbl.replace('Added ','')} <span class="dq-none">?</span>`
+      :`${lbl.replace('Added ','')} ${partial?'≥':''}<strong>${f1(d.v)}</strong>/${cap}g`;
+    if(share!=null&&share>=33)h+=` <span class="${share>=50?'dq-t-bad':'dq-t-warn'}">· ${share}% of carbs</span>`;
+    const tip=[`${lbl}: ${st==='none'?'no data yet':(partial?'at least ':'')+f1(d.v)+' g of a '+cap+' g cap'}`];
+    if(st!=='none'&&partial)tip.push(`${d.known} of ${D.n} items have data`);
+    if(d.est)tip.push('includes estimates');
+    if(share!=null)tip.push(`sugar is ${r.known<D.n?'at least ':''}${share}% of carbs`);
+    line.title=tip.join(' · ');
+    line.className='ring-dq dq-s-'+st;
+    line.innerHTML=h;
+  });
+}
+
+/* Optional-nutrient form plumbing. p = 'f' (meal modal) or 'db' (food database modal).
+   Blank input ⇒ field omitted ⇒ unknown. */
+function readExtras(p){
+  const x={};
+  const sg=pOpt(document.getElementById(p+'-sugar')?.value),ad=pOpt(document.getElementById(p+'-addedsugar')?.value),sf=pOpt(document.getElementById(p+'-satfat')?.value);
+  if(sg!=null)x.sugar=sg;if(ad!=null)x.addedSugar=ad;if(sf!=null)x.satFat=sf;
+  if(Object.keys(x).length&&document.getElementById(p+'-nest')?.checked)x.nEst=true;
+  return x;
+}
+function writeExtras(p,o){
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=dqNum(v)?v:'';};
+  set(p+'-sugar',o&&o.sugar);set(p+'-addedsugar',o&&o.addedSugar);set(p+'-satfat',o&&o.satFat);
+  const c=document.getElementById(p+'-nest');if(c)c.checked=!!(o&&o.nEst);
+  const d=document.getElementById(p+'-more');if(d)d.open=!!(o&&DQ_KEYS.some(k=>dqNum(o[k])));
+}
+function libShape(e){ // the fields of a logged entry that belong on a library item
+  return{name:e.name,serving:e.serving,unit:e.unit,kcal:e.kcal,protein:e.protein,fat:e.fat,carbs:e.carbs,fiber:e.fiber,...dqExtrasOf(e)};
+}
+function mergeExtrasIntoLib(lib,e){ // fill library values that are still unknown — never overwrite a known one
+  if(lib.unit!==e.unit||!(lib.serving>0)||!(+e.serving>0))return;
+  const ratio=lib.serving/e.serving;let set=false;
+  DQ_KEYS.forEach(k=>{if(!dqNum(lib[k])&&dqNum(e[k])){lib[k]=Math.round(e[k]*ratio*10)/10;set=true;}});
+  if(set&&e.nEst)lib.nEst=true;
+}
+function baseWithExtras(base,m){ // per-base-serving optional values derived from an existing entry, so rescaling stays consistent
+  const b={...base},s=+m.serving;
+  if(s>0&&b.serving>0)DQ_KEYS.forEach(k=>{if(!dqNum(b[k])&&dqNum(m[k]))b[k]=m[k]*b.serving/s;});
+  return b;
+}
 
 // Auto-save debounce
 let autoSaveTimer=null;
@@ -1325,8 +1497,9 @@ function buildRings(){
   const row=document.getElementById('ringsRow');
   row.innerHTML='';
   getMACROS().forEach(m=>{
-    const maxRef=TGT_MAX[m.key]!=null?Math.max(TGT[m.key],TGT_MAX[m.key]):TGT[m.key];
-    const rzStart=TGT_MAX[m.key]!=null?Math.min(TGT[m.key],TGT_MAX[m.key])/maxRef:null;
+    const floorKey=DQ_FLOOR_KEYS.has(m.key); // floor macro (fiber): no red "over" zone, ring scale = the goal
+    const maxRef=(!floorKey&&TGT_MAX[m.key]!=null)?Math.max(TGT[m.key],TGT_MAX[m.key]):TGT[m.key];
+    const rzStart=(!floorKey&&TGT_MAX[m.key]!=null)?Math.min(TGT[m.key],TGT_MAX[m.key])/maxRef:null;
     const rzLen=rzStart!=null?+((1-rzStart)*CIRC).toFixed(2):0;
     const rzOffset=rzStart!=null?+(-rzStart*CIRC).toFixed(2):0;
     // Green zone: TGT_MIN → min(TGT,TGT_MAX) = the "aim here" range
@@ -1346,6 +1519,7 @@ function buildRings(){
           ${rzStart!=null?`<circle class="r-redzone" cx="75" cy="75" r="${RR}" stroke-width="${RSW}" stroke-dasharray="${rzLen} ${CIRC}" stroke-dashoffset="${rzOffset}"/>`:''}
           <circle class="r-prog ring-prog-${m.cls}" id="rp_${m.key}" cx="75" cy="75" r="${RR}"
             stroke="${m.col}" stroke-width="${RSW}" stroke-dasharray="${CIRC}" stroke-dashoffset="${CIRC}"/>
+          ${DQ_RING[m.key]?`<circle class="r-track" cx="75" cy="75" r="${RR2}" stroke="${m.dim}" stroke-width="${RSW2}"/><circle class="dq-ring" id="dqr_${m.key}" cx="75" cy="75" r="${RR2}" stroke-width="${RSW2}" stroke-dasharray="${CIRC2}" stroke-dashoffset="${CIRC2}"/>`:''}
         </svg>
         <div class="ring-center">
           <div class="ring-val" id="rv_${m.key}" style="color:${m.col}">0</div>
@@ -1359,7 +1533,10 @@ function buildRings(){
           <span id="rtgt_${m.key}">target ${TGT[m.key]}g</span>
           <span id="rrem_${m.key}" style="color:${m.col}">—</span>
         </div>
-        <div class="ring-range" id="rrange_${m.key}" style="font-size:10px;color:var(--text3);font-family:var(--fm);margin-top:2px;"></div>
+        <div class="ring-sub">
+          <div class="ring-range" id="rrange_${m.key}"></div>
+          ${DQ_RING[m.key]?`<div class="ring-dq" id="rdq_${m.key}"></div>`:''}
+        </div>
       </div>
       <div style="display:none" id="rof_${m.key}"></div>
       <canvas class="spark-line" id="spark_${m.key}" width="84" height="14"></canvas>`;
@@ -1413,11 +1590,12 @@ function render(){
   const T=totals();
   MACROS.forEach(m=>{
     const v=T[m.key];
-    const maxRef=TGT_MAX[m.key]!=null?Math.max(TGT[m.key],TGT_MAX[m.key]):TGT[m.key];
+    const floorKey=DQ_FLOOR_KEYS.has(m.key); // floor macro (fiber): the ring is progress toward a goal, never a warning
+    const maxRef=(!floorKey&&TGT_MAX[m.key]!=null)?Math.max(TGT[m.key],TGT_MAX[m.key]):TGT[m.key];
     const ringPct=Math.min(v/maxRef,1);
     const displayPct=Math.round(v/TGT[m.key]*100);
-    const isRedline=TGT_MAX[m.key]!=null&&v>TGT_MAX[m.key];
-    const isWarn=!isRedline&&v>TGT[m.key];
+    const isRedline=!floorKey&&TGT_MAX[m.key]!=null&&v>TGT_MAX[m.key];
+    const isWarn=!floorKey&&!isRedline&&v>TGT[m.key];
     const col=isRedline?'var(--c-redline)':isWarn?'var(--c-warn)':m.col;
     document.getElementById('rp_'+m.key).style.strokeDashoffset=(CIRC*(1-ringPct)).toFixed(2);
     document.getElementById('rv_'+m.key).textContent=f1(v);
@@ -1426,14 +1604,14 @@ function render(){
     document.getElementById('rpt_'+m.key).style.color=col;
     document.getElementById('rtgt_'+m.key).textContent='target '+TGT[m.key]+'g';
     const rem=TGT[m.key]-v;
-    document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':'+'+f1(-rem)+'g over';
+    document.getElementById('rrem_'+m.key).textContent=rem>=0?f1(rem)+'g left':floorKey?'goal met':'+'+f1(-rem)+'g over';
     document.getElementById('rrem_'+m.key).style.color=col;
     const card=document.querySelector('.ring-card[data-key="'+m.key+'"]');
     if(card){card.classList.toggle('state-warn',isWarn);card.classList.toggle('state-redline',isRedline);}
     const rangeLbl=document.getElementById('rrange_'+m.key);
     if(rangeLbl){
       const mn=TGT_MIN[m.key], mx=TGT_MAX[m.key];
-      rangeLbl.textContent=(mn!=null||mx!=null)?[mn!=null?mn+'g min':'',mx!=null?mx+'g max':''].filter(Boolean).join(' · '):'';
+      rangeLbl.textContent=(mn!=null||mx!=null)?[mn!=null?mn+'g min':'',mx!=null&&!floorKey?mx+'g max':''].filter(Boolean).join(' · '):'';
     }
     const sp=Math.min(ringPct*100,100);
     document.getElementById('msf_'+m.key).style.width=sp+'%';
@@ -1479,6 +1657,7 @@ function render(){
   renderTable();
   renderWeeklySummary();
   renderWeekBudget();
+  renderDietQuality();
   renderRecentMeals();
   renderPendingWidget();
   renderDailySummary();
@@ -2045,12 +2224,7 @@ function showWidget(key){
 }
 function renderHiddenRestoreBar(){
   const bar=document.getElementById('hiddenWidgetRestore');
-  if(!bar)return;
-  const chips=[];
-  if(_wHide.recent)chips.push(`<button onclick="showWidget('recent')" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text2);cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">⚡ Show Recent</button>`);
-  if(_wHide.tpl)chips.push(`<button onclick="showWidget('tpl')" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text2);cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">🍱 Show Templates</button>`);
-  bar.innerHTML=chips.join('');
-  bar.style.display=chips.length?'flex':'none';
+  if(bar)bar.style.display='none';
 }
 
 /* ── Quick-log recent meals ── */
@@ -2088,7 +2262,7 @@ function renderRecentMeals(){
 function quickLogMeal(i){
   const m=window._recentMeals?.[i];
   if(!m)return;
-  const entry={cat:m.cat||selCat,name:m.name,time:nowTime(),serving:m.serving,unit:m.unit,kcal:m.kcal,protein:m.protein,fat:m.fat,carbs:m.carbs,fiber:m.fiber,notes:m.notes||'',_base:m._base||null};
+  const entry={cat:m.cat||selCat,name:m.name,time:nowTime(),serving:m.serving,unit:m.unit,kcal:m.kcal,protein:m.protein,fat:m.fat,carbs:m.carbs,fiber:m.fiber,...dqExtrasOf(m),notes:m.notes||'',_base:m._base||null};
   pushUndo('Add "'+m.name+'"');
   meals.push(entry);
   render();
@@ -2338,6 +2512,7 @@ function renderTable(){
   const chkHead=document.getElementById('logChkHead');
   if(chkHead)chkHead.style.display=showChk?'':'none';
   const catCls=c=>['breakfast','lunch','dinner','snack'].includes(c)?c:'snack';
+  const _dqIdx=dqLibIdx();
   b.innerHTML=indexed.map(({m,ri})=>{
     const sel=logMultiSel.has(ri);
     const cc=catCls(m.cat);
@@ -2350,7 +2525,7 @@ function renderTable(){
       <td><span class="badge ${cc}">${CAT_ICON[m.cat]||'🍽️'} ${CAT[m.cat]||m.cat||'—'}</span></td>
       <td>
         <div class="food-name">${pend?'⏳ ':''}${esc(m.name)}</div>
-        <div class="sub">${pend?'Unresolved — tap to fill in':(m.serving+' '+esc(m.unit)+(m.notes?' · '+esc(m.notes):''))}</div>
+        <div class="sub">${pend?'Unresolved — tap to fill in':(m.serving+' '+esc(m.unit)+(m.notes?' · '+esc(m.notes):''))}${dqGapChip(m,_dqIdx,'openEdit('+ri+')')}</div>
       </td>
       <td class="nr ck meal-kcal-cell">${pend?'–':f1(m.kcal)+pBar(m.kcal,TGT.kcal,'var(--mk)')}</td>
       <td class="nr cp">${pend?'–':f1(m.protein)+'g'+pBar(m.protein,TGT.protein,'var(--mp)')}</td>
@@ -2411,6 +2586,7 @@ function closeModal(){
 }
 function clearForm(){
   ['f-name','f-serving','f-kcal','f-protein','f-fat','f-carbs','f-fiber','f-notes'].forEach(id=>document.getElementById(id).value='');
+  writeExtras('f',null);
   document.getElementById('f-unit').value='g';
   document.getElementById('f-savelib').checked=true;
   document.getElementById('pasteArea').value='';
@@ -2545,6 +2721,10 @@ function onServingChange(){
   document.getElementById('f-fat').value=f1(baseServingRef.fat*ratio);
   document.getElementById('f-carbs').value=f1(baseServingRef.carbs*ratio);
   document.getElementById('f-fiber').value=f1(baseServingRef.fiber*ratio);
+  // Optional nutrients rescale only when the base actually knows them; a value typed by hand is left alone.
+  [['sugar','f-sugar'],['addedSugar','f-addedsugar'],['satFat','f-satfat']].forEach(([k,id])=>{
+    if(dqNum(baseServingRef[k]))document.getElementById(id).value=f1(baseServingRef[k]*ratio);
+  });
 }
 
 
@@ -2583,6 +2763,7 @@ function submitForm(){
     carbs:pnum(document.getElementById('f-carbs').value),
     fiber:pnum(document.getElementById('f-fiber').value),
     notes:document.getElementById('f-notes').value.trim(),
+    ...readExtras('f'),
     _base:baseServingRef||null
   };
   if(editIdx!==null){
@@ -2599,13 +2780,13 @@ function submitForm(){
       Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     });
     if(document.getElementById('f-savelib').checked)
-      addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
+      addToLib(libShape(entry));
     toast(name+' pre-logged for '+logDate,'ok');
     closeModal();queueAutoSave();
   } else {
     pushUndo('Add "'+name+'"');meals.push(entry);toast(name+' added to '+CAT[selCat],'ok');
     if(document.getElementById('f-savelib').checked)
-      addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
+      addToLib(libShape(entry));
     closeModal();render();
     checkNewAchievements();
   }
@@ -2629,6 +2810,7 @@ function submitAndStay(){
     carbs:pnum(document.getElementById('f-carbs').value),
     fiber:pnum(document.getElementById('f-fiber').value),
     notes:document.getElementById('f-notes').value.trim(),
+    ...readExtras('f'),
     _base:baseServingRef||null
   };
   if(logDate!==todayStr()){
@@ -2642,7 +2824,7 @@ function submitAndStay(){
       Store.set('nutrilog_history',h).catch(e=>console.warn('History save failed',e));
     });
     if(document.getElementById('f-savelib').checked)
-      addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
+      addToLib(libShape(entry));
     queueAutoSave();
     clearForm();
     document.getElementById('f-logdate').value=logDate;
@@ -2654,7 +2836,7 @@ function submitAndStay(){
     pushUndo('Add "'+name+'"');
     meals.push(entry);
     if(document.getElementById('f-savelib').checked)
-      addToLib({name:entry.name,serving:entry.serving,unit:entry.unit,kcal:entry.kcal,protein:entry.protein,fat:entry.fat,carbs:entry.carbs,fiber:entry.fiber});
+      addToLib(libShape(entry));
     queueAutoSave();
     render();
     checkNewAchievements();
@@ -2813,14 +2995,15 @@ function openEdit(i){
   document.getElementById('f-fat').value=m.fat;
   document.getElementById('f-carbs').value=m.carbs;
   document.getElementById('f-fiber').value=m.fiber;
+  writeExtras('f',m);
   document.getElementById('f-logdate').value=todayStr();
   document.getElementById('f-prelog-notice').style.display='none';
   // Set up base serving for recalculation
   // Use stored _base if available, otherwise derive per-unit from current values
   if(m._base){
-    baseServingRef=m._base;
+    baseServingRef=baseWithExtras(m._base,m);
   } else {
-    baseServingRef={serving:m.serving,kcal:m.kcal,protein:m.protein,fat:m.fat,carbs:m.carbs,fiber:m.fiber};
+    baseServingRef=baseWithExtras({serving:m.serving,kcal:m.kcal,protein:m.protein,fat:m.fat,carbs:m.carbs,fiber:m.fiber},m);
   }
   const note=document.getElementById('recalcNote');
   const baseSpan=document.getElementById('recalcBase');
@@ -3127,6 +3310,7 @@ function addToLib(e){
   const existing=foodLib.find(f=>f.name.toLowerCase()===e.name.toLowerCase());
   if(existing){
     existing._uses=(existing._uses||0)+1;
+    mergeExtrasIntoLib(existing,e);
   } else {
     e._uses=1;
     foodLib.unshift(e);if(foodLib.length>500)foodLib=foodLib.slice(0,500);
@@ -3180,8 +3364,9 @@ function acPick(i){
   document.getElementById('f-fat').value=f.fat;
   document.getElementById('f-carbs').value=f.carbs;
   document.getElementById('f-fiber').value=f.fiber;
+  writeExtras('f',f);
   // Set base serving ref for recalculation
-  baseServingRef={serving:f.serving||1,kcal:f.kcal,protein:f.protein,fat:f.fat,carbs:f.carbs,fiber:f.fiber};
+  baseServingRef={serving:f.serving||1,kcal:f.kcal,protein:f.protein,fat:f.fat,carbs:f.carbs,fiber:f.fiber,...dqExtrasOf(f)};
   if(f.serving){
     document.getElementById('f-serving').value=f.serving;
   }
@@ -3308,15 +3493,15 @@ function deleteDbSelected(){
   });
 }
 
-function openDbAdd(){dbEditIdx=null;document.getElementById('dbTitle').textContent='Add Food Item';document.getElementById('dbSaveBtn').textContent='Save Item';['db-name','db-variant','db-serving','db-unit','db-kcal','db-protein','db-fat','db-carbs','db-fiber'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});const tp=document.getElementById('db-type');if(tp)tp.value='';document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
-function openDbEdit(i){dbEditIdx=i;const f=foodLib[i];document.getElementById('dbTitle').textContent='Edit Food Item';document.getElementById('dbSaveBtn').textContent='Update Item';document.getElementById('db-name').value=f.name;const varEl=document.getElementById('db-variant');if(varEl)varEl.value=f.variant||'';const tp=document.getElementById('db-type');if(tp)tp.value=f.type||'';document.getElementById('db-serving').value=f.serving;document.getElementById('db-unit').value=f.unit;document.getElementById('db-kcal').value=f.kcal;document.getElementById('db-protein').value=f.protein;document.getElementById('db-fat').value=f.fat;document.getElementById('db-carbs').value=f.carbs;document.getElementById('db-fiber').value=f.fiber;document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
+function openDbAdd(){dbEditIdx=null;document.getElementById('dbTitle').textContent='Add Food Item';document.getElementById('dbSaveBtn').textContent='Save Item';['db-name','db-variant','db-serving','db-unit','db-kcal','db-protein','db-fat','db-carbs','db-fiber'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});const tp=document.getElementById('db-type');if(tp)tp.value='';writeExtras('db',null);document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
+function openDbEdit(i){dbEditIdx=i;const f=foodLib[i];document.getElementById('dbTitle').textContent='Edit Food Item';document.getElementById('dbSaveBtn').textContent='Update Item';document.getElementById('db-name').value=f.name;const varEl=document.getElementById('db-variant');if(varEl)varEl.value=f.variant||'';const tp=document.getElementById('db-type');if(tp)tp.value=f.type||'';document.getElementById('db-serving').value=f.serving;document.getElementById('db-unit').value=f.unit;document.getElementById('db-kcal').value=f.kcal;document.getElementById('db-protein').value=f.protein;document.getElementById('db-fat').value=f.fat;document.getElementById('db-carbs').value=f.carbs;document.getElementById('db-fiber').value=f.fiber;writeExtras('db',f);document.getElementById('dbOverlay').classList.add('open');setTimeout(()=>document.getElementById('db-name').focus(),80);}
 function closeDbModal(){document.getElementById('dbOverlay').classList.remove('open');dbEditIdx=null;}
 function submitDb(){
   const name=document.getElementById('db-name').value.trim();
   if(!name){toast('Name required','err');return;}
   const variant=(document.getElementById('db-variant')?.value||'').trim();
   const type=(document.getElementById('db-type')?.value||'').trim();
-  const item={name,variant:variant||undefined,type:type||undefined,serving:pnum(document.getElementById('db-serving').value)||100,unit:document.getElementById('db-unit').value.trim()||'g',kcal:pnum(document.getElementById('db-kcal').value),protein:pnum(document.getElementById('db-protein').value),fat:pnum(document.getElementById('db-fat').value),carbs:pnum(document.getElementById('db-carbs').value),fiber:pnum(document.getElementById('db-fiber').value)};
+  const item={name,variant:variant||undefined,type:type||undefined,serving:pnum(document.getElementById('db-serving').value)||100,unit:document.getElementById('db-unit').value.trim()||'g',kcal:pnum(document.getElementById('db-kcal').value),protein:pnum(document.getElementById('db-protein').value),fat:pnum(document.getElementById('db-fat').value),carbs:pnum(document.getElementById('db-carbs').value),fiber:pnum(document.getElementById('db-fiber').value),...readExtras('db')};
   if(dbEditIdx!==null){foodLib[dbEditIdx]=item;toast('Item updated','ok');}else{foodLib.unshift(item);toast('Item added','ok');}
   saveFoodLib();closeDbModal();renderFoodDb();
 }
@@ -3429,8 +3614,8 @@ async function executeMergeFoods(){
 
 /* Food DB import/export */
 function exportFoodDb(){
-  const tsv=['Food Item\tVariant\tType\tServing\tUnit\tCalories\tProtein\tFat\tCarbs\tFiber',
-    ...foodLib.map(f=>`${f.name}\t${f.variant||''}\t${f.type||''}\t${f.serving}\t${f.unit}\t${f.kcal}\t${f.protein}\t${f.fat}\t${f.carbs}\t${f.fiber}`)
+  const tsv=['Food Item\tVariant\tType\tServing\tUnit\tCalories\tProtein\tFat\tCarbs\tFiber\tTotal Sugar\tAdded Sugar\tSat Fat\tEstimated',
+    ...foodLib.map(f=>`${f.name}\t${f.variant||''}\t${f.type||''}\t${f.serving}\t${f.unit}\t${f.kcal}\t${f.protein}\t${f.fat}\t${f.carbs}\t${f.fiber}\t${dqNum(f.sugar)?f.sugar:''}\t${dqNum(f.addedSugar)?f.addedSugar:''}\t${dqNum(f.satFat)?f.satFat:''}\t${f.nEst?'yes':''}`)
   ].join('\n');
   downloadText(tsv,'nutrilog_foods_full.tsv','text/tab-separated-values');
   toast('Food database exported ('+foodLib.length+' items)','ok');
@@ -3534,7 +3719,8 @@ function exportExcel(range){
   // But let's generate a proper xlsx using SheetJS via a data URI trick
   // We'll generate a CSV with UTF-8 BOM so Excel opens it correctly
   const BOM='\uFEFF';
-  const cols=['Date','Time','Category','Food Item','Serving','Unit','Calories (kcal)','Protein (g)','Fat (g)','Carbs (g)','Fiber (g)','Notes'];
+  const cols=['Date','Time','Category','Food Item','Serving','Unit','Calories (kcal)','Protein (g)','Fat (g)','Carbs (g)','Fiber (g)','Notes','Total sugar (g)','Added sugar (g)','Sat fat (g)','Sugar/fat estimated'];
+  const unk=v=>dqNum(v)?v:'';  // blank = unknown, never 0
   const rows=entries.map(e=>[
     e.date||today,
     e.time||'',
@@ -3547,7 +3733,9 @@ function exportExcel(range){
     e.fat||0,
     e.carbs||0,
     e.fiber||0,
-    e.notes||''
+    e.notes||'',
+    unk(e.sugar),unk(e.addedSugar),unk(e.satFat),
+    e.nEst&&DQ_KEYS.some(k=>dqNum(e[k]))?'yes':''
   ]);
   
   // Add daily totals rows
@@ -3563,7 +3751,7 @@ function exportExcel(range){
       byDate[d].fiber+=+e.fiber||0;
     });
     rows.push([]);
-    rows.push(['--- DAILY TOTALS ---','','','','','','','','','','','']);
+    rows.push(['--- DAILY TOTALS ---','','','','','','','','','','','','','','','']);
     rows.push(cols);
     Object.keys(byDate).sort().forEach(d=>{
       const t=byDate[d];
@@ -3572,7 +3760,7 @@ function exportExcel(range){
         Math.round(t.protein*10)/10,
         Math.round(t.fat*10)/10,
         Math.round(t.carbs*10)/10,
-        Math.round(t.fiber*10)/10,'']);
+        Math.round(t.fiber*10)/10,'','','','','']);
     });
   }
   
@@ -3765,12 +3953,13 @@ function renderHistDetail(ds){
   });
   const _hPBar=(v,t,col)=>`<div class="macro-bar-mini" style="width:${Math.min((+v||0)/(t||1)*100,100).toFixed(1)}%;background:${col}"></div>`;
   const _hCC=c=>['breakfast','lunch','dinner','snack'].includes(c)?c:'snack';
+  const _dqIdxH=dqLibIdx();
   const rows=sorted.length
     ? sorted.map(({e,i})=>{const cc=_hCC(e.cat);const pend=!!e.pending;return`<tr data-cat="${cc}" class="${pend?'row-pending':''}" ${pend?`onclick="if(event.target.closest('.row-acts'))return;openHistEdit('${ds}',${i})" title="Tap to fill in the real item"`:''}>
         <td class="cat-strip ${cc}"></td>
         <td class="tc">${e.time||'—'}</td>
         <td><span class="badge ${cc}">${CAT_ICON[e.cat]||'🍽️'} ${CAT[e.cat]||e.cat||'—'}</span></td>
-        <td><div class="food-name">${pend?'⏳ ':''}${esc(e.name)}</div><div class="sub">${pend?'Unresolved — tap to fill in':(e.serving+' '+esc(e.unit)+(e.notes?' · '+esc(e.notes):''))}</div></td>
+        <td><div class="food-name">${pend?'⏳ ':''}${esc(e.name)}</div><div class="sub">${pend?'Unresolved — tap to fill in':(e.serving+' '+esc(e.unit)+(e.notes?' · '+esc(e.notes):''))}${dqGapChip(e,_dqIdxH,`openHistEdit('${ds}',${i})`)}</div></td>
         <td class="nr ck meal-kcal-cell">${pend?'–':f1(e.kcal)+_hPBar(e.kcal,TGT.kcal,'var(--mk)')}</td>
         <td class="nr cp">${pend?'–':f1(e.protein)+'g'+_hPBar(e.protein,TGT.protein,'var(--mp)')}</td>
         <td class="nr cf">${pend?'–':f1(e.fat)+'g'+_hPBar(e.fat,TGT.fat,'var(--mf)')}</td>
@@ -3813,6 +4002,7 @@ function renderHistDetail(ds){
       <textarea class="day-note-input" id="dayNoteInput" placeholder="e.g. gym day, cheat day, sick, busy at work…" oninput="saveDayNote('${ds}')">${esc(dayNotes[ds]||'')}</textarea>
     </div>
     <div class="hist-cards">${mCards.map(m=>{const pct=Math.round(+m.val/m.tgt*100);const barW=Math.min(pct,100);const subCol=pct>100?m.col:'var(--text3)';return`<div class="hist-card"><div class="hist-card-lbl">${m.lbl}</div><div class="hist-card-val" style="color:${m.col}">${m.val}<span style="font-size:12px;font-weight:400;color:var(--text3)"> ${m.unit}</span></div><div class="hist-card-sub" style="color:${subCol}">${pct}% of target</div><div class="hist-bar-wrap"><div class="hist-bar-fill" style="width:${barW}%;background:${m.col}"></div></div></div>`;}).join('')}</div>
+    ${dqDayLine(entries)}
     <div class="tcard">
       <div class="tcard-toolbar"><div class="tcard-title">${entries.length} entries · ${label}${isToday?' (Today)':''}</div></div>
       <table>
@@ -3833,7 +4023,7 @@ async function saveDayAsTemplate(ds){
     name:name.trim(),
     meals:entries.map(m=>({
       name:m.name,category:m.category||m.cat||'',
-      kcal:m.kcal,protein:m.protein,fat:m.fat,carbs:m.carbs,fiber:m.fiber||0,
+      kcal:m.kcal,protein:m.protein,fat:m.fat,carbs:m.carbs,fiber:m.fiber||0,...dqExtrasOf(m),
       serving:m.serving||'',notes:m.notes||''
     }))
   };
@@ -3882,11 +4072,13 @@ function openHistEdit(ds,i){
   document.getElementById('f-fat').value=e.fat;
   document.getElementById('f-carbs').value=e.carbs;
   document.getElementById('f-fiber').value=e.fiber;
+  writeExtras('f',e);
   document.getElementById('f-notes').value=e.notes||'';
+  if(e.notes)document.getElementById('f-more').open=true;
   document.getElementById('f-logdate').value=ds;
   document.getElementById('f-prelog-notice').style.display='none';
-  if(e._base){baseServingRef=e._base;}
-  else{baseServingRef={serving:e.serving,kcal:e.kcal,protein:e.protein,fat:e.fat,carbs:e.carbs,fiber:e.fiber};}
+  if(e._base){baseServingRef=baseWithExtras(e._base,e);}
+  else{baseServingRef=baseWithExtras({serving:e.serving,kcal:e.kcal,protein:e.protein,fat:e.fat,carbs:e.carbs,fiber:e.fiber},e);}
   const note=document.getElementById('recalcNote');
   const baseSpan=document.getElementById('recalcBase');
   note.style.display='block';
@@ -3911,6 +4103,7 @@ async function submitHistEntry(){
     fiber:pnum(document.getElementById('f-fiber').value),
     notes:document.getElementById('f-notes').value.trim(),
     date:ds,
+    ...readExtras('f'),
     _base:baseServingRef||null
   };
   const h=(await Store.get('nutrilog_history'))||{};
@@ -4116,12 +4309,12 @@ function renderAnalysis(){
     {lbl:'Fat',val:f1(avg.fat),tgt:TGT.fat,unit:'g',col:'var(--mf)'},
     {lbl:'Carbs',val:f1(avg.carbs),tgt:TGT.carbs,unit:'g',col:'var(--mc)'},
     {lbl:'Fiber',val:f1(avg.fiber),tgt:TGT.fiber,unit:'g',col:'var(--mfi)'},
-  ].map(m=>{
+  ].concat(dqAvgRows(activeDays)).map(m=>{
     const pct=Math.min(+m.val/m.tgt*100,100);
     return `<div class="avg-row">
       <div class="avg-lbl">${m.lbl}</div>
       <div class="avg-bar-track"><div class="avg-bar-fill" style="width:${pct}%;background:${m.col}"></div></div>
-      <div class="avg-val" style="color:${m.col}">${m.val} <span style="color:var(--text3)">${m.unit}</span> <span style="color:var(--text3)">/ ${m.tgt}</span></div>
+      <div class="avg-val" style="color:${m.col}">${m.val} <span style="color:var(--text3)">${m.unit}</span> <span style="color:var(--text3)">/ ${m.tgt}${m.note||''}</span></div>
     </div>`;
   }).join('');
 
@@ -4572,6 +4765,8 @@ async function loadSettings(){
       TGT={protein:s.protein||156,fat:s.fat||56,carbs:s.carbs||343,fiber:s.fiber||40,kcal:s.kcalTarget||2500};
       TGT_MIN={protein:s.proteinMin??156,fat:s.fatMin??45,carbs:s.carbsMin??290,fiber:s.fiberMin??30,kcal:s.kcalMin??null};
       TGT_MAX={protein:s.proteinMax??null,fat:s.fatMax??65,carbs:s.carbsMax??380,fiber:s.fiberMax??50,kcal:s.kcalMax??null};
+      DQ={addedSugarCap:s.addedSugarCap>0?s.addedSugarCap:25,satFatPct:s.satFatPct>0?s.satFatPct:10};
+      refreshDqSettingsUi();
       if(Array.isArray(s.deletedDates))_deletedDates=new Set(s.deletedDates);
       const kcalMinEl=document.getElementById('s-kcal-min');
       const kcalMaxEl=document.getElementById('s-kcal-max');
@@ -4602,8 +4797,6 @@ async function loadSettings(){
         tplOrder=s.templateOrder;
       if(s.streakOrder&&Array.isArray(s.streakOrder))
         streakOrder=s.streakOrder;
-      if(s.widgetHide&&typeof s.widgetHide==='object')
-        _wHide={recent:!!s.widgetHide.recent,tpl:!!s.widgetHide.tpl};
       if(s.cholesterolManagement!==undefined){
         const el=document.getElementById('s-cholesterol-mgmt');
         if(el)el.checked=!!s.cholesterolManagement;
@@ -4788,6 +4981,18 @@ function onMacroManualEdit(){
   markMTDirty();
   updateMacroCalc();
 }
+/* Diet-quality limit inputs (Settings → Targets). Deliberately NOT onMacroManualEdit(): editing
+   a cap must not flag the macro targets as manually customised. */
+function refreshDqSettingsUi(fromEdit){
+  const a=document.getElementById('s-added-sugar-cap'),p=document.getElementById('s-satfat-pct');
+  if(!fromEdit){if(a)a.value=DQ.addedSugarCap;if(p)p.value=DQ.satFatPct;}
+  const pct=+(p?p.value:DQ.satFatPct)||DQ.satFatPct,kcal=TGT.kcal||0;
+  const g=document.getElementById('s-satfat-g');if(g)g.value=Math.round(pct/100*kcal/9);
+  const h=document.getElementById('dq-who-hint');
+  if(h)h.textContent=`WHO: free sugars under 10% of calories (≈ ${Math.round(kcal*0.10/4)} g at your target), ideally under 5% (≈ ${Math.round(kcal*0.05/4)} g). `
+    +`AHA: 36 g/day for men, 25 g/day for women. Saturated fat: about 10% of calories is the usual ceiling; AHA suggests 5–6% when lowering LDL cholesterol.`;
+}
+function onDqLimitEdit(){refreshDqSettingsUi(true);markMTDirty();}
 function setMacroCustomized(v){
   _macroCustomized=v;
   document.getElementById('custom-macro-badge').style.display=v?'flex':'none';
@@ -4988,10 +5193,14 @@ function saveSettings(){
     theme:isDark?'dark':'light',
     variant:_uiVariant||'default',
     cholesterolManagement:document.getElementById('s-cholesterol-mgmt')?.checked??false,
+    addedSugarCap:+document.getElementById('s-added-sugar-cap')?.value>0?+document.getElementById('s-added-sugar-cap').value:25,
+    satFatPct:+document.getElementById('s-satfat-pct')?.value>0?+document.getElementById('s-satfat-pct').value:10,
   };
   TGT={protein:s.protein,fat:s.fat,carbs:s.carbs,fiber:s.fiber,kcal:kcalTarget};
   TGT_MIN={protein:s.proteinMin,fat:s.fatMin,carbs:s.carbsMin,fiber:s.fiberMin,kcal:s.kcalMin??null};
   TGT_MAX={protein:s.proteinMax,fat:s.fatMax,carbs:s.carbsMax,fiber:s.fiberMax,kcal:s.kcalMax??null};
+  DQ={addedSugarCap:s.addedSugarCap,satFatPct:s.satFatPct};
+  refreshDqSettingsUi();
   const _kd=document.getElementById('s-kcal-display');if(_kd)_kd.value=Math.round(kcalTarget);
   s.macroCustomized=_macroCustomized;
   Store.set('nutrilog_settings', s).catch(e=>{console.error('Settings save failed',e);toast('Save failed — check disk space','err');});
@@ -5343,6 +5552,7 @@ function updateTplServing(i,val){
     fat:Math.round(base.fat*factor*10)/10,
     carbs:Math.round(base.carbs*factor*10)/10,
     fiber:Math.round(base.fiber*factor*10)/10};
+  DQ_KEYS.forEach(k=>{if(dqNum(base[k]))_tplDraftMeals[i][k]=Math.round(base[k]*factor*10)/10;});
   updateTplTotals();
 }
 
@@ -5676,7 +5886,20 @@ function renderDailySummary(){
     const estNote=estimatedCats.length?`<span style="font-size:11px;color:var(--text3)"> (+ avg ${estimatedCats.join(', ')})</span>`:'';
     proj=`<div class="ds-projected">Projected end of day → <strong>~${projected.toLocaleString()} kcal</strong>${estNote} <span style="color:${over?'var(--red)':'var(--green)'}">${over?'⚠️ over target':'✓ on track'}</span></div>`;
   }
-  el.innerHTML=`<div class="ds-row">${items}</div>${proj}`;
+  // Caps (added sugar, sat fat): ✓ only when every logged item has data and it's under the cap;
+  // unknown/partial shows "–", never a tick.
+  const D=dqTotals(),V=dqVerdict(T,D);
+  const capItem=(lbl,d,cap)=>{
+    const st=dqCapState(d.v,cap,d.known,D.n);
+    const icon=st==='ok'?'✓':st==='over'?'✗':st==='warn'?'!':'–';
+    const col=st==='ok'?green:st==='over'?'var(--c-redline)':st==='warn'?'var(--c-warn)':'var(--text3)';
+    const val=st==='none'?'—':(d.known<D.n?'≥ ':'')+f1(d.v);
+    return `<div class="ds-item"><div class="ds-icon" style="color:${col}">${icon}</div><div class="ds-lbl">${lbl}</div>
+      <div class="ds-val" style="color:${st==='over'?'var(--c-redline)':'var(--text)'}">${val}<span class="ds-unit"> g</span></div><div class="ds-tgt">≤ ${cap}</div></div>`;
+  };
+  const dq=`<div class="ds-row">${capItem('Added sugar',D.addedSugar,DQ.addedSugarCap)}${capItem('Sat fat',D.satFat,satFatCapG())}</div>
+    <div class="ds-projected"><span class="dq-verdict dq-${V.cls}">${V.txt}</span></div>`;
+  el.innerHTML=`<div class="ds-row">${items}</div>${dq}${proj}`;
 }
 
 /* ═══ MACRO SPARKLINES ═══ */

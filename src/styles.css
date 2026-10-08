@@ -1454,3 +1454,43 @@ button:focus-visible, .nav-item:focus-visible, .bnav-item:focus-visible { box-sh
 .kcal-bar { padding:12px 18px; }
 .kcal-cur { font-size:44px; }
 .weekly-summary { padding:14px 18px; }
+
+/* ══ DIET QUALITY — cap nutrients live inside the macro rings ══
+   Added sugar sits inside the Carbs ring and saturated fat inside the Fat ring: a thin inner ring
+   fills toward the cap (green → amber near it → red over it) with one line of text under the card.
+   Fiber is a floor, so its ring never turns amber/red. No animation. */
+.dq-ring { fill:none; stroke-linecap:round; }
+.ring-sub { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:1px 8px; margin-top:2px; }
+.ring-range { font-size:10px; color:var(--text3); font-family:var(--fm); }
+.ring-dq { font-family:var(--fm); font-size:10px; color:var(--text2); white-space:nowrap; margin-left:auto; }
+.ring-dq strong { color:var(--text); font-size:11px; }
+.ring-dq.dq-s-over strong { color:var(--c-redline); }
+.ring-dq.dq-s-warn strong { color:var(--c-warn); }
+.dq-verdict { font-size:12px; font-weight:700; padding:4px 12px; border-radius:999px; border:1px solid var(--border); }
+.dq-verdict.dq-good    { color:var(--green);      background:color-mix(in srgb,var(--green) 14%,transparent);      border-color:color-mix(in srgb,var(--green) 45%,transparent); }
+.dq-verdict.dq-warn    { color:var(--c-warn);     background:color-mix(in srgb,var(--c-warn) 14%,transparent);     border-color:color-mix(in srgb,var(--c-warn) 45%,transparent); }
+.dq-verdict.dq-bad     { color:var(--c-redline);  background:color-mix(in srgb,var(--c-redline) 14%,transparent);  border-color:color-mix(in srgb,var(--c-redline) 50%,transparent); }
+.dq-verdict.dq-neutral { color:var(--text2);      background:var(--bg3); }
+.dq-none { color:var(--text3); }
+.dq-note { font-family:var(--fb); font-size:10px; color:var(--text3); }
+.dq-t-warn { color:var(--c-warn); }
+.dq-t-bad, .dq-t-over { color:var(--c-redline); font-weight:700; }
+
+/* Optional nutrient fields in the meal / food-database forms */
+.more-nutrients { margin:0 0 12px; border:1px solid var(--border); border-radius:10px; background:var(--bg3); padding:0 12px; }
+.more-nutrients summary { cursor:pointer; padding:9px 0; font-size:12px; font-weight:600; color:var(--text2); }
+.more-nutrients[open] summary { border-bottom:1px solid var(--border); margin-bottom:10px; }
+.mn-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:8px; }
+.mn-est { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text2); margin-bottom:6px; cursor:pointer; }
+.mn-hint { font-size:11px; color:var(--text3); padding-bottom:10px; line-height:1.5; }
+
+/* "needs sugar / sat fat data" chip on log rows */
+.dq-gap { display:inline-block; margin-left:8px; padding:0 7px; font:500 10px var(--fm); line-height:16px; color:var(--text3); background:none; border:1px dashed var(--border); border-radius:8px; cursor:pointer; vertical-align:middle; }
+.dq-gap:hover { color:var(--accent); border-color:var(--accent); }
+
+/* History detail: one-line added-sugar / sat-fat readout */
+.hist-dq { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 10px; margin:-4px 0 14px; padding:0 4px; font-family:var(--fm); font-size:12px; color:var(--text2); }
+.hist-dq strong { color:var(--text); font-size:13px; }
+.hist-dq strong.dq-t-over { color:var(--c-redline); }
+.hist-dq strong.dq-t-warn { color:var(--c-warn); }
+.hist-dq-sep { color:var(--text3); }

@@ -1144,6 +1144,26 @@
           </div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Streak: Min ≤ fiber ≤ Max &nbsp;|&nbsp; Soluble fiber lowers LDL — especially beneficial for you</div>
         </div>
+        <!-- Diet quality limits: added-sugar cap + saturated-fat cap (fiber's goal/floor are the Fiber row above) -->
+        <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;">
+          <div class="srow-label">Diet quality limits</div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">ADDED SUGAR CAP (g/day)</label>
+              <input class="sinput" id="s-added-sugar-cap" type="number" min="0" max="300" step="1" value="25" oninput="onDqLimitEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">SAT FAT CAP (% of calories)</label>
+              <input class="sinput" id="s-satfat-pct" type="number" min="1" max="40" step="0.5" value="10" oninput="onDqLimitEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">= SAT FAT CAP (g/day)</label>
+              <input class="sinput" id="s-satfat-g" type="text" readonly tabindex="-1" style="width:100%;opacity:.7;">
+            </div>
+          </div>
+          <div id="dq-who-hint" style="font-size:10px;color:var(--text3);font-family:var(--fm);line-height:1.5;"></div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Fiber on the Today card uses the Fiber target above as its goal and Streak Min as its floor — reaching more is never a warning.</div>
+        </div>
         <div class="calc-box" style="margin-top:12px">
           <div style="font-family:var(--fm);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Calorie Breakdown</div>
           <div class="calc-row"><span class="calc-lbl">From Protein</span><span class="calc-val cp" id="c-pkcal">—</span></div>
@@ -1782,10 +1802,6 @@
       <div id="f-prelog-notice" style="display:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--accent);margin-bottom:8px;">
         📅 Pre-logging for a future date — meal will be saved to History
       </div>
-      <div class="frow">
-        <div class="ff" style="flex:2"><label>Notes (optional)</label>
-          <input type="text" id="f-notes" placeholder="e.g. post-workout, canteen"></div>
-      </div>
       <div class="macro-grid">
         <div class="mf-field mk"><label>Calories</label><input type="number" id="f-kcal" placeholder="0" step="any" min="0"></div>
         <div class="mf-field mp"><label>Protein g</label><input type="number" id="f-protein" placeholder="0" step="any" min="0"></div>
@@ -1793,30 +1809,44 @@
         <div class="mf-field mc"><label>Carbs g</label><input type="number" id="f-carbs" placeholder="0" step="any" min="0"></div>
         <div class="mf-field mfi"><label>Fiber g</label><input type="number" id="f-fiber" placeholder="0" step="any" min="0"></div>
       </div>
+      <details class="more-nutrients" id="f-more">
+        <summary>More (notes, sugar &amp; fat detail, paste)</summary>
+        <div class="frow">
+          <div class="ff" style="flex:2"><label>Notes (optional)</label>
+            <input type="text" id="f-notes" placeholder="e.g. post-workout, canteen"></div>
+        </div>
+        <div class="mn-grid">
+          <div class="mf-field"><label>Total sugar g</label><input type="number" id="f-sugar" placeholder="unknown" step="any" min="0"></div>
+          <div class="mf-field"><label>Added sugar g</label><input type="number" id="f-addedsugar" placeholder="unknown" step="any" min="0"></div>
+          <div class="mf-field"><label>Sat fat g</label><input type="number" id="f-satfat" placeholder="unknown" step="any" min="0"></div>
+        </div>
+        <label class="mn-est"><input type="checkbox" id="f-nest"> These values are estimates, not from a label</label>
+        <div class="mn-hint">Blank means unknown and is never counted as 0. Total sugar includes natural sugar (fruit, milk); only added sugar counts toward the sugar cap.</div>
+        <button class="paste-tog" id="pasteTog" onclick="togglePaste()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          Paste tab-separated data instead
+        </button>
+        <div class="paste-box" id="pasteBox">
+          <div class="paste-hint">Three paste modes — all auto-detected:<br>
+            <strong>Q–AA selection:</strong> Select cols Q→AA in your Excel PART 3 section, copy, paste here.<br>
+            <strong>Full sheet:</strong> Ctrl+A, copy the entire sheet — the app finds PART 3 automatically.<br>
+            <strong>Simple (8 cols):</strong> Food Item · Serving · Unit · kcal · Protein · Fat · Carbs · Fiber<br>
+            Header rows, TOTALS, TARGETS, DIFFERENCE, and blank rows are automatically skipped.</div>
+          <div class="paste-cols">
+            <span class="paste-col">Food Item</span><span class="paste-col">Serving</span>
+            <span class="paste-col">Unit</span><span class="paste-col ck">Calories</span>
+            <span class="paste-col cp">Protein</span><span class="paste-col cf">Fat</span>
+            <span class="paste-col cc">Carbs</span><span class="paste-col cfi">Fiber</span>
+          </div>
+          <textarea id="pasteArea" spellcheck="false"
+            placeholder="Chicken Breast&#9;150&#9;g&#9;165&#9;31&#9;3.6&#9;0&#9;0"
+            oninput="pastePreview()"></textarea>
+          <div class="paste-info" id="pasteInfo">Enter data above, then click Add</div>
+        </div>
+      </details>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
         <input type="checkbox" id="f-savelib" checked style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)">
         <label for="f-savelib" style="font-size:12px;color:var(--text2);cursor:pointer">Save to food library for autocomplete</label>
-      </div>
-      <button class="paste-tog" id="pasteTog" onclick="togglePaste()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-        Paste tab-separated data instead
-      </button>
-      <div class="paste-box" id="pasteBox">
-        <div class="paste-hint">Three paste modes — all auto-detected:<br>
-          <strong>Q–AA selection:</strong> Select cols Q→AA in your Excel PART 3 section, copy, paste here.<br>
-          <strong>Full sheet:</strong> Ctrl+A, copy the entire sheet — the app finds PART 3 automatically.<br>
-          <strong>Simple (8 cols):</strong> Food Item · Serving · Unit · kcal · Protein · Fat · Carbs · Fiber<br>
-          Header rows, TOTALS, TARGETS, DIFFERENCE, and blank rows are automatically skipped.</div>
-        <div class="paste-cols">
-          <span class="paste-col">Food Item</span><span class="paste-col">Serving</span>
-          <span class="paste-col">Unit</span><span class="paste-col ck">Calories</span>
-          <span class="paste-col cp">Protein</span><span class="paste-col cf">Fat</span>
-          <span class="paste-col cc">Carbs</span><span class="paste-col cfi">Fiber</span>
-        </div>
-        <textarea id="pasteArea" spellcheck="false"
-          placeholder="Chicken Breast&#9;150&#9;g&#9;165&#9;31&#9;3.6&#9;0&#9;0"
-          oninput="pastePreview()"></textarea>
-        <div class="paste-info" id="pasteInfo">Enter data above, then click Add</div>
       </div>
       <div class="form-acts">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -1869,6 +1899,16 @@
         <div class="mf-field mc"><label>Carbs g</label><input type="number" id="db-carbs" placeholder="0" step="any" min="0"></div>
         <div class="mf-field mfi"><label>Fiber g</label><input type="number" id="db-fiber" placeholder="0" step="any" min="0"></div>
       </div>
+      <details class="more-nutrients" id="db-more">
+        <summary>More nutrients (optional)</summary>
+        <div class="mn-grid">
+          <div class="mf-field"><label>Total sugar g</label><input type="number" id="db-sugar" placeholder="unknown" step="any" min="0"></div>
+          <div class="mf-field"><label>Added sugar g</label><input type="number" id="db-addedsugar" placeholder="unknown" step="any" min="0"></div>
+          <div class="mf-field"><label>Sat fat g</label><input type="number" id="db-satfat" placeholder="unknown" step="any" min="0"></div>
+        </div>
+        <label class="mn-est"><input type="checkbox" id="db-nest"> These values are estimates, not from a label</label>
+        <div class="mn-hint">Per serving above. Blank means unknown and is never counted as 0.</div>
+      </details>
       <div class="form-acts">
         <button class="btn-cancel" onclick="closeDbModal()">Cancel</button>
         <button class="btn-save" id="dbSaveBtn" onclick="submitDb()">Save Item</button>
