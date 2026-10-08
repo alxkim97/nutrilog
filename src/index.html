@@ -1816,11 +1816,11 @@
             <input type="text" id="f-notes" placeholder="e.g. post-workout, canteen"></div>
         </div>
         <div class="mn-grid">
-          <div class="mf-field"><label>Total sugar g</label><input type="number" id="f-sugar" placeholder="unknown" step="any" min="0"></div>
-          <div class="mf-field"><label>Added sugar g</label><input type="number" id="f-addedsugar" placeholder="unknown" step="any" min="0"></div>
-          <div class="mf-field"><label>Sat fat g</label><input type="number" id="f-satfat" placeholder="unknown" step="any" min="0"></div>
+          <div class="mf-field"><label>Total sugar g</label><input type="number" id="f-sugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('f',this)"></div>
+          <div class="mf-field"><label>Added sugar g</label><input type="number" id="f-addedsugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('f',this)"></div>
+          <div class="mf-field"><label>Sat fat g</label><input type="number" id="f-satfat" placeholder="unknown" step="any" min="0" oninput="onExtraInput('f',this)"></div>
         </div>
-        <label class="mn-est"><input type="checkbox" id="f-nest"> These values are estimates, not from a label</label>
+        <label class="mn-est"><input type="checkbox" id="f-nest" onchange="onNestToggle('f')"> These values are estimates, not from a label</label>
         <div class="mn-hint">Blank means unknown and is never counted as 0. Total sugar includes natural sugar (fruit, milk); only added sugar counts toward the sugar cap.</div>
         <button class="paste-tog" id="pasteTog" onclick="togglePaste()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1902,11 +1902,11 @@
       <details class="more-nutrients" id="db-more">
         <summary>More nutrients (optional)</summary>
         <div class="mn-grid">
-          <div class="mf-field"><label>Total sugar g</label><input type="number" id="db-sugar" placeholder="unknown" step="any" min="0"></div>
-          <div class="mf-field"><label>Added sugar g</label><input type="number" id="db-addedsugar" placeholder="unknown" step="any" min="0"></div>
-          <div class="mf-field"><label>Sat fat g</label><input type="number" id="db-satfat" placeholder="unknown" step="any" min="0"></div>
+          <div class="mf-field"><label>Total sugar g</label><input type="number" id="db-sugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('db',this)"></div>
+          <div class="mf-field"><label>Added sugar g</label><input type="number" id="db-addedsugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('db',this)"></div>
+          <div class="mf-field"><label>Sat fat g</label><input type="number" id="db-satfat" placeholder="unknown" step="any" min="0" oninput="onExtraInput('db',this)"></div>
         </div>
-        <label class="mn-est"><input type="checkbox" id="db-nest"> These values are estimates, not from a label</label>
+        <label class="mn-est"><input type="checkbox" id="db-nest" onchange="onNestToggle('db')"> These values are estimates, not from a label</label>
         <div class="mn-hint">Per serving above. Blank means unknown and is never counted as 0.</div>
       </details>
       <div class="form-acts">

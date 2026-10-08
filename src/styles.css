@@ -1494,3 +1494,8 @@ button:focus-visible, .nav-item:focus-visible, .bnav-item:focus-visible { box-sh
 .hist-dq strong.dq-t-over { color:var(--c-redline); }
 .hist-dq strong.dq-t-warn { color:var(--c-warn); }
 .hist-dq-sep { color:var(--text3); }
+
+/* estimated sugar/sat-fat: chip on log rows, grey value in the form until confirmed */
+.dq-est { display:inline-block; margin-left:8px; padding:0 7px; font:500 10px var(--fm); line-height:16px; color:var(--text3); background:none; border:1px dashed var(--border); border-radius:8px; cursor:pointer; vertical-align:middle; }
+.dq-est:hover { color:var(--accent); border-color:var(--accent); }
+.mn-grid input.is-est { color:rgb(117,117,117); } /* same grey as the form's placeholder text */

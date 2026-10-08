@@ -1004,36 +1004,15 @@ function dqEntryValue(m,key,idx){
 function dqLibIdx(){const idx=new Map();foodLib.forEach(f=>{const k=String(f.name||'').toLowerCase();if(!idx.has(k))idx.set(k,f);});return idx;}
 function dqGapChip(m,idx,editCall){
   if(m.pending)return'';
-  const miss=[];
-  if(!dqEntryValue(m,'addedSugar',idx))miss.push('added sugar');
-  if(!dqEntryValue(m,'satFat',idx))miss.push('sat fat');
-  if(!miss.length)return'';
-  return `<button class="dq-gap" title="No ${miss.join(' or ')} data yet, so this item isn't counted toward those caps. Click to add or estimate." onclick="${editCall};document.getElementById('f-more').open=true">＋ ${miss.length===2?'sugar / sat fat':miss[0]}</button>`;
-}
-// One-line added-sugar / sat-fat readout for a day's entries (History detail). Unknown is shown as unknown, never 0.
-function dqDayLine(entries){
-  if(!entries.length)return'';
-  const D=dqTotals(entries);if(!D.n)return'';
-  const part=(lbl,d,cap)=>{
-    const st=dqCapState(d.v,cap,d.known,D.n);
-    if(st==='none')return`${lbl} <span class="dq-none">no data</span>`;
-    const col=st==='over'?'dq-t-over':st==='warn'?'dq-t-warn':'';
-    return`${lbl} <strong class="${col}">${d.known<D.n?'≥ ':''}${f1(d.v)}</strong> / ${cap} g${st==='over'?` <span class="dq-t-over">+${f1(d.v-cap)} over</span>`:''}`;
-  };
-  const unk=D.n-Math.min(D.addedSugar.known,D.satFat.known);
-  return`<div class="hist-dq">${part('Added sugar',D.addedSugar,DQ.addedSugarCap)}<span class="hist-dq-sep">·</span>${part('Sat fat',D.satFat,satFatCapG())}${unk>0?`<span class="hist-dq-sep">·</span><span class="dq-note">${unk} of ${D.n} items missing data</span>`:''}</div>`;
-}
-// Analysis: average added sugar / sat fat per logged day against the caps, using only days that have any data.
-function dqAvgRows(days){
-  const rows=[];
-  [['Added sugar','addedSugar',DQ.addedSugarCap],['Sat fat','satFat',satFatCapG()]].forEach(([lbl,k,cap])=>{
-    let sum=0,withData=0;
-    days.forEach(d=>{const D=dqTotals(d.entries||[]);if(D[k].known>0){sum+=D[k].v;withData++;}});
-    if(!withData)return;
-    const avg=sum/withData,col=avg>cap?'var(--c-redline)':avg>=cap*0.8?'var(--c-warn)':'var(--green)';
-    rows.push({lbl,val:f1(avg),tgt:cap,unit:'g',col,note:withData<days.length?' · '+withData+'/'+days.length+' days':''});
+  const miss=[];let est=false;
+  [['addedSugar','added sugar'],['satFat','sat fat']].forEach(([k,lbl])=>{
+    const x=dqEntryValue(m,k,idx);
+    if(!x)miss.push(lbl);else if(x.est)est=true;
   });
-  return rows;
+  const go=`${editCall};document.getElementById('f-more').open=true`;
+  if(miss.length)return `<button class="dq-gap" title="No ${miss.join(' or ')} data yet, so this item isn't counted toward those caps. Click to add or estimate." onclick="${go}">＋ ${miss.length===2?'sugar / sat fat':miss[0]}</button>`;
+  if(est)return `<button class="dq-est" title="Sugar / sat fat for this item is an estimate. Click to review and confirm the real numbers." onclick="${go}">≈ est.</button>`;
+  return'';
 }
 function dqTotals(list){
   const src=(list||meals).filter(m=>!m.pending);
@@ -1115,20 +1094,70 @@ function readExtras(p){
   if(Object.keys(x).length&&document.getElementById(p+'-nest')?.checked)x.nEst=true;
   return x;
 }
+// Empty boxes show what the item is currently counted as (zero-carb/fat rule or library match) as grey
+// placeholder text, so "unknown" is only shown when the item really is uncounted. Typing a value overrides it.
+const DQ_FIELDS=[['sugar','f-sugar'],['addedSugar','f-addedsugar'],['satFat','f-satfat']];
+function refreshExtraHints(){
+  const v=id=>{const x=document.getElementById(id);return x&&x.value!==''?+x.value:undefined;};
+  const probe={name:(document.getElementById('f-name')||{}).value||'',serving:v('f-serving'),unit:(document.getElementById('f-unit')||{}).value,carbs:v('f-carbs'),fat:v('f-fat')};
+  const idx=dqLibIdx();
+  DQ_FIELDS.forEach(([k,id])=>{
+    const el=document.getElementById(id);if(!el)return;
+    let hint='unknown';
+    if(el.value===''){
+      const x=dqEntryValue(probe,k,idx);
+      if(x){
+        const lib=idx.get(probe.name.toLowerCase());
+        const fromRule=!(lib&&dqNum(lib[k]))||x.v===0&&((k==='satFat'&&probe.fat===0)||(k!=='satFat'&&probe.carbs===0));
+        hint='≈ '+f1(x.v)+(x.est?' est.':fromRule?' (auto)':' (library)');
+      }
+    }
+    el.placeholder=hint;
+  });
+}
+// Estimated values sit in the boxes in grey until they are confirmed: typing a number in a box makes that box
+// white ("real"); ticking/unticking the estimate checkbox greys/whitens all of them. nEst is one flag per entry,
+// so it clears automatically once every filled box has been typed over.
+const DQ_IDS=['sugar','addedsugar','satfat'];
+function syncEstStyle(p){
+  const on=!!(document.getElementById(p+'-nest')||{}).checked;
+  // The estimate checkbox only means something once a box holds a value; hide it while they are all empty.
+  const lab=document.querySelector('#'+p+'-more .mn-est');
+  if(lab)lab.style.display=DQ_IDS.some(f=>{const el=document.getElementById(p+'-'+f);return el&&el.value!=='';})?'':'none';
+  DQ_IDS.forEach(f=>{const el=document.getElementById(p+'-'+f);if(el)el.classList.toggle('is-est',on&&el.value!==''&&!el.dataset.real);});
+}
+function onExtraInput(p,el){
+  el.dataset.real='1';
+  const filled=DQ_IDS.map(f=>document.getElementById(p+'-'+f)).filter(e=>e&&e.value!=='');
+  const nest=document.getElementById(p+'-nest');
+  if(nest&&nest.checked&&filled.length&&filled.every(e=>e.dataset.real))nest.checked=false;
+  syncEstStyle(p);
+}
+function onNestToggle(p){
+  DQ_IDS.forEach(f=>{const el=document.getElementById(p+'-'+f);if(el&&document.getElementById(p+'-nest').checked)delete el.dataset.real;});
+  syncEstStyle(p);
+}
 function writeExtras(p,o){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=dqNum(v)?v:'';};
   set(p+'-sugar',o&&o.sugar);set(p+'-addedsugar',o&&o.addedSugar);set(p+'-satfat',o&&o.satFat);
+  DQ_IDS.forEach(f=>{const el=document.getElementById(p+'-'+f);if(el)delete el.dataset.real;});
   const c=document.getElementById(p+'-nest');if(c)c.checked=!!(o&&o.nEst);
-  const d=document.getElementById(p+'-more');if(d)d.open=!!(o&&DQ_KEYS.some(k=>dqNum(o[k])));
+  syncEstStyle(p);
+  const d=document.getElementById(p+'-more');if(d)d.open=false; // always collapsed; only the row chips (or notes on an entry) open it
+  if(p==='f')refreshExtraHints();
 }
 function libShape(e){ // the fields of a logged entry that belong on a library item
   return{name:e.name,serving:e.serving,unit:e.unit,kcal:e.kcal,protein:e.protein,fat:e.fat,carbs:e.carbs,fiber:e.fiber,...dqExtrasOf(e)};
 }
-function mergeExtrasIntoLib(lib,e){ // fill library values that are still unknown — never overwrite a known one
+function mergeExtrasIntoLib(lib,e){ // fill library values that are still unknown; confirmed (non-estimate) numbers replace library estimates
   if(lib.unit!==e.unit||!(lib.serving>0)||!(+e.serving>0))return;
-  const ratio=lib.serving/e.serving;let set=false;
-  DQ_KEYS.forEach(k=>{if(!dqNum(lib[k])&&dqNum(e[k])){lib[k]=Math.round(e[k]*ratio*10)/10;set=true;}});
-  if(set&&e.nEst)lib.nEst=true;
+  const ratio=lib.serving/e.serving,confirm=!!lib.nEst&&!e.nEst;let set=false;
+  DQ_KEYS.forEach(k=>{
+    if(!dqNum(e[k]))return;
+    if(!dqNum(lib[k])||confirm){lib[k]=Math.round(e[k]*ratio*10)/10;set=true;}
+  });
+  if(confirm){if(DQ_KEYS.every(k=>!dqNum(lib[k])||dqNum(e[k])))delete lib.nEst;} // nothing estimated is left
+  else if(set&&e.nEst)lib.nEst=true;
 }
 function baseWithExtras(base,m){ // per-base-serving optional values derived from an existing entry, so rescaling stays consistent
   const b={...base},s=+m.serving;
@@ -2712,6 +2741,7 @@ function pastePreview(){
 
 /* ═══ SERVING CHANGE — MACRO RECALCULATION ═══ */
 function onServingChange(){
+  refreshExtraHints();
   if(!baseServingRef)return;
   const newServing=pnum(document.getElementById('f-serving').value);
   if(!newServing||!baseServingRef.serving)return;
