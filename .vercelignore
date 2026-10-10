@@ -1,5 +1,11 @@
 node_modules
 dist
+release
 .git
 *.rar
 *.zip
+/index.html
+/src
+/public
+/scripts
+/vite.config.mjs

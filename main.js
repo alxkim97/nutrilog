@@ -136,7 +136,7 @@ function createWindow() {
   });
 
   // Load the app
-  mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, 'legacy', 'index.html'));
 
   // Show when ready to avoid white flash
   mainWindow.once('ready-to-show', () => {
