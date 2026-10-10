@@ -41,7 +41,7 @@ export function renderQuickAdd(container, { profile, foodLibrary, onSaved }) {
       <div id="modeBody"></div>
       <label>Meal</label>
       <div class="cat-grid" id="catGrid">
-        ${MEAL_CATEGORIES.map(c => `<button type="button" class="cat-chip ${c.id === category ? 'active' : ''}" data-cat="${c.id}">${icon(c.icon, 18)}<span>${c.label}</span></button>`).join('')}
+        ${MEAL_CATEGORIES.map(c => `<button type="button" class="cat-chip cat-${c.id} ${c.id === category ? 'active' : ''}" data-cat="${c.id}">${icon(c.icon, 18)}<span>${c.label}</span></button>`).join('')}
       </div>
       <label for="timeInput">Time</label>
       <input id="timeInput" type="time" value="${time}" />

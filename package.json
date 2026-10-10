@@ -1,7 +1,7 @@
 {
   "name": "nutrilog",
-  "version": "2.13.0",
-  "description": "NutriLog — personal macro tracker (phone PWA, desktop web, Windows app)",
+  "version": "2.13.1",
+  "description": "NutriLog â€” personal macro tracker (phone PWA, desktop web, Windows app)",
   "main": "main.js",
   "scripts": {
     "dev": "vite",
@@ -23,7 +23,7 @@
   "build": {
     "appId": "com.apm.nutrilog",
     "productName": "NutriLog",
-    "copyright": "Copyright © 2026 Alex · APm R&D",
+    "copyright": "Copyright Â© 2026 Alex Â· APm R&D",
     "files": [
       "main.js",
       "preload.js",

@@ -4,7 +4,7 @@ export function renderAuth(container, { onSignedIn }) {
   container.innerHTML = `
     <div class="center-screen auth">
       <div class="auth-brand">
-        <img src="./favicon.svg" alt="" width="56" height="56" />
+        <img src="./icon-192.png" alt="" width="64" height="64" />
         <h1>NutriLog</h1>
         <p>Sign in to sync your log across devices.</p>
       </div>

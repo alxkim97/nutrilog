@@ -168,7 +168,7 @@ function mealsHtml(meals) {
     if (!rows.length) return ''
     const kcal = rows.reduce((s, { m }) => s + (Number(m.kcal) || 0), 0)
     return `
-      <div class="meal-group">
+      <div class="meal-group cat-${c.id}">
         <div class="meal-group-head"><span class="meal-group-ico">${icon(c.icon, 15)}</span>${c.label}<span class="meal-group-kcal">${fmtNum(kcal)} kcal</span></div>
         <div class="card list">
           ${rows.map(({ m, i }) => `
