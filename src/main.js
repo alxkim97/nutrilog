@@ -1,4 +1,4 @@
-import './style.css'
+import phoneCss from './style.css?inline'
 import { getSession, onAuthChange, fetchProfilesAndSettings, fetchFoodLibrary, fetchDayMeals, fetchHistory, saveSettingsPatch } from './supabase.js'
 import { renderAuth } from './views/auth.js'
 import { renderToday } from './views/today.js'
@@ -11,9 +11,15 @@ import { toast, todayStr } from './helpers.js'
 import { applyTheme, applyThemeFromSettings, setTheme, setVariant } from './theme.js'
 import { cacheLoad, cacheGet, cacheClearAll } from './cache.js'
 import { setupPullToRefresh } from './pullToRefresh.js'
-import { onDesktopViewChange } from './platform.js'
+import { isDesktopView, onDesktopViewChange } from './platform.js'
 
 applyTheme()
+
+// Two layouts from one codebase: the phone views below, or (at ≥860px, signed
+// in) the desktop UI from src/desktop/. Each brings its own stylesheet, so only
+// one is ever on the page; crossing the breakpoint reloads into the other.
+let layout = null // 'phone' | 'desktop'
+let reloadWhenIdle = false
 
 const PROFILE_KEY = 'nutrilog_active_profile'
 const app = document.getElementById('app')
@@ -104,6 +110,7 @@ function signedOut() {
 }
 
 function setView(view) {
+  if (reloadWhenIdle && view !== 'add') { location.reload(); return }
   state.view = view
   render()
   window.scrollTo(0, 0)
@@ -148,6 +155,7 @@ function renderImmediate() {
   if (!state.session) {
     renderAuth(app, {
       onSignedIn: async () => {
+        if (isDesktopView()) { location.reload(); return }
         state.session = await getSession()
         state.loading = true
         render()
@@ -210,33 +218,56 @@ function renderImmediate() {
   app.appendChild(tabbar)
 }
 
-// Coming back to the app (phone unlocked, window refocused): pick up entries
-// logged on another device, and roll over to a new day if the date changed.
-// Never on Log, where a rebuild would wipe a half-typed entry.
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !state.session || state.loading || state.view === 'add') return
-  if (state.loadedDate !== todayStr() || Date.now() - state.loadedAt > 2 * 60 * 1000) refresh()
-})
+function startPhoneListeners() {
+  // Coming back to the app (phone unlocked, window refocused): pick up entries
+  // logged on another device, and roll over to a new day if the date changed.
+  // Never on Log, where a rebuild would wipe a half-typed entry.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !state.session || state.loading || state.view === 'add') return
+    if (state.loadedDate !== todayStr() || Date.now() - state.loadedAt > 2 * 60 * 1000) refresh()
+  })
 
-setupPullToRefresh({
-  isEnabled: () => !!state.session && !state.loading && state.view !== 'add',
-  onRefresh: refresh,
-})
+  setupPullToRefresh({
+    isEnabled: () => !!state.session && !state.loading && state.view !== 'add',
+    onRefresh: refresh,
+  })
 
-onDesktopViewChange(() => { if (state.session && !state.loading && state.view !== 'add') render() })
+  // iOS Safari ignores user-scalable=no; block pinch-zoom via its gesture events.
+  for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false })
 
-// iOS Safari ignores user-scalable=no; block pinch-zoom via its gesture events.
-for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false })
+  // Escape closes the topmost popup by replaying a backdrop click.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return
+    const overlays = document.querySelectorAll('.confirm-overlay')
+    overlays[overlays.length - 1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
 
-// Escape closes the topmost popup by replaying a backdrop click.
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return
-  const overlays = document.querySelectorAll('.confirm-overlay')
-  overlays[overlays.length - 1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+onDesktopViewChange(async () => {
+  if (layout === 'desktop') {
+    await window.saveSession?.().catch(() => {}) // flush an unsaved edit first
+    location.reload()
+  } else if (layout === 'phone' && state.session) {
+    if (state.view === 'add') reloadWhenIdle = true // don't throw away a half-typed entry
+    else location.reload()
+  }
 })
 
 async function boot() {
   state.session = await getSession()
+
+  if (state.session && isDesktopView()) {
+    layout = 'desktop'
+    const { mountDesktop } = await import('./desktop/mount.js')
+    await mountDesktop()
+    return
+  }
+
+  layout = 'phone'
+  const style = document.createElement('style')
+  style.textContent = phoneCss
+  document.head.appendChild(style)
+  startPhoneListeners()
   onAuthChange((session) => {
     if (!session && state.session) { signedOut(); toast('Signed out — please sign in again'); render(); return }
     state.session = session

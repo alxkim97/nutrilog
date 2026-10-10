@@ -1,0 +1,2336 @@
+<!-- Desktop layout markup — copied from legacy/index.html <body> (v2.12). -->
+<!-- TOPBAR -->
+<header id="topbar">
+  <div class="topbar-left">
+    <span class="page-title" id="pageTitle">Today</span>
+    <span class="date-pill" id="datePill"></span>
+    <span style="color:var(--border2);font-size:11px;user-select:none;">·</span>
+    <span class="time-pill" id="timePill"></span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-accent" onclick="openAddModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Meal
+    </button>
+    <div style="position:relative;display:inline-flex;" id="exportDropWrapper">
+      <button class="btn btn-ghost" onclick="toggleExportMenu()" style="border-color:var(--yellow);color:var(--yellow);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export ▾
+      </button>
+      <div id="exportMenu" style="display:none;position:absolute;top:38px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:190px;box-shadow:var(--sh);z-index:300;">
+        <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;padding:4px 8px 2px;">JSON</div>
+        <button class="btn btn-ghost" onclick="exportData();toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 Today (JSON)</button>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;padding:6px 8px 2px;margin-top:2px;border-top:1px solid var(--border);">CSV</div>
+        <button class="btn btn-ghost" onclick="exportExcel('today');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 Today (CSV)</button>
+        <button class="btn btn-ghost" onclick="exportExcel('week');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 This Week (CSV)</button>
+        <button class="btn btn-ghost" onclick="exportExcel('month');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 This Month (CSV)</button>
+        <button class="btn btn-ghost" onclick="exportExcel('all');toggleExportMenu()" style="width:100%;justify-content:flex-start;height:30px;font-size:12px;">📄 All Data (CSV)</button>
+      </div>
+    </div>
+    <div style="position:relative;display:inline-flex;" id="moreMenuWrapper">
+      <button class="btn btn-ghost" onclick="toggleMoreMenu()" id="moreMenuBtn" title="More actions">⋯ More</button>
+      <div id="moreMenu" style="display:none;position:absolute;top:38px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:180px;box-shadow:var(--sh);z-index:300;">
+        <button class="btn btn-ghost" onclick="openImport();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import
+        </button>
+        <button class="btn btn-ghost" onclick="copyYesterdayToToday();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy Yesterday
+        </button>
+        <button class="btn btn-ghost" onclick="saveSession();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save
+        </button>
+        <button class="btn btn-ghost" onclick="openCheckin();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Log Check-in
+        </button>
+        <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
+        <button class="btn btn-ghost danger" onclick="confirmClearAll();toggleMoreMenu()" style="width:100%;justify-content:flex-start;height:32px;font-size:12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+          Clear Today
+        </button>
+      </div>
+    </div>
+    <!-- Profile pill removed — sidebar toggle is sufficient -->
+    <!-- Local save status -->
+    <div id="savePill" title="Local save status">
+      <div class="sp-dot"></div>
+      <span id="savePillLabel">Saved</span>
+    </div>
+    <!-- Sync status badge -->
+    <div class="sync-badge" id="syncBadge" onclick="showSyncMenu()" title="Sync status">
+      <div class="dot" id="syncDot"></div>
+      <span id="syncLabel">Offline</span>
+      <span id="syncLastTime"></span>
+    </div>
+  </div>
+</header>
+
+<!-- EASTER EGG FLOATING LIGHTBOX -->
+<div id="eggOverlay">
+  <div id="eggDragBar">
+    <span id="eggDragLabel">📸 Photos</span>
+    <div style="display:flex;align-items:center;gap:4px;">
+      <button id="eggPin" onclick="eggTogglePin()" title="Pin (keeps open, ignores Escape)">📌</button>
+      <button id="eggClose" onclick="eggClose()" title="Close">✕</button>
+    </div>
+  </div>
+  <div id="eggImgWrap">
+    <img id="eggImg" src="" alt="🐣" draggable="false">
+  </div>
+  <div id="eggFooter">
+    <div id="eggCounter">1 / 3</div>
+    <div id="eggIntervalRow">
+      <label for="eggIntervalInput" style="cursor:pointer;">⏱</label>
+      <input id="eggIntervalInput" type="number" min="0" max="300" value="0" title="Slideshow interval in seconds (0 = off)" onchange="eggSetInterval()">
+      <span>s</span>
+    </div>
+    <div id="eggNav">
+      <button onclick="eggNav(-1)">← Prev</button>
+      <button onclick="eggNav(1)">Next →</button>
+    </div>
+  </div>
+  <div id="eggResize"></div>
+</div>
+
+<!-- EGG SETTINGS MODAL -->
+<div id="eggSettingsOverlay" onclick="if(event.target===this)closeEggSettings()">
+  <div id="eggSettingsPanel">
+    <div class="modal-hdr">
+      <span style="font-family:var(--fb);font-size:15px;font-weight:600;">📸 Photo Manager</span>
+      <button class="modal-x" onclick="closeEggSettings()">✕</button>
+    </div>
+    <div style="padding:12px 16px 0;display:flex;gap:8px;flex-shrink:0;">
+      <button class="btn btn-accent" onclick="eggSettingsAdd()" style="font-size:12px;">+ Add Photos</button>
+      <span id="eggSettingsCount" style="font-size:12px;color:var(--text3);align-self:center;"></span>
+    </div>
+    <div id="eggSettingsGrid"></div>
+  </div>
+</div>
+
+<!-- FIRST-RUN NAME PROMPT -->
+<div id="firstRunScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:0;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px 40px;max-width:380px;width:90%;display:flex;flex-direction:column;gap:20px;align-items:center;text-align:center;">
+    <div style="font-size:36px;">🥗</div>
+    <div>
+      <div style="font-family:var(--fd);font-size:22px;letter-spacing:-.3px;margin-bottom:6px;">Welcome to NutriLog</div>
+      <div style="font-size:13px;color:var(--text3);">What's your name? This sets up your personal profile.</div>
+    </div>
+    <input id="firstRunName" type="text" maxlength="20" placeholder="e.g. Alex"
+      style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:15px;outline:none;text-align:center;"
+      onkeydown="if(event.key==='Enter')submitFirstRun()">
+    <button class="btn btn-accent" onclick="submitFirstRun()" style="width:100%;padding:10px;font-size:14px;">Get Started</button>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🥗</div>
+      <div>
+        <div class="auth-logo-name">NutriLog</div>
+        <div class="auth-logo-sub">CALORIE TRACKER</div>
+      </div>
+    </div>
+    <div class="auth-title" id="authTitle">Sign In</div>
+    <div class="auth-sub" id="authSubtitle">Sync your data across all your devices</div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="authEmail" placeholder="alex@example.com" autocomplete="email">
+    </div>
+    <div class="auth-field" id="authNameField" style="display:none;">
+      <label>Display Name <span style="color:var(--text3)">(optional)</span></label>
+      <input type="text" id="authName" placeholder="Alex">
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+    <div class="auth-err" id="authErr"></div>
+    <button class="auth-btn" id="authBtn" onclick="submitAuth()">Sign In</button>
+    <div class="auth-switch" id="authSwitch">
+      No account? <span onclick="toggleAuthMode()">Create one</span>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);text-align:center;">
+      <span style="font-size:11px;color:var(--text3);cursor:pointer;" onclick="skipAuth()">
+        Continue without syncing (local only)
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<!-- Profile switch loading overlay -->
+<div id="profileSwitchOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:14px;">
+  <div style="width:36px;height:36px;border:3px solid var(--accent-dim);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+  <div id="profileSwitchLabel" style="font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.2px;">Switching...</div>
+</div>
+
+<aside id="sidebar">
+  <div class="logo" onclick="eggTap()" style="cursor:default;user-select:none;" title="">
+    <div class="logo-icon">🥗</div>
+    <div>
+      <div class="logo-name">NutriLog</div>
+      <div class="logo-sub">CALORIE TRACKER</div>
+    </div>
+  </div>
+  <div class="profile-toggle" id="profileToggle"></div>
+  <nav class="sidenav">
+    <div class="nav-section">Views</div>
+    <div class="nav-item active" id="nav-today" data-page="today" onclick="showPage('today',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Today
+      <span class="nav-pill" id="todayBadge">0</span>
+    </div>
+    <div class="nav-item" id="nav-history" data-page="history" onclick="showPage('history',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      History
+    </div>
+    <div class="nav-item" id="nav-analysis" data-page="analysis" onclick="showPage('analysis',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analysis
+      <span class="nav-ach-badge" id="nav-ach-badge"></span>
+    </div>
+    <div class="nav-item" id="nav-projection" data-page="projection" onclick="showPage('projection',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><polyline points="2 20 22 20"/></svg>
+      Projection
+    </div>
+    <div class="nav-section">Data</div>
+    <div class="nav-item" id="nav-foods" data-page="foods" onclick="showPage('foods',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Food Database
+      <span class="nav-pill" id="dbBadge">0</span>
+    </div>
+    <div class="nav-item" id="nav-references" data-page="references" onclick="showPage('references',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+      References
+    </div>
+    <div class="nav-item" id="nav-settings" data-page="settings" onclick="showPage('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="app-version" id="appVersionLabel"></div>
+    <div class="ms-box">
+      <div class="ms-head">
+        <div class="ms-label">Today's Intake</div>
+        <div class="ms-kcal" id="sKcal">0 kcal</div>
+      </div>
+      <div class="ms-rows" id="msRows"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- TODAY -->
+  <div class="page active" id="page-today">
+    <div class="rings-row" id="ringsRow"></div>
+    <div id="sparklinesRow" style="display:flex;gap:0;margin:-4px 0 6px;justify-content:stretch;"></div>
+    <div class="kcal-bar">
+      <div class="kcal-left">
+        <div class="kcal-label" style="display:flex;align-items:center;gap:6px;">TOTAL CALORIES
+          <button id="wk-budget-toggle" onclick="toggleWeekBudget()" class="btn btn-ghost" style="height:18px;font-size:9px;padding:0 7px;border-radius:4px;letter-spacing:.3px;" title="Toggle weekly calorie budget">Week</button>
+          <button id="ds-toggle" onclick="toggleDailySummary()" class="btn btn-ghost" style="height:18px;font-size:9px;padding:0 7px;border-radius:4px;letter-spacing:.3px;" title="Toggle daily macro summary">Summary</button>
+        </div>
+        <div class="kcal-num">
+          <span class="kcal-cur" id="kcalCur">0</span>
+          <span class="kcal-tgt" id="kcalTgt">/ 2,835 kcal</span>
+        </div>
+      </div>
+      <div class="kcal-mid">
+        <div class="kcal-bar-labels" id="kcalBarLbls">
+          <span>0</span><span>700</span><span>1,400</span><span>2,100</span><span>2,835</span>
+        </div>
+        <div class="kcal-track-wrap">
+          <div class="kcal-track">
+            <div id="kcalGreenZone" class="kcal-zone-green"></div>
+            <div id="kcalRedZone" class="kcal-zone-red"></div>
+            <div class="kcal-fill" id="kcalFill" style="width:0%"></div>
+          </div>
+          <div class="kcal-tick" id="kcalTickMin"></div>
+          <div class="kcal-tick" id="kcalTickMax"></div>
+          <div class="kcal-range-info" id="kcalRangeInfo">
+            <span id="kcalMinLabel" style="color:var(--green);"></span>
+            <span id="kcalMaxLabel" style="color:var(--red);"></span>
+          </div>
+        </div>
+      </div>
+      <div class="kcal-right">
+        <div class="kcal-rem-lbl">remaining</div>
+        <div class="kcal-rem-val" id="kcalRem">2,835</div>
+      </div>
+    </div>
+    <!-- WEEKLY BUDGET PANEL -->
+    <div id="weekBudgetPanel" class="week-budget-panel" style="display:none;">
+      <div class="wb-row">
+        <div class="wb-col">
+          <div class="wb-lbl">WEEKLY BUDGET</div>
+          <div class="wb-val" id="wbBudget">—</div>
+          <div class="wb-sub" id="wbBudgetSub">7 × target</div>
+        </div>
+        <div class="wb-col" style="flex:1;">
+          <div class="wb-range-lbl" id="wbRange">—</div>
+          <div class="wb-bar-wrap"><div class="wb-bar-fill" id="wbBarFill" style="width:0%"></div></div>
+          <div class="wb-bar-nums">
+            <span id="wbConsumed">—</span>
+            <span id="wbRemaining">—</span>
+          </div>
+        </div>
+        <div class="wb-col" style="text-align:right;">
+          <div class="wb-lbl">DAILY AVG</div>
+          <div class="wb-val" id="wbAvg">—</div>
+          <div class="wb-sub" id="wbDaysLeft">— of 7 days</div>
+        </div>
+      </div>
+    </div>
+    <!-- DAILY SUMMARY CARD -->
+    <div id="dailySummaryCard" class="daily-summary-card" style="display:none;">
+      <div id="dailySummaryBody"></div>
+    </div>
+    <!-- WEEKLY SUMMARY -->
+    <div class="weekly-summary">
+      <div class="weekly-hdr">
+        <div>
+          <div class="weekly-title">Weekly Summary</div>
+          <div class="weekly-sub" id="weeklySubLbl">This week's calorie intake</div>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+          <button id="wk-macro"  onclick="toggleWeeklyOpt('macroView')"  class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Stacked macro breakdown">Macro</button>
+          <span style="width:1px;height:14px;background:var(--border);margin:0 2px;flex-shrink:0;"></span>
+          <button id="wk-grid"   onclick="toggleWeeklyOpt('gridLines')"  class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Horizontal grid lines">Grid</button>
+          <button id="wk-target" onclick="toggleWeeklyOpt('targetLine')" class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Calorie target line">Target</button>
+          <button id="wk-zone"   onclick="toggleWeeklyOpt('minMaxZone')" class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Floor/ceiling zone">Zone</button>
+          <button id="wk-trend"  onclick="toggleWeeklyOpt('trendLine')"  class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Day-to-day trend line">Trend</button>
+          <button id="wk-avg"    onclick="toggleWeeklyOpt('avgLine')"    class="btn btn-ghost" style="height:24px;font-size:10px;padding:0 8px;" title="Weekly average line">Avg</button>
+        </div>
+      </div>
+      <div style="position:relative;">
+        <div class="weekly-grid" id="weeklyGrid"></div>
+        <!-- Trend line overlay rendered by canvas -->
+        <canvas id="trendCanvas" style="position:absolute;inset:0;pointer-events:none;width:100%;height:100%;z-index:2;"></canvas>
+      </div>
+      <!-- Macro legend — shown only when Macro view is active -->
+      <div id="weeklyMacroLegend" style="display:none;gap:12px;margin-top:6px;padding:0 2px;">
+        <span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--mp);opacity:.85;display:inline-block;"></span>Protein</span>
+        <span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--mc);opacity:.85;display:inline-block;"></span>Carbs</span>
+        <span style="font-size:10px;color:var(--text3);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--mf);opacity:.85;display:inline-block;"></span>Fat</span>
+      </div>
+    </div>
+
+    <!-- Streak counters + body weight widget row -->
+    <div id="todayWidgets" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">
+      <!-- streak and weight widgets rendered dynamically by renderStreaks/renderWeightWidget -->
+      <div id="widget-weight" class="tcard" style="padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="openWeightLog()" title="Click to log weight">
+        <div style="font-size:22px;">⚖️</div>
+        <div style="flex:1;">
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Last Weigh-in <span style="color:var(--accent);font-size:9px;">· tap to log</span></div>
+          <div id="widget-weight-val" style="font-size:20px;font-weight:700;color:var(--accent);">— kg</div>
+          <div id="widget-weight-delta" style="font-size:10px;color:var(--text3);">No check-ins yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick-log recent meals -->
+    <div id="recentMealsWidget" style="display:none;margin-bottom:14px;">
+      <div class="tcard" style="padding:12px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">⚡ Quick-Log Frequent</div>
+          <button onclick="toggleWidgetHide('recent')" title="Hide section" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 6px;border-radius:4px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Hide ✕</button>
+        </div>
+        <div id="recentMealsList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- Quick-apply templates widget -->
+    <div id="quickTplWidget" style="display:none;margin-bottom:16px;">
+      <div class="tcard" style="padding:12px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:600;">🍱 Quick Apply Template</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-ghost" onclick="showPage('foods',document.getElementById('nav-foods'));switchFdTab('templates')" style="height:26px;font-size:11px;padding:0 10px;">Manage</button>
+            <button onclick="toggleWidgetHide('tpl')" title="Hide section" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:2px 6px;border-radius:4px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">Hide ✕</button>
+          </div>
+        </div>
+        <div id="quickTplList" style="display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;"></div>
+      </div>
+    </div>
+
+    <!-- Auto-detected recurring-combo → template suggestion -->
+    <div id="tplSuggestWidget" style="display:none;margin-bottom:16px;">
+      <div class="tcard" style="padding:12px 16px;border-color:var(--accent-dim);">
+        <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">💡 Template Suggestion</div>
+            <div id="tplSuggestText" style="font-size:13px;color:var(--text);"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button class="btn btn-ghost" onclick="dismissTplSuggestion()" style="height:30px;font-size:11px;padding:0 12px;">Dismiss</button>
+            <button class="btn btn-accent" onclick="saveTplSuggestion()" style="height:30px;font-size:11px;padding:0 14px;">Save as Template</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unresolved "Log Later" placeholders — across today + any past day -->
+    <div id="pendingEntriesWidget" style="display:none;margin-bottom:16px;">
+      <div class="tcard" style="padding:12px 16px;border-color:rgba(240,160,48,.4);">
+        <div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:11px;font-weight:700;color:var(--yellow);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">⏳ Unresolved Entries</div>
+            <div id="pendingEntriesText" style="font-size:13px;color:var(--text);"></div>
+          </div>
+          <button class="btn btn-ghost" onclick="showPage('history',document.getElementById('nav-history'))" style="height:30px;font-size:11px;padding:0 14px;flex-shrink:0;">Review in History</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <!-- Restore hidden widgets row -->
+      <div id="hiddenWidgetRestore" style="display:none;gap:6px;margin-bottom:10px;flex-wrap:wrap;"></div>
+      <div class="sec-hdr" style="margin-bottom:12px">
+        <div class="sec-title">Meal Log</div>
+        <span class="pill" id="entryCount">0 entries</span>
+      </div>
+      <div class="tcard">
+        <div class="tcard-toolbar">
+          <div class="tcard-title">Today's Entries</div>
+          <button class="btn btn-ghost" id="logSelBtn" onclick="toggleLogMulti()" style="height:28px;font-size:11px;padding:0 10px">Select</button>
+          <button class="btn btn-ghost" id="undoBtn" onclick="undoLast()" title="Undo last action" style="height:28px;font-size:11px;padding:0 10px;display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 101.85-4.36L1 10"/></svg>
+            Undo
+          </button>
+          <button class="btn btn-ghost" id="redoBtn" onclick="redoLast()" title="Redo last action" style="height:28px;font-size:11px;padding:0 10px;display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-1.85-4.36L23 10"/></svg>
+            Redo
+          </button>
+          <select class="fsel" id="filterCat" onchange="renderTable()">
+            <option value="">All Categories</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+          </select>
+        </div>
+        <div id="logBulkBar" class="bulk-bar">
+          <span class="bulk-count" id="logSelCount">0 selected</span>
+          <select id="bulkCatSel" class="fsel" style="height:28px;font-size:11px;">
+            <option value="">Set category…</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+          </select>
+          <input type="time" id="bulkTimeSel" class="sinput" style="height:28px;font-size:11px;padding:0 8px;width:110px;" title="Set time for selected">
+          <button class="btn btn-ghost" onclick="applyBulkEdit()" style="height:28px;font-size:11px;padding:0 10px">Apply</button>
+          <button class="btn btn-ghost danger" onclick="deleteLogSelected()" style="height:28px;font-size:11px;padding:0 10px">Delete</button>
+          <button class="btn btn-ghost" onclick="clearLogSel()" style="height:28px;font-size:11px;padding:0 10px">Clear</button>
+        </div>
+        <div class="tcard-scroll">
+        <table>
+          <thead><tr>
+            <th class="chk" id="logChkHead" style="display:none"><input type="checkbox" id="logChkAll" onchange="logSelectAll(this.checked)" style="cursor:pointer;accent-color:var(--accent)"></th>
+            <th class="cat-strip-head"></th>
+            <th style="width:58px;cursor:pointer;user-select:none;" onclick="logSortBy('time')" id="th-time">Time</th>
+            <th style="width:100px;cursor:pointer;user-select:none;" onclick="logSortBy('cat')" id="th-cat">Category</th>
+            <th>Food Item</th>
+            <th class="nr ck" style="cursor:pointer;user-select:none;" onclick="logSortBy('kcal')" id="th-kcal">kcal</th>
+            <th class="nr cp" style="cursor:pointer;user-select:none;" onclick="logSortBy('protein')" id="th-protein">Protein</th>
+            <th class="nr cf" style="cursor:pointer;user-select:none;" onclick="logSortBy('fat')" id="th-fat">Fat</th>
+            <th class="nr cc" style="cursor:pointer;user-select:none;" onclick="logSortBy('carbs')" id="th-carbs">Carbs</th>
+            <th class="nr cfi" style="cursor:pointer;user-select:none;" onclick="logSortBy('fiber')" id="th-fiber">Fiber</th>
+            <th class="ac"></th>
+          </tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="page" id="page-history">
+    <div class="sec-hdr">
+      <button class="btn btn-ghost" id="histMultiBtn" onclick="toggleHistMulti()" style="display:none;margin-left:auto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+        Select Dates
+      </button>
+    </div>
+    <div class="hist-layout">
+      <div>
+        <div class="cal-card">
+          <div class="cal-hdr">
+            <button class="cal-nav" onclick="calMove(-1)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="cal-month" id="calMonthLbl"></div>
+            <button class="cal-nav" onclick="calMove(1)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <div class="cal-grid">
+            <div class="cal-dow">
+              <div class="cal-dow-lbl">SUN</div><div class="cal-dow-lbl">MON</div>
+              <div class="cal-dow-lbl">TUE</div><div class="cal-dow-lbl">WED</div>
+              <div class="cal-dow-lbl">THU</div><div class="cal-dow-lbl">FRI</div>
+              <div class="cal-dow-lbl">SAT</div>
+            </div>
+            <div class="cal-days-grid" id="calDays"></div>
+          </div>
+          <!-- multi-select action bar inside calendar -->
+          <div id="histMultiBar" style="display:none; padding:10px 12px; border-top:1px solid var(--border); display:none; gap:6px; flex-wrap:wrap;">
+            <span id="histSelCount" style="font-size:12px;color:var(--accent);flex:1;font-family:var(--fm)">0 selected</span>
+            <button class="btn btn-ghost" onclick="exportHistSelected()" style="height:28px;font-size:11px;padding:0 10px">Export</button>
+            <button class="btn btn-ghost danger" onclick="deleteHistSelected()" style="height:28px;font-size:11px;padding:0 10px">Delete</button>
+            <button class="btn btn-ghost" onclick="clearHistMulti()" style="height:28px;font-size:11px;padding:0 10px">Clear</button>
+          </div>
+        </div>
+      </div>
+      <div class="hist-detail" id="histDetail">
+        <div class="hist-empty">
+          <div class="ei">Select a date</div>
+          <p>Click any highlighted date to view that day's nutrition log</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSIS -->
+  <div class="page" id="page-analysis">
+    <div class="sec-hdr">
+      <div class="period-btns" style="margin-left:auto">
+        <button class="period-btn active" onclick="setAnalysisPeriod(7,this)">7d</button>
+        <button class="period-btn" onclick="setAnalysisPeriod(14,this)">14d</button>
+        <button class="period-btn" onclick="setAnalysisPeriod(30,this)">30d</button>
+        <button class="period-btn" onclick="setAnalysisPeriod(90,this)">90d</button>
+      </div>
+    </div>
+    <div class="analysis-grid">
+      <div class="analysis-card full">
+        <div class="analysis-card-title">Calorie Trend</div>
+        <div class="analysis-card-sub" id="calorieTrendSub">Daily calorie intake over selected period</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="calorieTrendChart"></canvas></div>
+      </div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">Average vs Targets</div>
+        <div class="analysis-card-sub">Daily average compared to your goals</div>
+        <div id="avgVsTargets"></div>
+      </div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">Macro Breakdown</div>
+        <div class="analysis-card-sub">Average macro distribution</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="macroBreakdownChart"></canvas></div>
+      </div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">Top Protein Sources</div>
+        <div class="analysis-card-sub">Most frequent high-protein foods</div>
+        <div id="topProteinFoods"></div>
+      </div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">Meal Category Distribution</div>
+        <div class="analysis-card-sub">Calories by meal time</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="catDistChart"></canvas></div>
+      </div>
+      <div class="analysis-card full">
+        <div class="analysis-card-title">Meal Timing</div>
+        <div class="analysis-card-sub" id="mealTimingSub">When you eat throughout the day</div>
+        <div id="mealTimingBody" style="margin-top:12px;"></div>
+      </div>
+      <div class="analysis-card full">
+        <div class="analysis-card-title">12-Month Calorie Overview</div>
+        <div class="analysis-card-sub">Average daily calories per month vs your target</div>
+        <div class="chart-wrap" style="height:180px;margin-top:10px;"><canvas id="monthlyKcalChart"></canvas></div>
+      </div>
+      <div class="analysis-card full">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div class="analysis-card-title">Food Log Heatmap</div>
+            <div class="analysis-card-sub">Logging consistency over the past year</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:var(--text3);">
+            <span>Less</span>
+            <span id="heatmapLegend" style="display:flex;gap:2px;"></span>
+            <span>More</span>
+          </div>
+        </div>
+        <div id="heatmapBody" style="margin-top:14px;overflow-x:auto;padding-bottom:4px;"></div>
+        <div id="heatmapStats" style="margin-top:10px;display:flex;gap:20px;flex-wrap:wrap;"></div>
+      </div>
+      <div class="analysis-card full">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div>
+            <div class="analysis-card-title">🎯 Achievements</div>
+            <div class="analysis-card-sub" id="achievementSub">Unlock milestones as you log</div>
+          </div>
+          <div id="achievementCount" style="font-family:var(--fm);font-size:11px;color:var(--text3);"></div>
+        </div>
+        <div class="achievement-grid" id="achievement-grid"></div>
+      </div>
+      <div class="analysis-card full">
+        <div class="analysis-card-title">🏆 Personal Records</div>
+        <div class="analysis-card-sub">Your best single-day nutrition stats across all history</div>
+        <div id="bestDayRecords" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;"></div>
+      </div>
+      <div class="analysis-card full">
+        <div class="analysis-card-title">💡 Nutrition Insights</div>
+        <div class="analysis-card-sub">Patterns and observations from your logged history</div>
+        <div id="nutritionInsights" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOD DATABASE -->
+  <div class="page" id="page-foods">
+    <div class="sec-hdr" style="margin-bottom:0">
+      <span class="pill" id="dbCount">0 items</span>
+    </div>
+    <!-- Tab bar -->
+    <div style="display:flex;gap:2px;margin:14px 0 16px;background:var(--bg3);border-radius:10px;padding:3px;border:1px solid var(--border);">
+      <button id="fdTab-library" onclick="switchFdTab('library')" style="flex:1;height:30px;border:none;border-radius:8px;font-family:var(--fb);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--accent);color:#fff;">📦 Food Library</button>
+      <button id="fdTab-templates" onclick="switchFdTab('templates')" style="flex:1;height:30px;border:none;border-radius:8px;font-family:var(--fb);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);">🍱 Meal Templates</button>
+      <button id="fdTab-recipes" onclick="switchFdTab('recipes')" style="flex:1;height:30px;border:none;border-radius:8px;font-family:var(--fb);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;background:transparent;color:var(--text2);">🧪 Recipes</button>
+    </div>
+
+    <!-- FOOD LIBRARY TAB -->
+    <div id="fdPanel-library">
+      <!-- Macro filter bar -->
+      <div class="db-macro-filter">
+        <span style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Filter:</span>
+        <div class="db-flt-group"><label>Protein ≥</label><input id="dbFltMinProt" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Kcal ≤</label><input id="dbFltMaxKcal" type="number" min="0" placeholder="kcal" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Carbs ≤</label><input id="dbFltMaxCarbs" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Fat ≤</label><input id="dbFltMaxFat" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
+        <div class="db-flt-group"><label>Fiber ≥</label><input id="dbFltMinFiber" type="number" min="0" placeholder="g" oninput="renderFoodDbD()"></div>
+        <button class="btn btn-ghost" onclick="clearDbFilters()" style="height:24px;font-size:10px;padding:0 8px;margin-left:auto;">Clear</button>
+      </div>
+      <div class="db-type-filters">
+        <span style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;margin-right:2px;">Type:</span>
+        <button class="dtf-btn active" id="dtf-all" onclick="setDbTypeFilter('')">All</button>
+        <button class="dtf-btn" id="dtf-packaged" onclick="setDbTypeFilter('packaged')">🏷️ Packaged</button>
+        <button class="dtf-btn" id="dtf-whole" onclick="setDbTypeFilter('whole')">🌿 Whole</button>
+        <button class="dtf-btn" id="dtf-recipe" onclick="setDbTypeFilter('recipe')">🍳 Recipe</button>
+        <button class="dtf-btn" id="dtf-restaurant" onclick="setDbTypeFilter('restaurant')">🍜 Takeout</button>
+        <button class="dtf-btn" id="dtf-untagged" onclick="setDbTypeFilter('untagged')">◌ Untagged</button>
+      </div>
+      <div class="db-toolbar">
+        <input class="db-search" id="dbSearch" type="text" placeholder="Search food items…" oninput="renderFoodDbD()">
+        <button class="btn btn-ghost" onclick="importFoodDb()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Import DB
+        </button>
+        <button class="btn btn-ghost" onclick="exportFoodDb()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export DB
+        </button>
+        <button class="btn btn-accent" onclick="openDbAdd()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Item
+        </button>
+      </div>
+      <div class="tcard">
+        <div class="tcard-toolbar">
+          <div class="tcard-title">Food Items</div>
+          <button class="btn btn-ghost" id="dbSelBtn" onclick="toggleDbMulti()" style="height:28px;font-size:11px;padding:0 10px">Select</button>
+        </div>
+        <div id="dbBulkBar" class="bulk-bar">
+          <span class="bulk-count" id="dbSelCount">0 selected</span>
+          <select id="dbBulkTypeSelect" class="db-type-sel" style="height:28px;width:auto;font-size:11px;padding:0 8px;border-radius:6px;background:var(--bg3);">
+            <option value="">Set type…</option>
+            <option value="packaged">🏷️ Packaged</option>
+            <option value="whole">🌿 Whole</option>
+            <option value="recipe">🍳 Recipe</option>
+            <option value="restaurant">🍜 Takeout</option>
+            <option value="">◌ Clear type</option>
+          </select>
+          <button class="btn btn-ghost" onclick="bulkSetDbType()" style="height:28px;font-size:11px;padding:0 10px">Apply Type</button>
+          <button class="btn btn-ghost" onclick="openMergeFoods()" title="Merge these into one food — also relabels past log entries so frequency/streak stats aren't split across near-duplicates" style="height:28px;font-size:11px;padding:0 10px">Merge…</button>
+          <button class="btn btn-ghost" onclick="exportDbSelected()" style="height:28px;font-size:11px;padding:0 10px">Export</button>
+          <button class="btn btn-ghost danger" onclick="deleteDbSelected()" style="height:28px;font-size:11px;padding:0 10px">Delete</button>
+          <button class="btn btn-ghost" onclick="clearDbSel()" style="height:28px;font-size:11px;padding:0 10px">Clear</button>
+        </div>
+        <div class="tcard-scroll">
+        <table>
+          <thead><tr>
+            <th class="chk" id="dbChkHead" style="display:none"><input type="checkbox" id="dbChkAll" onchange="dbSelectAll(this.checked)" style="cursor:pointer;accent-color:var(--accent)"></th>
+            <th style="width:34px">#</th>
+            <th>Food Item</th>
+            <th class="nr">Serving</th>
+            <th>Unit</th>
+            <th class="nr ck">kcal</th>
+            <th class="nr cp">Protein</th>
+            <th class="nr cf">Fat</th>
+            <th class="nr cc">Carbs</th>
+            <th class="nr cfi">Fiber</th>
+            <th class="ac"></th>
+          </tr></thead>
+          <tbody id="dbBody"></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEAL PREP TEMPLATES TAB -->
+    <div id="fdPanel-templates" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:12px;color:var(--text3);">Save groups of meals as reusable templates — apply to today or any date range in one click.</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" onclick="undoTplHistoryApply()" style="height:32px;font-size:11px;padding:0 12px;">↩ Undo Last Apply</button>
+          <button class="btn btn-accent" onclick="openTplCreate()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Template
+          </button>
+        </div>
+      </div>
+      <div id="tplList"></div>
+    </div>
+
+    <!-- RECIPES TAB -->
+    <div id="fdPanel-recipes" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:12px;color:var(--text3);">Build recipes from food library items. Same ingredients, different amounts — scale per serving when logging.</div>
+        <button class="btn btn-accent" onclick="openRecipeEditor(null)" style="height:32px;font-size:12px;padding:0 14px;">+ New Recipe</button>
+      </div>
+      <div id="recipeList"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <div class="settings-grid">
+      <!-- Stats Dashboard -->
+      <div class="settings-section" style="grid-column:1/-1;" id="statsDashSection">
+        <div class="settings-title">Overview</div>
+        <div class="stats-dash-cards" id="statsDashCards"></div>
+        <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;">Top 10 Foods (by frequency)</div>
+            <div id="statsTopFoods"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:8px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;">Most Active Day of Week</div>
+            <div id="statsDayOfWeek"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Appearance -->
+      <div class="settings-section" style="grid-column:1/-1">
+        <div class="settings-title">Appearance</div>
+        <div class="srow" style="margin-top:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">
+          <div><div class="srow-label">Theme</div><div class="srow-sub">Switch between dark and light</div></div>
+          <button class="btn btn-ghost icon-only" id="themeBtn" onclick="toggleTheme()" title="Dark / Light">🌙</button>
+        </div>
+        <div style="margin-top:14px;">
+          <div class="srow-label" style="margin-bottom:12px;">UI Variant <span style="font-size:10px;font-weight:400;color:var(--text3);font-family:var(--fm);">— applies to both dark &amp; light mode</span></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;" id="variantGrid">
+            <!-- Default / Aura -->
+            <button class="variant-swatch active" data-v="default" onclick="applyVariant('default')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #2e2550;display:flex;height:46px;">
+                <div style="flex:1;background:#0d0b1a;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#8b82ff;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#2e2550;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#2e2550;"></div>
+                <div style="flex:1;background:#f4f3ff;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#6366f1;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#e2dcf8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Aura</div>
+              <div style="font-size:9px;opacity:.6;">Indigo · default</div>
+            </button>
+            <!-- Onyx -->
+            <button class="variant-swatch" data-v="onyx" onclick="applyVariant('onyx')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #38383a;display:flex;height:46px;">
+                <div style="flex:1;background:#0f0f0f;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#0a84ff;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#38383a;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#38383a;"></div>
+                <div style="flex:1;background:#f5f5f7;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#0071e3;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#d8d8d8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Onyx</div>
+              <div style="font-size:9px;opacity:.6;">Blue · Apple</div>
+            </button>
+            <!-- Linear -->
+            <button class="variant-swatch" data-v="linear" onclick="applyVariant('linear')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #25253a;display:flex;height:46px;">
+                <div style="flex:1;background:#0a0a0e;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#5c6aff;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#25253a;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#d0d4f0;"></div>
+                <div style="flex:1;background:#f5f7ff;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#4c5bff;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#d4d8f8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Linear</div>
+              <div style="font-size:9px;opacity:.6;">Indigo · tech</div>
+            </button>
+            <!-- Amber -->
+            <button class="variant-swatch" data-v="amber" onclick="applyVariant('amber')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #2a2530;display:flex;height:46px;">
+                <div style="flex:1;background:#08070a;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#f0a030;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#2a2530;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#e8d8a8;"></div>
+                <div style="flex:1;background:#fdf8ee;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#c17800;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#e8d8a8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Amber</div>
+              <div style="font-size:9px;opacity:.6;">Gold · warm</div>
+            </button>
+            <!-- Rose -->
+            <button class="variant-swatch" data-v="rose" onclick="applyVariant('rose')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #4a2040;display:flex;height:46px;">
+                <div style="flex:1;background:#140a0f;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#e879a8;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#4a2040;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#d8a0c4;"></div>
+                <div style="flex:1;background:#fce8f4;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#c01870;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#d8a0c4;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Rose</div>
+              <div style="font-size:9px;opacity:.6;">Pink · dark</div>
+            </button>
+            <!-- Nord -->
+            <button class="variant-swatch" data-v="nord" onclick="applyVariant('nord')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #4c566a;display:flex;height:46px;">
+                <div style="flex:1;background:#232731;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#88c0d0;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#4c566a;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#b0c4d8;"></div>
+                <div style="flex:1;background:#d8e4ef;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#4a8cb4;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#b0c4d8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Nord</div>
+              <div style="font-size:9px;opacity:.6;">Arctic · blue</div>
+            </button>
+            <!-- Forest -->
+            <button class="variant-swatch" data-v="forest" onclick="applyVariant('forest')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #244830;display:flex;height:46px;">
+                <div style="flex:1;background:#071209;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#4ade80;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#244830;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#a0d4ac;"></div>
+                <div style="flex:1;background:#d4eeda;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#16a34a;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#a0d4ac;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Forest</div>
+              <div style="font-size:9px;opacity:.6;">Green · dark</div>
+            </button>
+            <!-- Teal -->
+            <button class="variant-swatch" data-v="teal" onclick="applyVariant('teal')">
+              <div style="width:100%;border-radius:6px;overflow:hidden;border:1px solid #224c52;display:flex;height:46px;">
+                <div style="flex:1;background:#060f10;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#2dd4bf;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#224c52;border-radius:1px;width:85%;"></div>
+                </div>
+                <div style="width:1px;background:#98d4d8;"></div>
+                <div style="flex:1;background:#cceef0;padding:7px 7px 5px;">
+                  <div style="height:3px;background:#0d9488;border-radius:2px;width:70%;margin-bottom:5px;"></div>
+                  <div style="height:2px;background:#98d4d8;border-radius:1px;width:85%;"></div>
+                </div>
+              </div>
+              <div style="font-size:11px;font-weight:600;">Teal</div>
+              <div style="font-size:9px;opacity:.6;">Cyan · dark</div>
+            </button>
+          </div>
+        </div>
+        <div class="srow" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+          <div><div class="srow-label">Simple Mode</div><div class="srow-sub">hides advanced views — best for parents &amp; new users</div></div>
+          <button id="simpleModeToggle" class="btn btn-ghost" onclick="toggleSimpleMode()" style="min-width:52px;height:28px;font-size:12px;font-family:var(--fm);">Off</button>
+        </div>
+      </div>
+      <!-- Profiles -->
+      <div class="settings-section">
+        <div class="settings-title">Profiles</div>
+        <div id="profile-settings-list"></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div class="srow-label" style="margin-bottom:8px;">Add Profile</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="s-new-profile-name" type="text" maxlength="20" placeholder="e.g. Mom, Dad, Pia…"
+              style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:13px;outline:none;"
+              onkeydown="if(event.key==='Enter')addProfileFromInput()">
+            <button class="btn btn-primary" onclick="addProfileFromInput()" style="padding:7px 16px;font-size:13px;">Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-title-row">
+          <div class="settings-title">Personal Info</div>
+          <div class="unsaved-dot" id="pi-dot"></div>
+          <div class="unsaved-label" id="pi-label">Unsaved changes</div>
+        </div>
+        <div class="srow"><div><div class="srow-label">Age</div><div class="srow-sub">years</div></div>
+          <input class="sinput" id="s-age" type="number" min="10" max="100" value="28" oninput="markPIDirty();updateCalc()"></div>
+        <div class="srow"><div><div class="srow-label">Height</div><div class="srow-sub">cm</div></div>
+          <input class="sinput" id="s-height" type="number" min="100" max="250" value="191" oninput="markPIDirty();updateCalc()"></div>
+        <div class="srow"><div><div class="srow-label">Weight</div><div class="srow-sub">kg</div></div>
+          <input class="sinput" id="s-weight" type="number" min="30" max="300" step="0.1" value="77" oninput="markPIDirty();updateCalc()"></div>
+        <div class="srow"><div><div class="srow-label">Gender</div></div>
+          <select class="sselect" id="s-gender" onchange="markPIDirty();updateCalc()">
+            <option value="M">Male</option><option value="F">Female</option>
+          </select></div>
+        <div class="srow"><div><div class="srow-label">Activity Level</div></div>
+          <select class="sselect" id="s-activity" onchange="markPIDirty();updateCalc()">
+            <option value="1.2">No exercise</option>
+            <option value="1.375">1–3x / week</option>
+            <option value="1.55" selected>4–5x / week</option>
+            <option value="1.725">6–7x / week</option>
+            <option value="1.9">2x / day</option>
+          </select></div>
+        <div class="srow"><div><div class="srow-label">Goal</div></div>
+          <select class="sselect" id="s-goal" onchange="markPIDirty();updateCalc();updateGoalFields()">
+            <option value="recomp" selected>Body Recomposition ⭐</option>
+            <option value="-200">Gentle Loss (−200 kcal) 👴👵</option>
+            <option value="-500">Fat Loss (−500 kcal)</option>
+            <option value="0">Maintenance</option>
+            <option value="300">Lean Bulk (+300 kcal)</option>
+          </select></div>
+        <!-- Goal Planning — collapsible, hidden in simple mode -->
+        <div class="adv">
+          <div class="goal-setup-toggle" onclick="toggleGoalSetup()" id="goalSetupToggle">
+            <div>
+              <div class="srow-label" style="margin:0;">Goal Planning</div>
+              <div class="srow-sub" style="margin:2px 0 0;">body fat %, target weight, timeline</div>
+            </div>
+            <span class="goal-setup-chevron" id="goalSetupChevron">▶</span>
+          </div>
+          <div class="goal-setup-body" id="goalSetupBody">
+            <div class="srow" style="margin-top:10px;"><div><div class="srow-label">Body Fat %</div><div class="srow-sub">estimate; 16% default</div></div>
+              <input class="sinput" id="s-bodyfat" type="number" min="5" max="45" step="0.5" value="16" oninput="markPIDirty();updateCalc()"></div>
+            <div class="srow" id="goalwtRow"><div><div class="srow-label">Goal Weight</div><div class="srow-sub">kg target — leave blank for maintenance</div></div>
+              <input class="sinput" id="s-goalwt" type="number" min="40" max="200" step="0.5" placeholder="—" oninput="markPIDirty();updateCalc()"></div>
+            <div class="srow"><div><div class="srow-label">Plan Start Date</div><div class="srow-sub">for progress tracking</div></div>
+              <input type="date" id="s-planstart" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:12px;border-radius:6px;padding:5px 8px;outline:none;" oninput="markPIDirty()"></div>
+            <div class="srow"><div><div class="srow-label">Timeline</div><div class="srow-sub">weeks</div></div>
+              <input class="sinput" id="s-weeks" type="number" min="4" max="104" step="1" value="20" oninput="markPIDirty();updateCalc()"></div>
+            <div class="srow"><div><div class="srow-label">Lifetime Mode</div><div class="srow-sub">tiny deficit, forever</div></div>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                <input type="checkbox" id="s-lifetime" onchange="markPIDirty();updateCalc()" style="width:16px;height:16px;accent-color:var(--accent);">
+                <span style="font-size:12px;color:var(--text2)">Gentle recomp (−100 kcal)</span>
+              </label></div>
+            <div class="calc-box" style="margin-top:10px;">
+              <div class="calc-row">
+                <span class="calc-lbl">BMI <span class="ci">i<span class="ci-tip"><strong>Body Mass Index</strong>Normal: 18.5–24.9 · Underweight: &lt;18.5 · Overweight: 25–29.9 · Obese: ≥30. Note: BMI doesn't distinguish muscle from fat — use body fat % for a fuller picture. Source: WHO 2000.</span></span></span>
+                <span class="calc-val" id="c-bmi">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">BMR <span class="ci">i<span class="ci-tip"><strong>Basal Metabolic Rate</strong>Calories burned at complete rest — your "floor." Calculated with Revised Harris-Benedict. Varies by body size, age, and sex. This number alone is not a target.</span></span></span>
+                <span class="calc-val" id="c-bmr">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">TDEE <span class="ci">i<span class="ci-tip"><strong>Total Daily Energy Expenditure</strong>BMR × activity multiplier. This is your maintenance calories — eating at TDEE neither gains nor loses weight. Source: McArdle, Katch &amp; Katch 2010.</span></span></span>
+                <span class="calc-val" id="c-tdee">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Calorie Target <span class="ci">i<span class="ci-tip"><strong>Your daily calorie goal</strong>TDEE + your deficit/surplus. Safe range: 1,400–3,500 kcal for most adults. Below 1,200 kcal risks nutrient deficiencies and muscle loss. Above 4,000 kcal is rarely needed outside elite athletes.</span></span></span>
+                <span class="calc-val" id="c-target">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Lean Body Mass <span class="ci">i<span class="ci-tip"><strong>Lean Body Mass (LBM)</strong>Weight minus fat mass. Estimated by Boer formula. Used to set protein targets (2.4 g/kg LBM) and muscle gain caps in the projection model. Higher LBM = higher metabolism.</span></span></span>
+                <span class="calc-val" id="c-lbm">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Fat to Lose <span class="ci">i<span class="ci-tip"><strong>Estimated fat mass to reach goal weight</strong>Assumes all weight difference is fat. Safe loss rate: 0.5–1% body weight per week. Losing faster risks muscle loss. Source: Garthe 2011; Hall 2012.</span></span></span>
+                <span class="calc-val" id="c-fatloss">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Required Deficit <span class="ci">i<span class="ci-tip"><strong>Daily calorie deficit needed</strong>Conservative &lt;300 kcal/day · Moderate 300–500 · Aggressive 500–750 · Risky &gt;750 (muscle loss likely). ~7,700 kcal deficit = 1 kg fat. Source: Hall et al. 2012.</span></span></span>
+                <span class="calc-val" id="c-deficit">—</span>
+              </div>
+              <div class="calc-row">
+                <span class="calc-lbl">Safe Timeline <span class="ci">i<span class="ci-tip"><strong>Recommended weeks to reach goal weight</strong>Based on 0.3–0.5 kg/week fat loss rate — the range shown to preserve muscle while losing fat. Slower is better for body composition. Source: Barakat 2020; Garthe 2011.</span></span></span>
+                <span class="calc-val" id="c-safeweeks">—</span>
+              </div>
+              <div id="c-recomp-warn" style="margin-top:8px;padding:8px;border-radius:6px;font-size:11px;line-height:1.5;display:none;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="srow" style="margin-top:8px;"><div><div class="srow-label">Daily Log Reminder</div><div class="srow-sub">notify if no meals logged by this time</div></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" id="s-reminder-enabled" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;" onchange="saveSettings()">
+            <input type="time" id="s-reminder-time" value="20:00" style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-family:var(--fm);font-size:12px;outline:none;width:90px;" onchange="saveSettings()">
+          </div></div>
+        <div class="srow adv"><div><div class="srow-label">Check-in Frequency</div><div class="srow-sub">how often to prompt weekly check-in</div></div>
+          <select id="s-checkin-freq" class="sselect" onchange="markPIDirty()" style="width:160px;">
+            <option value="3">Every 3 days</option>
+            <option value="7" selected>Every 7 days</option>
+            <option value="14">Every 14 days</option>
+            <option value="30">Every 30 days</option>
+            <option value="9999">Never</option>
+          </select></div>
+        <div class="srow adv"><div><div class="srow-label">Streak Macros</div><div class="srow-sub">which macros show a streak on Today</div></div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="s-streak-protein" checked style="accent-color:var(--mp);" onchange="renderStreaks()"> Protein</label>
+            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="s-streak-carbs" style="accent-color:var(--mc);" onchange="renderStreaks()"> Carbs</label>
+            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="s-streak-fat" style="accent-color:var(--mf);" onchange="renderStreaks()"> Fat</label>
+            <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="s-streak-fiber" checked style="accent-color:var(--mfi);" onchange="renderStreaks()"> Fiber</label>
+          </div></div>
+        <div class="srow"><div><div class="srow-label">Body Weight Widget</div><div class="srow-sub">show last weigh-in on Today page</div></div>
+          <input type="checkbox" id="s-show-weight-widget" checked style="width:16px;height:16px;accent-color:var(--accent);" onchange="applyWidgetSettings()"></div>
+      </div>
+      <div class="settings-section macro-section">
+        <div class="settings-title-row">
+          <div class="settings-title">Daily Macro Targets</div>
+          <div class="unsaved-dot" id="mt-dot"></div>
+          <div class="unsaved-label" id="mt-label">Unsaved changes</div>
+        </div>
+        <div class="custom-macro-badge" id="custom-macro-badge">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.2 2.5L10 4l-2 1.9.5 2.7L6 7.4 3.5 8.6l.5-2.7L2 4l2.8-.5L6 1z" fill="currentColor"/></svg>
+          Custom targets — not auto-calculated
+          <span onclick="resetToAutoMacro()" style="margin-left:8px;cursor:pointer;font-size:10px;color:var(--text3);text-decoration:underline;white-space:nowrap;">↺ Reset to auto</span>
+        </div>
+        <div id="protein-guide-box" style="background:var(--bg4);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11.5px;line-height:1.6;color:var(--text2);">
+          <strong style="color:var(--accent);">Protein Guide 📚</strong><br>
+          <span style="color:var(--text3);font-size:10.5px;">Hover to understand the 1.2–2.4 g/kg range debate</span><br>
+          <span title="Minimum for sedentary. Not enough for active people or recomposition.">🔸 1.2–1.4 g/kg</span> — Minimum (sedentary)<br>
+          <span title="Solid evidence base. Good for lightly active. Preserves muscle.">🔹 1.6–1.8 g/kg</span> — Effective (moderately active)<br>
+          <span title="ISSN recommendation for recomposition. Preserves AND builds muscle during a deficit.">⭐ 2.0–2.2 g/kg</span> — Optimal (your situation)<br>
+          <span title="Diminishing returns but not harmful. Useful if calorie budget allows.">🔺 2.4+ g/kg</span> — High-end (cutting phases)<br>
+          <span style="color:var(--green);font-size:10.5px;">→ Auto-set to 2.4 g/kg (high-protein recomp + cholesterol-aware fat)</span>
+        </div>
+        <!-- Calories Range -->
+        <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:10px;">
+          <div class="srow-label" style="color:var(--mk);">Calorie Range</div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">TARGET (auto)</label>
+              <input class="sinput" id="s-kcal-display" type="number" disabled style="width:100%;opacity:.55;" placeholder="auto">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--green);font-family:var(--fm);">FLOOR MIN (kcal)</label>
+              <input class="sinput" id="s-kcal-min" type="number" min="0" max="9999" placeholder="e.g. 2000" style="width:100%;border-color:var(--green);" oninput="markMTDirty()">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--red);font-family:var(--fm);">CEILING MAX (kcal)</label>
+              <input class="sinput" id="s-kcal-max" type="number" min="0" max="9999" placeholder="e.g. 2600" style="width:100%;border-color:var(--red);" oninput="markMTDirty()">
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Shown as a zone on the calorie bar · Does not affect projection</div>
+            <button class="btn btn-ghost" onclick="autoCalorieRange()" style="height:24px;font-size:10px;padding:0 10px;flex-shrink:0;" title="Set floor/ceiling to ±200 kcal around target">Auto</button>
+          </div>
+        </div>
+        <!-- Protein -->
+        <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="srow-label cp">Protein</div>
+            <span class="macro-info-btn" data-tip="Evidence: Helms et al. (2014) — 2.3–3.1 g/kg LBM for recomposition. Your LBM: ~64.9 kg → 149–201g range. Streak hits when ≥ Min (no upper penalty — excess protein is safe up to ~200g). Source: ISSN Position Stand 2017." style="cursor:help;font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;">i</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">TARGET (g/day)</label>
+              <input class="sinput" id="s-protein" type="number" min="0" max="500" value="156" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MIN (g)</label>
+              <input class="sinput" id="s-protein-min" type="number" min="0" max="500" value="156" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MAX (g)</label>
+              <input class="sinput" id="s-protein-max" type="number" min="0" max="500" placeholder="∞" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Streak: ≥ Min g/day &nbsp;|&nbsp; No upper cap by default</div>
+        </div>
+        <!-- Cholesterol management toggle -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);margin-top:4px;">
+          <div>
+            <div class="srow-label">Cholesterol Management</div>
+            <div class="srow-sub">Limits fat to ~20% of calories · max 65g (AHA guidelines). Turn on if you have high cholesterol.</div>
+          </div>
+          <input type="checkbox" id="s-cholesterol-mgmt" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;" onchange="onCholesterolToggle()">
+        </div>
+        <!-- Fat -->
+        <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="srow-label cf">Fat</div>
+            <span id="fat-info-btn" class="macro-info-btn" data-tip="Standard: 25–35% of calories. Auto-calculated based on your calorie target." style="cursor:help;font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;">i</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">TARGET (g/day)</label>
+              <input class="sinput" id="s-fat" type="number" min="0" max="500" step="0.1" value="56" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MIN (g)</label>
+              <input class="sinput" id="s-fat-min" type="number" min="0" max="500" value="45" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MAX (g)</label>
+              <input class="sinput" id="s-fat-max" type="number" min="0" max="500" value="65" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+          </div>
+          <div id="fat-hint" style="font-size:10px;color:var(--text3);font-family:var(--fm);">Streak: Min ≤ fat ≤ Max &nbsp;|&nbsp; Standard: 25–35% of calories</div>
+        </div>
+        <!-- Carbs -->
+        <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="srow-label cc">Carbs</div>
+            <span class="macro-info-btn" data-tip="Evidence: Remaining calories after protein + fat from your 2,500 kcal TDEE. Range: 290–380g based on ±10% of calculated remainder. Streak hits when within Min–Max. Prefer complex carbs (oats, legumes, vegetables) to support cholesterol management. Source: EFSA Dietary Reference Values 2019." style="cursor:help;font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;">i</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">TARGET (g/day)</label>
+              <input class="sinput" id="s-carbs" type="number" min="0" max="1000" value="343" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MIN (g)</label>
+              <input class="sinput" id="s-carbs-min" type="number" min="0" max="1000" value="290" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MAX (g)</label>
+              <input class="sinput" id="s-carbs-max" type="number" min="0" max="1000" value="380" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Streak: Min ≤ carbs ≤ Max &nbsp;|&nbsp; Based on remaining kcal from 2,500 target</div>
+        </div>
+        <!-- Fiber -->
+        <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="srow-label cfi">Fiber</div>
+            <span class="macro-info-btn" data-tip="Evidence: EFSA Adequate Intake: 25g/day minimum. AHA: higher soluble fiber (oats, legumes, psyllium) reduces LDL cholesterol. Upper limit ~50g/day to avoid GI discomfort. Particularly beneficial for your cholesterol level (251 mg/dL). Source: EFSA 2017, AHA Dietary Guidelines 2021." style="cursor:help;font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;">i</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">TARGET (g/day)</label>
+              <input class="sinput" id="s-fiber" type="number" min="0" max="200" value="40" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MIN (g)</label>
+              <input class="sinput" id="s-fiber-min" type="number" min="0" max="200" value="30" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">STREAK MAX (g)</label>
+              <input class="sinput" id="s-fiber-max" type="number" min="0" max="200" value="50" oninput="onMacroManualEdit()" style="width:100%;">
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Streak: Min ≤ fiber ≤ Max &nbsp;|&nbsp; Soluble fiber lowers LDL — especially beneficial for you</div>
+        </div>
+        <!-- Diet quality limits: added-sugar cap + saturated-fat cap (fiber's goal/floor are the Fiber row above) -->
+        <div class="srow" style="align-items:flex-start;flex-direction:column;gap:6px;">
+          <div class="srow-label">Diet quality limits</div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">ADDED SUGAR CAP (g/day)</label>
+              <input class="sinput" id="s-added-sugar-cap" type="number" min="0" max="300" step="1" value="25" oninput="onDqLimitEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">SAT FAT CAP (% of calories)</label>
+              <input class="sinput" id="s-satfat-pct" type="number" min="1" max="40" step="0.5" value="10" oninput="onDqLimitEdit()" style="width:100%;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;">
+              <label style="font-size:10px;color:var(--text3);font-family:var(--fm);">= SAT FAT CAP (g/day)</label>
+              <input class="sinput" id="s-satfat-g" type="text" readonly tabindex="-1" style="width:100%;opacity:.7;">
+            </div>
+          </div>
+          <div id="dq-who-hint" style="font-size:10px;color:var(--text3);font-family:var(--fm);line-height:1.5;"></div>
+          <div style="font-size:10px;color:var(--text3);font-family:var(--fm);">Fiber on the Today card uses the Fiber target above as its goal and Streak Min as its floor — reaching more is never a warning.</div>
+        </div>
+        <div class="calc-box" style="margin-top:12px">
+          <div style="font-family:var(--fm);font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Calorie Breakdown</div>
+          <div class="calc-row"><span class="calc-lbl">From Protein</span><span class="calc-val cp" id="c-pkcal">—</span></div>
+          <div class="calc-row"><span class="calc-lbl">From Fat</span><span class="calc-val cf" id="c-fkcal">—</span></div>
+          <div class="calc-row"><span class="calc-lbl">From Carbs</span><span class="calc-val cc" id="c-ckcal">—</span></div>
+          <div class="calc-row"><span class="calc-lbl">Total from Macros</span><span class="calc-val accent" id="c-mtotal">—</span></div>
+        </div>
+        <details id="macro-calc-details" style="margin-top:10px;background:var(--bg4);border-radius:8px;border:1px solid var(--border);">
+          <summary style="cursor:pointer;padding:9px 12px;font-size:11.5px;font-weight:600;color:var(--text2);list-style:none;display:flex;justify-content:space-between;align-items:center;user-select:none;">
+            🔍 Auto-Calculation Breakdown <span style="font-size:10px;color:var(--text3);">▾</span>
+          </summary>
+          <div style="padding:0 12px 12px;font-size:11px;line-height:1.9;color:var(--text2);font-family:var(--fm);">
+            <div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px;">Step-by-step from your Personal Info</div>
+            <div class="calc-row"><span class="calc-lbl" style="font-size:11px;">LBM (lean body mass)</span><span class="calc-val" id="mc-lbm" style="font-size:11px;">—</span></div>
+            <div class="calc-row"><span class="calc-lbl" style="font-size:11px;color:var(--text3);">= Weight × (1 – BF%)</span><span></span></div>
+            <div class="calc-row" style="margin-top:4px;"><span class="calc-lbl" style="font-size:11px;">Fat to lose</span><span class="calc-val" id="mc-fatloss" style="font-size:11px;color:var(--red);">—</span></div>
+            <div class="calc-row"><span class="calc-lbl" style="font-size:11px;color:var(--text3);">= Weight – Goal Weight</span><span></span></div>
+            <div class="calc-row" style="margin-top:4px;"><span class="calc-lbl" style="font-size:11px;">Daily deficit</span><span class="calc-val" id="mc-deficit" style="font-size:11px;color:var(--orange);">—</span></div>
+            <div class="calc-row"><span class="calc-lbl" style="font-size:11px;color:var(--text3);">= (Fat × 7700 kcal) ÷ (Weeks × 7)</span><span></span></div>
+            <div class="calc-row" style="margin-top:4px;"><span class="calc-lbl" style="font-size:11px;">Calorie target (TDEE + deficit)</span><span class="calc-val" id="mc-target" style="font-size:11px;color:var(--accent);">—</span></div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px;">Macro allocation</div>
+            <div class="calc-row" style="margin-top:4px;"><span class="calc-lbl" style="font-size:11px;color:var(--mp);">Protein</span><span class="calc-val" id="mc-prot" style="font-size:11px;color:var(--mp);">—</span></div>
+            <div class="calc-row"><span class="calc-lbl" style="font-size:11px;color:var(--text3);">= LBM × 2.4 g/kg</span><span></span></div>
+            <div class="calc-row" style="margin-top:4px;"><span class="calc-lbl" style="font-size:11px;color:var(--mf);">Fat</span><span class="calc-val" id="mc-fat" style="font-size:11px;color:var(--mf);">—</span></div>
+            <div class="calc-row"><span class="calc-lbl" style="font-size:11px;color:var(--text3);">= 20% of calorie target ÷ 9</span><span></span></div>
+            <div class="calc-row" style="margin-top:4px;"><span class="calc-lbl" style="font-size:11px;color:var(--mc);">Carbs</span><span class="calc-val" id="mc-carb" style="font-size:11px;color:var(--mc);">—</span></div>
+            <div class="calc-row"><span class="calc-lbl" style="font-size:11px;color:var(--text3);">= Remaining kcal ÷ 4</span><span></span></div>
+          </div>
+        </details>
+        <button class="btn btn-ghost" onclick="recalcFromLatestWeight()" style="font-size:12px;height:36px;margin-bottom:8px;">⚖️ Recalculate Macros from Latest Weight</button>
+        <button class="btn btn-ghost" onclick="deduplicateHistory()" style="font-size:12px;height:36px;margin-bottom:8px;">🧹 Remove Duplicate Meals from History</button>
+        <button class="btn-save-settings" onclick="saveSettings()">💾 Save Settings &amp; Recalculate</button>
+      </div>
+      <!-- ACCOUNT SECTION -->
+      <div class="settings-section" style="grid-column:1/-1" id="account-section">
+        <div class="settings-title-row">
+          <div class="settings-title">Account &amp; Sync</div>
+          <div id="account-sync-dot" class="dot online" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;"></div>
+          <div id="account-sync-status" style="font-size:11px;color:var(--text3);">Not signed in</div>
+        </div>
+        <div id="account-signed-out" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div class="srow-label">Cloud Sync</div>
+            <div class="srow-sub">Sign in to sync your data across devices</div>
+          </div>
+          <button class="btn btn-ghost" onclick="document.getElementById('authScreen').style.display='flex'">Sign In</button>
+        </div>
+        <!-- Display name — always visible, no sign-in required -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div class="srow-label">Display Name</div>
+            <div class="srow-sub">Shown in the sync badge (overrides email)</div>
+          </div>
+          <input id="s-display-name" type="text" maxlength="24" placeholder="e.g. Alex"
+            style="width:140px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:8px;font-size:13px;outline:none;text-align:right;"
+            oninput="saveDisplayName()">
+        </div>
+        <div id="account-signed-in" style="display:none;flex-direction:column;gap:0;">
+          <!-- Signed in info row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="srow-label">Signed in as</div>
+              <div class="srow-sub" id="account-email-display">—</div>
+            </div>
+            <button class="btn btn-ghost danger" onclick="signOutFromApp()">Sign Out</button>
+          </div>
+          <!-- Change password row -->
+          <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+            <div class="srow-label" style="margin-bottom:8px;">Change Password</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="password" id="cp-current" placeholder="Current password"
+                  style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                <input type="password" id="cp-new" placeholder="New password (min 6 chars)"
+                  style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;">
+                <input type="password" id="cp-confirm" placeholder="Confirm new password"
+                  style="flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;"
+                  onkeydown="if(event.key==='Enter')changePassword()">
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <button class="btn btn-ghost" onclick="changePassword()" id="cp-btn">Update Password</button>
+                <span id="cp-msg" style="font-size:12px;"></span>
+              </div>
+            </div>
+          </div>
+          <!-- Manual sync row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="srow-label">Force Sync Now</div>
+              <div class="srow-sub">Pull latest data from cloud and refresh the app</div>
+            </div>
+            <button class="btn btn-ghost" onclick="forceSyncNow()">☁️ Pull from Cloud</button>
+          </div>
+          <!-- Force Push row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="srow-label">Push Local → Cloud</div>
+              <div class="srow-sub">Force-upload all local data (history, templates, food lib) to Supabase</div>
+            </div>
+            <button class="btn btn-ghost" style="border-color:var(--orange);color:var(--orange);" onclick="forcePushToCloud()">⬆️ Push All</button>
+          </div>
+          <!-- Sync log row -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;">
+            <div>
+              <div class="srow-label">Sync Failure Log</div>
+              <div class="srow-sub">View recent cloud save failures — helps diagnose missing data</div>
+            </div>
+            <button class="btn btn-ghost" onclick="showSyncLog()">🔍 View Log</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-section" style="grid-column:1/-1" id="update-section">
+        <div class="settings-title">App Updates</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+          <div>
+            <div class="srow-label">Version: <span id="update-version-label" style="color:var(--text2);">—</span></div>
+            <div class="srow-sub" id="update-status-text" style="margin-top:3px;">Click "Check" to look for a newer version</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <button id="update-check-btn" class="btn btn-ghost" onclick="checkForUpdates()">Check for Updates</button>
+            <button id="update-download-btn" class="btn btn-accent" onclick="startDownloadUpdate()" style="display:none">Download</button>
+            <button id="update-install-btn" class="btn btn-accent" onclick="installAndRestart()" style="display:none">Restart &amp; Install</button>
+          </div>
+        </div>
+        <div id="update-progress-wrap" style="display:none;height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">
+          <div id="update-progress-fill" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width .3s ease"></div>
+        </div>
+      </div>
+      <div class="settings-section danger-section" style="grid-column:1/-1;border:1.5px solid var(--red);">
+        <div class="settings-title" style="color:var(--red)">Danger Zone</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="srow-label">Clear Today's Log</div>
+              <div class="srow-sub">Remove all meals from today's session (not saved history)</div>
+            </div>
+            <button class="btn btn-ghost danger" onclick="confirmClearAll()" style="flex-shrink:0">Clear Today</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="srow-label">Delete a Specific Date</div>
+              <div class="srow-sub">Permanently remove all logged meals for one date from history</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="date" id="del-date-input" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;outline:none">
+              <button class="btn btn-ghost danger" onclick="deleteSpecificDate()" style="flex-shrink:0">Delete Date</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="srow-label">Clear All History</div>
+              <div class="srow-sub">Permanently delete all saved history for all dates</div>
+            </div>
+            <button class="btn btn-ghost danger" onclick="clearAllHistory()" style="flex-shrink:0">Clear History</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+            <div>
+              <div class="srow-label">Reset Food Database</div>
+              <div class="srow-sub">Restore food library to the original built-in items, removing any custom entries</div>
+            </div>
+            <button class="btn btn-ghost danger" onclick="resetFoodDb()" style="flex-shrink:0">Reset DB</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- PROJECTION PAGE -->
+  <div class="page" id="page-projection">
+    <div class="sec-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div class="sec-title">Body Composition Projection</div>
+        <div class="sec-sub" style="font-size:12px;color:var(--text3);margin-top:2px;">Hybrid model · Weekly BMR recalc · Adaptive factor from week 5</div>
+      </div>
+      <!-- Days Remaining pill toggle -->
+      <div id="pj-days-pill" onclick="toggleDaysPill()" title="Click to show/hide details"
+        style="cursor:pointer;display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:24px;padding:7px 16px;transition:border-color .2s;">
+        <span style="font-size:14px;">⏳</span>
+        <span id="pj-days-num" style="font-size:16px;font-weight:700;color:var(--accent);">—</span>
+        <span id="pj-days-label" style="font-size:11px;color:var(--text3);">days left</span>
+        <span id="pj-days-chevron" style="font-size:10px;color:var(--text3);margin-left:2px;">▾</span>
+      </div>
+    </div>
+
+    <!-- Phase + Progress hero -->
+    <div style="background:var(--bg3);border-radius:14px;border:1px solid var(--border);padding:20px;margin:16px 0;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;">
+      <!-- Phase arc SVG -->
+      <div style="position:relative;width:130px;height:130px;flex-shrink:0;">
+        <svg viewBox="0 0 130 130" width="130" height="130" style="transform:rotate(-90deg)">
+          <circle cx="65" cy="65" r="54" fill="none" stroke="var(--bg4)" stroke-width="12"/>
+          <circle id="pj-arc-fat" cx="65" cy="65" r="54" fill="none" stroke="var(--red)" stroke-width="12"
+            stroke-dasharray="339.3" stroke-dashoffset="339.3" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease;"/>
+          <circle id="pj-arc-muscle" cx="65" cy="65" r="42" fill="none" stroke="var(--blue)" stroke-width="8"
+            stroke-dasharray="263.9" stroke-dashoffset="263.9" stroke-linecap="round" style="transition:stroke-dashoffset 1.2s ease;"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+          <div id="pj-phase-icon" style="font-size:22px;">⚡</div>
+          <div id="pj-phase-label" style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);">Phase</div>
+        </div>
+      </div>
+      <!-- Phase info -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span id="pj-phase-name" style="font-size:20px;font-weight:700;color:var(--accent);">Body Recomposition</span>
+          <span id="pj-phase-badge" style="font-size:10px;padding:3px 8px;border-radius:20px;background:var(--accent-dim);color:var(--accent);font-weight:600;">Active</span>
+        </div>
+        <!-- Timeline progress bar -->
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:11px;color:var(--text3);">Timeline Progress</span>
+            <span id="pj-pct-label" style="font-size:11px;color:var(--text2);font-weight:600;">0%</span>
+          </div>
+          <div style="height:10px;background:var(--bg4);border-radius:8px;overflow:visible;position:relative;box-shadow:inset 0 1px 3px rgba(0,0,0,.3);">
+            <div id="pj-progress-bar" style="height:100%;border-radius:8px;background:linear-gradient(90deg,var(--accent) 0%,#a78bfa 45%,var(--blue) 100%);transition:width 1s ease;width:0%;position:relative;box-shadow:0 2px 12px rgba(139,130,255,.45);">
+              <div id="pj-progress-dot" style="position:absolute;right:-7px;top:-5px;width:20px;height:20px;border-radius:50%;background:white;border:3px solid var(--accent);box-shadow:0 0 12px var(--accent),0 2px 6px rgba(0,0,0,.4);"></div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;">
+            <span id="pj-start-label" style="font-size:10px;color:var(--text3);">Start</span>
+            <span id="pj-midpoint" style="font-size:10px;color:var(--text3);">—</span>
+            <span id="pj-end-label" style="font-size:10px;color:var(--text3);">Goal</span>
+          </div>
+          <div id="pj-saved-badge" style="display:none;margin-top:8px;font-size:10px;color:var(--green);display:flex;align-items:center;gap:5px;">
+            <span>✓</span><span id="pj-saved-text">Settings saved</span>
+          </div>
+        </div>
+        <!-- Key stats mini row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="background:var(--bg4);border-radius:8px;padding:8px 10px;">
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Fat to Lose</div>
+            <div id="pj-fat-remaining" style="font-size:15px;font-weight:700;color:var(--red);">— kg</div>
+          </div>
+          <div style="background:var(--bg4);border-radius:8px;padding:8px 10px;">
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">Muscle Target</div>
+            <div id="pj-muscle-target" style="font-size:15px;font-weight:700;color:var(--blue);">— kg</div>
+          </div>
+          <div style="background:var(--bg4);border-radius:8px;padding:8px 10px;">
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">End BF%</div>
+            <div id="pj-end-bf" style="font-size:15px;font-weight:700;color:var(--accent);">—%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expanded details panel (toggleable) -->
+    <div id="pj-days-detail" style="display:none;background:var(--bg3);border-radius:10px;border:1px solid var(--border);padding:16px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Days Remaining</div>
+          <div id="pj-detail-days" style="font-size:24px;font-weight:800;color:var(--accent);">—</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Daily Deficit</div>
+          <div id="pj-deficit" style="font-size:24px;font-weight:800;color:var(--orange);">—</div>
+          <div style="font-size:10px;color:var(--text3);">kcal/day</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Fat Loss Rate</div>
+          <div id="pj-fatloss" style="font-size:24px;font-weight:800;color:var(--red);">—</div>
+          <div style="font-size:10px;color:var(--text3);">kg/week</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Muscle Gain</div>
+          <div id="pj-muscle" style="font-size:24px;font-weight:800;color:var(--blue);">—</div>
+          <div style="font-size:10px;color:var(--text3);">kg/week</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projected weight comparison -->
+    <div style="background:var(--bg3);border-radius:12px;border:1px solid var(--border);padding:16px 20px;margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:12px;">Weight Estimate</div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;">
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Current</div>
+          <div id="pj-wt-current" style="font-size:26px;font-weight:800;color:var(--text);">—</div>
+          <div style="font-size:10px;color:var(--text3);">kg</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div id="pj-wt-arrow" style="font-size:22px;color:var(--text3);">→</div>
+          <div id="pj-wt-delta" style="font-size:11px;font-weight:600;color:var(--text2);">—</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Projected</div>
+          <div id="pj-wt-projected" style="font-size:26px;font-weight:800;color:var(--accent);">—</div>
+          <div style="font-size:10px;color:var(--text3);">kg</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div style="background:var(--bg3);border-radius:12px;padding:20px;border:1px solid var(--border);margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:24px;height:3px;background:var(--red);border-radius:2px;"></span>Fat Mass</span>
+          <span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:24px;height:3px;background:var(--blue);border-radius:2px;"></span>Lean Mass</span>
+          <span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:24px;height:3px;background:var(--text3);border-radius:2px;"></span>Total Weight</span>
+        </div>
+        <div id="pj-scale" style="font-size:12px;color:var(--text3);"></div>
+      </div>
+      <canvas id="projChart" style="width:100%;max-height:280px;"></canvas>
+    </div>
+
+    <!-- Insight box (collapsed by default, toggle via icon) -->
+    <details style="background:var(--bg3);border-radius:10px;padding:14px 16px;border:1px solid var(--border);margin-bottom:12px;">
+      <summary style="cursor:pointer;font-weight:600;color:var(--text);list-style:none;display:flex;justify-content:space-between;align-items:center;">
+        📋 Projection Summary <span style="color:var(--text3);font-size:12px;">▾</span>
+      </summary>
+      <div id="pj-insight" style="margin-top:12px;font-size:13px;line-height:1.7;color:var(--text2);"></div>
+    </details>
+
+    <!-- Actual weight trend chart -->
+    <div style="background:var(--bg3);border-radius:12px;padding:18px 20px;border:1px solid var(--border);margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);">⚖️ Actual Weight Trend</div>
+        <span style="font-size:10px;color:var(--text3);font-family:var(--fm);">from check-ins</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;">Your real weigh-in history vs the projected model</div>
+      <div id="weightTrendEmpty" style="display:none;font-size:12px;color:var(--text3);text-align:center;padding:24px 0;">No weight check-ins yet — log your weight in the ⚖️ widget on the Today page</div>
+      <canvas id="weightTrendChart" style="width:100%;max-height:220px;"></canvas>
+    </div>
+
+    <!-- Protein science accordion -->
+    <details style="background:var(--bg3);border-radius:10px;padding:14px 16px;border:1px solid var(--border);">
+      <summary style="cursor:pointer;font-weight:600;color:var(--text);list-style:none;display:flex;justify-content:space-between;align-items:center;">
+        📚 Protein Intake — The 1.2–2.4 g/kg Debate Explained <span style="color:var(--text3);font-size:12px;">▾</span>
+      </summary>
+      <div style="margin-top:14px;font-size:12.5px;line-height:1.8;color:var(--text2);">
+        <p>The wide range you see (1.2–2.4 g/kg) is real, and all values are cited in legitimate research. Here's why they differ:</p>
+        <div style="margin:12px 0;padding:10px;background:var(--bg4);border-radius:8px;">
+          <strong style="color:var(--text);">1.2–1.4 g/kg</strong> — The <em>minimum</em> to avoid muscle breakdown in healthy sedentary adults. Used in older WHO/FAO reports. Not enough if you're training.<br>
+          <em style="color:var(--text3);font-size:11px;">Source: WHO/FAO/UNU, Human Energy Requirements, 2004</em>
+        </div>
+        <div style="margin:12px 0;padding:10px;background:var(--bg4);border-radius:8px;">
+          <strong style="color:var(--text);">1.6–1.8 g/kg</strong> — Meta-analysis sweet spot for muscle gain in training individuals (not cutting). Morton et al. 2018 (Br J Sports Med) analysed 49 studies — muscle gains plateau around 1.62 g/kg/day.<br>
+          <em style="color:var(--text3);font-size:11px;">Source: Morton RW et al. Br J Sports Med. 2018;52:376–384.</em>
+        </div>
+        <div style="margin:12px 0;padding:10px;background:var(--bg4);border-radius:8px;border:1px solid var(--accent-dim);">
+          <strong style="color:var(--accent);">⭐ 2.4 g/kg — Your current target (high-protein recomp + cholesterol-aware fat)</strong><br>
+          When you're in a caloric deficit, muscle breakdown risk rises. High protein counteracts this and supports new synthesis simultaneously. 2.4 g/kg is at the upper-effective range — safe and proven to maximise muscle retention during a cut.<br>
+          <em style="color:var(--text3);font-size:11px;">Sources: Helms et al. JISSN 2014;11:20 · Longland et al. AJCN 2016;103(3):738 · Schoenfeld & Aragon JISSN 2018;15:10</em>
+        </div>
+        <div style="margin:12px 0;padding:10px;background:var(--bg4);border-radius:8px;">
+          <strong style="color:var(--text);">Fat at 20% of calories</strong> — Adjusted from standard 27% to support your cholesterol management. Essential fats still covered; prioritise unsaturated sources (fish, avocado, olive oil).<br>
+          <em style="color:var(--text3);font-size:11px;">Note: Monitor cholesterol with your doctor; dietary fat type matters as much as quantity.</em>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- REFERENCES PAGE -->
+  <div class="page" id="page-references">
+    <div class="sec-hdr" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div class="sec-title">Scientific References</div>
+        <div class="sec-sub" style="font-size:12px;color:var(--text3);margin-top:2px;">Formulas, ranges, and evidence behind every calculation in NutriLog</div>
+      </div>
+      <a id="refFullLink" style="font-size:12px;color:var(--accent);text-decoration:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:20px;padding:5px 14px;cursor:pointer;" onclick="openFullRef()">Full references PDF ↗</a>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:4px;">
+
+      <!-- BMI -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">⚖️</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Body Mass Index (BMI)</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          BMI = weight (kg) ÷ height (m)²
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Category</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">BMI Range</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--blue);">Underweight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">&lt; 18.5</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Normal weight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">18.5 – 24.9</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--yellow);">Overweight</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">25.0 – 29.9</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--orange);">Obese class I</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">30.0 – 34.9</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--red);">Obese class II–III</td><td style="text-align:right;color:var(--text2);font-family:var(--fm);">≥ 35.0</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Source: WHO (2000). BMI classification.</div>
+      </div>
+
+      <!-- BMR -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🔥</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Basal Metabolic Rate (BMR)</div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">Revised Harris-Benedict (Settings page)</div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:8px;line-height:1.7;">
+          ♂ 88.362 + (13.397 × W) + (4.799 × H) − (5.677 × A)<br>
+          ♀ 447.593 + (9.247 × W) + (3.098 × H) − (4.330 × A)
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">Mifflin–St Jeor (Projection model)</div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--green);background:var(--green-dim);border-radius:8px;padding:8px 12px;line-height:1.7;">
+          ♂ (10 × W) + (6.25 × H) − (5 × A) + 5<br>
+          ♀ (10 × W) + (6.25 × H) − (5 × A) − 161
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">W = kg, H = cm, A = years · Roza &amp; Shizgal 1984; Mifflin 1990</div>
+      </div>
+
+      <!-- TDEE -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">⚡</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">TDEE Activity Multipliers</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          TDEE = BMR × Activity Factor
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Level</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">Multiplier</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Sedentary (desk job)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.20</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Lightly active (1–3×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.375</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Moderately active (3–5×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.55</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Very active (6–7×/wk)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.725</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Extremely active</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">× 1.90</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Source: Harris &amp; Benedict 1918; McArdle, Katch &amp; Katch 2010</div>
+      </div>
+
+      <!-- Lean Body Mass -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">💪</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Lean Body Mass (LBM)</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7;">
+          ♂ LBM = 0.407W + 0.267H − 19.2<br>
+          ♀ LBM = 0.252W + 0.473H − 48.3
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">W = kg, H = cm. Used to set protein floor and muscle gain cap.</div>
+        <div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px;">Body Fat % categories (ACSM)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:2px 6px 5px 0;border-bottom:1px solid var(--border);">Category</th>
+            <th style="text-align:right;padding:2px 0 5px 0;border-bottom:1px solid var(--border);">♂ %</th>
+            <th style="text-align:right;padding:2px 0 5px 0;border-bottom:1px solid var(--border);">♀ %</th>
+          </tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--blue);">Essential fat</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">2–5</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">10–13</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--green);">Athlete</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">6–13</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">14–20</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--green);">Fit</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">14–17</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">21–24</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--yellow);">Average</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">18–24</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">25–31</td></tr>
+          <tr><td style="padding:3px 6px 3px 0;color:var(--red);">Obese</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 25</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 32</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">Boer 1984; ACSM Guidelines 2018</div>
+      </div>
+
+      <!-- Protein -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🥩</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Protein Targets</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Context</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">g / kg BW</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Sedentary adult (RDA)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">0.8</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">General active adult</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">1.2 – 1.6</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Body recomp (app floor)</td><td style="text-align:right;font-family:var(--fm);color:var(--green);">1.8 min</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--accent);">Body recomp (app default)</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">2.4</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">Max benefit ceiling</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≤ 3.1</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);">Morton 2018 (meta-analysis); Stokes 2018; Phillips &amp; Van Loon 2011</div>
+      </div>
+
+      <!-- Fat & Carbs -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🥑</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Fat &amp; Carbohydrates</div>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;">Dietary Fat (AMDR)</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
+          <tr><td style="padding:3px 0;color:var(--text2);">Acceptable range (IOM)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">20 – 35% TDEE</td></tr>
+          <tr><td style="padding:3px 0;color:var(--accent);">App default</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">25% of TDEE</td></tr>
+          <tr><td style="padding:3px 0;color:var(--text2);">Minimum (hormonal health)</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">≥ 0.5 g/kg BW</td></tr>
+        </table>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;">Carbohydrates</div>
+        <div style="font-family:var(--fm);font-size:11px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;">
+          Carbs = TDEE − (Protein × 4) − (Fat × 9), ÷ 4
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">IOM Dietary Reference Intakes 2005; Helms 2014</div>
+      </div>
+
+      <!-- Fiber -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🌾</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Dietary Fiber</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          14 g fiber per 1,000 kcal consumed
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Calorie level</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">Target fiber</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">1,400 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~20 g</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">1,800 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~25 g</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">2,200 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~31 g</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--text2);">2,500 kcal/day</td><td style="text-align:right;font-family:var(--fm);color:var(--text2);">~35 g</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);margin-top:8px;">IOM Adequate Intake 2001 (Trumbo et al. 2002)</div>
+      </div>
+
+      <!-- Weight Loss Rate -->
+      <div class="analysis-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">📉</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Safe Rate of Loss &amp; 7,700 Rule</div>
+        </div>
+        <div style="font-family:var(--fm);font-size:12px;color:var(--accent);background:var(--accent-dim);border-radius:8px;padding:8px 12px;margin-bottom:10px;">
+          ~7,700 kcal deficit ≈ 1 kg of fat
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px;">
+          <tr style="color:var(--text3);font-family:var(--fm);">
+            <th style="text-align:left;padding:3px 6px 6px 0;border-bottom:1px solid var(--border);">Rate</th>
+            <th style="text-align:right;padding:3px 0 6px 0;border-bottom:1px solid var(--border);">% body weight / week</th>
+          </tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--green);">Conservative (muscle-sparing)</td><td style="text-align:right;font-family:var(--fm);color:var(--green);">0.5%</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--accent);">Moderate (app default)</td><td style="text-align:right;font-family:var(--fm);color:var(--accent);">0.75%</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--yellow);">Aggressive</td><td style="text-align:right;font-family:var(--fm);color:var(--yellow);">1.0%</td></tr>
+          <tr><td style="padding:4px 6px 4px 0;color:var(--red);">Risky (muscle loss likely)</td><td style="text-align:right;font-family:var(--fm);color:var(--red);">&gt; 1.0%</td></tr>
+        </table>
+        <div style="font-size:10px;color:var(--text3);">Hall 2012; Garthe 2011; Barakat 2020</div>
+      </div>
+
+      <!-- Projection Model -->
+      <div class="analysis-card full" style="grid-column:1/-1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:18px;">🤖</span>
+          <div style="font-size:14px;font-weight:700;color:var(--text);">NutriLog Projection Model — Step by Step</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 1 — Weekly BMR recalc</div>
+            <div style="font-size:11px;color:var(--text2);">Each week the model re-runs Mifflin–St Jeor with the projected weight, ensuring calorie targets drift down as body mass decreases.</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 2 — Adaptive factor</div>
+            <div style="font-size:11px;color:var(--text2);">From week 5, a 0.95× metabolic adaptation factor is applied. This models the ~5% metabolic slowdown seen in sustained deficit (Rosenbaum &amp; Leibel 2010).</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 3 — Muscle gain cap</div>
+            <div style="font-size:11px;color:var(--text2);">In recomp / lean-bulk phases, muscle accrual is capped at 0.15 kg/week (novice) down to 0.06 kg/week (advanced) based on training age.</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 4 — Protein adequacy factor</div>
+            <div style="font-size:11px;color:var(--text2);">A modifier min(1, protein ÷ (LBM × 1.6)) scales muscle outcomes when protein intake falls below 1.6 g/kg LBM.</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:10px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px;">Step 5 — Net fat change</div>
+            <div style="font-size:11px;color:var(--text2);">Fat loss = (Energy deficit ÷ 7,700) − muscle gain. Weight = prior weight + muscle − fat. Repeated weekly until goal date.</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text3);margin-top:12px;">Rosenbaum &amp; Leibel 2010; Hall et al. 2012; Morton 2018; Barakat 2020; Lemon 1998 (protein ceiling)</div>
+      </div>
+
+    </div><!-- end grid -->
+
+    <div style="margin-top:20px;padding:14px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--text3);line-height:1.7;">
+      <strong style="color:var(--text2);">Full academic citations</strong> for all 14 formula sections are available in
+      <code style="font-family:var(--fm);background:var(--bg4);padding:1px 5px;border-radius:4px;">references.html</code>
+      (located alongside the app). All values are used for informational tracking purposes only — consult a registered dietitian or physician for medical advice.
+    </div>
+  </div><!-- end page-references -->
+
+</main>
+
+<!-- ADD / EDIT MEAL MODAL -->
+<div class="overlay" id="mealOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="mealTitle">Add Meal</div>
+      <button class="modal-x" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="cat-toggle">
+        <button class="cat-btn breakfast" onclick="setCat('breakfast')">🌅 Breakfast</button>
+        <button class="cat-btn lunch"     onclick="setCat('lunch')">☀️ Lunch</button>
+        <button class="cat-btn dinner"    onclick="setCat('dinner')">🌙 Dinner</button>
+        <button class="cat-btn snack"     onclick="setCat('snack')">🍎 Snack</button>
+      </div>
+      <div class="ff">
+        <label>Food Item</label>
+        <div class="ac-wrap">
+          <input type="text" id="f-name" placeholder="e.g. Chicken Breast (cooked)" autocomplete="off"
+            oninput="acSearch(this.value)" onkeydown="acKey(event)">
+          <div class="ac-list" id="acList"></div>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="ff"><label>Serving Amount</label>
+          <input type="number" id="f-serving" placeholder="150" step="any" min="0" oninput="onServingChange()"></div>
+        <div class="ff"><label>Unit</label>
+          <select id="f-unit">
+            <option value="g">g (gram)</option>
+            <option value="ml">ml</option>
+            <option value="piece">piece</option>
+            <option value="serving">serving</option>
+            <option value="cup">cup</option>
+            <option value="tbsp">tbsp</option>
+            <option value="tsp">tsp</option>
+            <option value="bottle">bottle</option>
+            <option value="bowl">bowl</option>
+            <option value="plate">plate</option>
+            <option value="box">box</option>
+            <option value="bar">bar</option>
+            <option value="bag">bag</option>
+            <option value="can">can</option>
+            <option value="egg">egg</option>
+            <option value="slice">slice</option>
+          </select>
+        </div>
+      </div>
+      <div id="recalcNote" class="recalc-note" style="display:none">
+        Macros auto-scale from base serving of <span id="recalcBase">—</span>
+      </div>
+      <div class="frow">
+        <div class="ff"><label>Log Date</label>
+          <input type="date" id="f-logdate" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fb);font-size:13px;border-radius:8px;padding:8px 10px;outline:none;width:100%;transition:border-color var(--tr);" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" onchange="onLogDateChange()"></div>
+        <div class="ff"><label style="display:flex;justify-content:space-between;align-items:center;">Time <span onclick="document.getElementById('f-time').value=nowTime()" style="cursor:pointer;color:var(--accent);font-size:10px;font-weight:500;text-transform:none;letter-spacing:0">↺ now</span></label>
+          <input type="time" id="f-time" step="300"></div>
+      </div>
+      <div id="f-prelog-notice" style="display:none;background:var(--accent-dim);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--accent);margin-bottom:8px;">
+        📅 Pre-logging for a future date — meal will be saved to History
+      </div>
+      <div class="macro-grid">
+        <div class="mf-field mk"><label>Calories</label><input type="number" id="f-kcal" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mp"><label>Protein g</label><input type="number" id="f-protein" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mf"><label>Fat g</label><input type="number" id="f-fat" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mc"><label>Carbs g</label><input type="number" id="f-carbs" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mfi"><label>Fiber g</label><input type="number" id="f-fiber" placeholder="0" step="any" min="0"></div>
+      </div>
+      <details class="more-nutrients" id="f-more">
+        <summary>More (notes, sugar &amp; fat detail, paste)</summary>
+        <div class="frow">
+          <div class="ff" style="flex:2"><label>Notes (optional)</label>
+            <input type="text" id="f-notes" placeholder="e.g. post-workout, canteen"></div>
+        </div>
+        <div class="mn-grid">
+          <div class="mf-field"><label>Total sugar g</label><input type="number" id="f-sugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('f',this)"></div>
+          <div class="mf-field"><label>Added sugar g</label><input type="number" id="f-addedsugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('f',this)"></div>
+          <div class="mf-field"><label>Sat fat g</label><input type="number" id="f-satfat" placeholder="unknown" step="any" min="0" oninput="onExtraInput('f',this)"></div>
+        </div>
+        <label class="mn-est"><input type="checkbox" id="f-nest" onchange="onNestToggle('f')"> These values are estimates, not from a label</label>
+        <div class="mn-hint">Blank means unknown and is never counted as 0. Total sugar includes natural sugar (fruit, milk); only added sugar counts toward the sugar cap.</div>
+        <button class="paste-tog" id="pasteTog" onclick="togglePaste()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          Paste tab-separated data instead
+        </button>
+        <div class="paste-box" id="pasteBox">
+          <div class="paste-hint">Three paste modes — all auto-detected:<br>
+            <strong>Q–AA selection:</strong> Select cols Q→AA in your Excel PART 3 section, copy, paste here.<br>
+            <strong>Full sheet:</strong> Ctrl+A, copy the entire sheet — the app finds PART 3 automatically.<br>
+            <strong>Simple (8 cols):</strong> Food Item · Serving · Unit · kcal · Protein · Fat · Carbs · Fiber<br>
+            Header rows, TOTALS, TARGETS, DIFFERENCE, and blank rows are automatically skipped.</div>
+          <div class="paste-cols">
+            <span class="paste-col">Food Item</span><span class="paste-col">Serving</span>
+            <span class="paste-col">Unit</span><span class="paste-col ck">Calories</span>
+            <span class="paste-col cp">Protein</span><span class="paste-col cf">Fat</span>
+            <span class="paste-col cc">Carbs</span><span class="paste-col cfi">Fiber</span>
+          </div>
+          <textarea id="pasteArea" spellcheck="false"
+            placeholder="Chicken Breast&#9;150&#9;g&#9;165&#9;31&#9;3.6&#9;0&#9;0"
+            oninput="pastePreview()"></textarea>
+          <div class="paste-info" id="pasteInfo">Enter data above, then click Add</div>
+        </div>
+      </details>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <input type="checkbox" id="f-savelib" checked style="width:14px;height:14px;cursor:pointer;accent-color:var(--accent)">
+        <label for="f-savelib" style="font-size:12px;color:var(--text2);cursor:pointer">Save to food library for autocomplete</label>
+      </div>
+      <div class="form-acts">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-cancel" id="logLaterBtn" onclick="submitPlaceholder()" title="Don't know the details yet? Log a placeholder for this category/time and fill in the real item later.">❓ Log Later</button>
+        <button class="btn-add-another" id="addAnotherBtn" onclick="submitAndStay()" title="Save this entry and add another without closing">+ Add Another</button>
+        <button class="btn-save" id="mealSaveBtn" onclick="submitMeal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Meal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOD DB MODAL -->
+<div class="overlay" id="dbOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="dbTitle">Add Food Item</div>
+      <button class="modal-x" onclick="closeDbModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow">
+        <div class="ff" style="flex:2"><label>Food Item Name</label>
+          <input type="text" id="db-name" placeholder="e.g. Chicken Breast (cooked)"></div>
+        <div class="ff"><label>Variant <span style="color:var(--text3);font-weight:400;font-size:10px;">(optional)</span></label>
+          <input type="text" id="db-variant" placeholder="e.g. grilled, homemade" style="font-size:12px;"></div>
+      </div>
+      <div class="frow">
+        <div class="ff"><label>Data Source <span style="color:var(--text3);font-weight:400;font-size:10px;">(affects confidence indicator)</span></label>
+          <select class="db-type-sel" id="db-type">
+            <option value="">— Uncategorized —</option>
+            <option value="packaged">🏷️ Official / Packaged — has nutrition label</option>
+            <option value="whole">🌿 Whole / Common food — per-100g estimate</option>
+            <option value="recipe">🍳 Homemade / Recipe — calculated from ingredients</option>
+            <option value="restaurant">🍜 Restaurant / Takeout — rough estimate only</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="ff"><label>Default Serving</label>
+          <input type="number" id="db-serving" placeholder="100" step="any" min="0"></div>
+        <div class="ff"><label>Unit</label>
+          <input type="text" id="db-unit" placeholder="g"></div>
+      </div>
+      <div class="macro-grid">
+        <div class="mf-field mk"><label>Calories</label><input type="number" id="db-kcal" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mp"><label>Protein g</label><input type="number" id="db-protein" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mf"><label>Fat g</label><input type="number" id="db-fat" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mc"><label>Carbs g</label><input type="number" id="db-carbs" placeholder="0" step="any" min="0"></div>
+        <div class="mf-field mfi"><label>Fiber g</label><input type="number" id="db-fiber" placeholder="0" step="any" min="0"></div>
+      </div>
+      <details class="more-nutrients" id="db-more">
+        <summary>More nutrients (optional)</summary>
+        <div class="mn-grid">
+          <div class="mf-field"><label>Total sugar g</label><input type="number" id="db-sugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('db',this)"></div>
+          <div class="mf-field"><label>Added sugar g</label><input type="number" id="db-addedsugar" placeholder="unknown" step="any" min="0" oninput="onExtraInput('db',this)"></div>
+          <div class="mf-field"><label>Sat fat g</label><input type="number" id="db-satfat" placeholder="unknown" step="any" min="0" oninput="onExtraInput('db',this)"></div>
+        </div>
+        <label class="mn-est"><input type="checkbox" id="db-nest" onchange="onNestToggle('db')"> These values are estimates, not from a label</label>
+        <div class="mn-hint">Per serving above. Blank means unknown and is never counted as 0.</div>
+      </details>
+      <div class="form-acts">
+        <button class="btn-cancel" onclick="closeDbModal()">Cancel</button>
+        <button class="btn-save" id="dbSaveBtn" onclick="submitDb()">Save Item</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="overlay" id="importOverlay">
+  <div class="modal" style="width:480px">
+    <div class="modal-hdr">
+      <div class="modal-title">Import Data</div>
+      <button class="modal-x" onclick="closeImport()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+        Import a previously exported NutriLog JSON file, or paste tab-separated log data below. Each row: <code style="font-family:var(--fm);font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:4px">Food Item ⇥ Serving ⇥ Unit ⇥ Calories ⇥ Protein ⇥ Fat ⇥ Carbs ⇥ Fiber</code>
+      </div>
+      <div class="ff">
+        <label>Paste TSV / JSON</label>
+        <textarea id="importArea" style="min-height:120px;font-family:var(--fm);font-size:11px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;outline:none;resize:vertical;width:100%" placeholder='Paste JSON or TSV rows here…'></textarea>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:12px;font-family:var(--fm)" id="importPreviewInfo"></div>
+      <div class="form-acts">
+        <button class="btn-cancel" onclick="closeImport()">Cancel</button>
+        <button class="btn-save" onclick="submitImport()">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="conf-overlay" id="confOverlay">
+  <div class="conf-box">
+    <div class="conf-title" id="confTitle"></div>
+    <div class="conf-body" id="confBody"></div>
+    <div class="conf-btns">
+      <button class="btn-cc" onclick="closeConf()">Cancel</button>
+      <button class="btn-co" id="confOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK WEIGHT LOG MODAL -->
+<div class="conf-overlay" id="weightLogOverlay" style="z-index:1200;" onclick="if(event.target===this)closeWeightLog()">
+  <div class="conf-box" style="max-width:320px;width:90%;">
+    <div class="conf-title" style="font-size:16px;">⚖️ Log Weight</div>
+    <div class="conf-body" style="margin:12px 0;">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Enter your current weight in kg</div>
+      <input type="number" id="weightLogInput" step="0.1" min="20" max="300" placeholder="e.g. 76.4"
+        style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:18px;font-weight:600;text-align:center;font-family:var(--fb);"
+        onkeydown="if(event.key==='Enter')saveWeightLog()">
+    </div>
+    <div class="conf-btns">
+      <button class="btn-cc" onclick="closeWeightLog()">Cancel</button>
+      <button class="btn-co" style="background:var(--accent);" onclick="saveWeightLog()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- COPY DAY TO DATE MODAL -->
+<div class="conf-overlay" id="copyDayOverlay" style="z-index:1200;" onclick="if(event.target===this)closeCopyDay()">
+  <div class="conf-box" style="max-width:380px;width:92%;">
+    <div class="conf-title">Copy Day's Meals To…</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;" id="copyDaySrcLabel">Copy entries to another date</p>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px;">Target date</label>
+      <input type="date" id="copyDayTarget" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:var(--fb);font-size:13px;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+    <div class="conf-btns">
+      <button class="btn btn-ghost" onclick="closeCopyDay()">Cancel</button>
+      <button class="btn btn-accent" onclick="executeCopyDay()">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- MERGE DUPLICATE FOODS MODAL -->
+<div class="conf-overlay" id="mergeFoodsOverlay" style="z-index:1200;" onclick="if(event.target===this)closeMergeFoods()">
+  <div class="conf-box" style="max-width:440px;width:92%;">
+    <div class="conf-title">Merge Foods Into One</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px;">Pick which one is the canonical name. Every past log entry under the others' names will be relabeled to match — the calories/macros you actually logged that day are kept exactly as-is, only the name changes.</p>
+    <div id="mergeFoodsChoices" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:220px;overflow-y:auto;"></div>
+    <div id="mergeFoodsPreview" style="font-size:12px;color:var(--text3);font-family:var(--fm);margin-bottom:14px;"></div>
+    <div class="conf-btns">
+      <button class="btn btn-ghost" onclick="closeMergeFoods()">Cancel</button>
+      <button class="btn btn-accent" onclick="executeMergeFoods()">Merge</button>
+    </div>
+  </div>
+</div>
+
+<!-- KEYBOARD SHORTCUTS MODAL -->
+<div class="conf-overlay" id="shortcutsOverlay" style="z-index:1200;" onclick="if(event.target===this)closeShortcuts()">
+  <div class="conf-box" style="max-width:480px;width:92%;max-height:80vh;overflow-y:auto;">
+    <div class="conf-title" style="font-size:16px;">⌨️ Keyboard Shortcuts</div>
+    <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px;font-size:13px;">
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Navigation</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Today</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+1</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">History</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+2</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Food Database</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+3</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Settings</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+4</kbd></div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;">Actions</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Push All to Cloud</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+S</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Pull from Cloud</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+Shift+U</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Toggle dark / light mode</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+T</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Undo last meal action</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Ctrl+Z</kbd></div>
+      <div style="font-size:10px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;">In Modals / Autocomplete</div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Close modal / photo viewer</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">Escape</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Navigate autocomplete</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">↑ ↓</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text2);">Navigate photo viewer</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">← →</kbd></div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;"><span style="color:var(--text2);">This shortcuts panel</span><kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;font-family:var(--fm);font-size:11px;">?</kbd></div>
+    </div>
+    <div class="conf-btns" style="margin-top:16px;">
+      <button class="btn-co" style="background:var(--accent);" onclick="closeShortcuts()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- WEEKLY CHECK-IN MODAL -->
+<div class="conf-overlay" id="checkinOverlay" style="z-index:1100;">
+  <div class="conf-box" style="max-width:420px;width:92%;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <span style="font-size:22px;">📊</span>
+      <div class="conf-title" style="margin:0;">Weekly Progress Check-in</div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;" id="ci-subtitle">How are things going?</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px;">Current Weight <span style="color:var(--text3)">(kg) — post-workout weight is fine, just note it below</span></label>
+        <input id="ci-weight" type="number" min="40" max="200" step="0.1" placeholder="e.g. 76.5"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px;">Weigh-in timing</label>
+        <select id="ci-timing" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;">
+          <option value="morning">Morning (best — after toilet, before food)</option>
+          <option value="postworkout">Post-workout (typically 0.5–1.5 kg lighter)</option>
+          <option value="evening">Evening / random</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px;">How's progress feeling? <span style="color:var(--text3)">(optional)</span></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <label id="ci-mood-great" style="flex:1;min-width:80px;text-align:center;padding:8px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">
+            <input type="radio" name="ci-mood" value="great" style="display:none;"> 💪 Great
+          </label>
+          <label id="ci-mood-ok" style="flex:1;min-width:80px;text-align:center;padding:8px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">
+            <input type="radio" name="ci-mood" value="ok" style="display:none;"> 😐 OK
+          </label>
+          <label id="ci-mood-hard" style="flex:1;min-width:80px;text-align:center;padding:8px 6px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;">
+            <input type="radio" name="ci-mood" value="hard" style="display:none;"> 😓 Tough
+          </label>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:5px;">Notes <span style="color:var(--text3)">(optional)</span></label>
+        <textarea id="ci-notes" rows="2" placeholder="e.g. Feeling leaner, strength up, diet slipped mid-week..."
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;resize:vertical;box-sizing:border-box;font-family:var(--fb);"></textarea>
+      </div>
+      <div id="ci-prev-summary" style="background:var(--bg4);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--text2);display:none;"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:center;">
+      <button class="btn btn-ghost" onclick="closeCheckin()" style="width:155px;justify-content:center;padding:0 12px;">Remind me later</button>
+      <button class="btn" onclick="saveCheckin()" style="width:155px;justify-content:center;padding:0 12px;background:var(--accent);color:#fff;border:none;">💾 Save Check-in</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- MEAL PREP TEMPLATE MODAL -->
+<div class="overlay" id="tplOverlay">
+  <div class="modal" style="max-width:560px;width:96%;">
+    <div class="modal-hdr">
+      <div class="modal-title" id="tplModalTitle">New Template</div>
+      <button class="modal-close" onclick="closeTplModal()">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;padding:18px 20px 20px;">
+      <div class="ff">
+        <label>Template Name</label>
+        <input type="text" id="tpl-name" placeholder="e.g. Gym Day Combo, Meal Prep Week 1" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fb);font-size:13px;border-radius:8px;padding:9px 12px;outline:none;width:100%;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px;">Meals in this template</label>
+        <div id="tplMealList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
+        <button class="btn btn-ghost" onclick="openTplAddMeal()" style="margin-top:8px;width:100%;justify-content:center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Meal from Library
+        </button>
+      </div>
+      <!-- Totals preview -->
+      <div id="tplTotals" style="background:var(--bg3);border-radius:8px;padding:10px 14px;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;font-family:var(--fm);font-size:11px;text-align:center;">
+        <div><div style="color:var(--text3);">kcal</div><div id="tpl-tot-kcal" style="font-weight:700;color:var(--yellow);">0</div></div>
+        <div><div style="color:var(--text3);">protein</div><div id="tpl-tot-prot" style="font-weight:700;color:var(--mp);">0g</div></div>
+        <div><div style="color:var(--text3);">fat</div><div id="tpl-tot-fat" style="font-weight:700;color:var(--mf);">0g</div></div>
+        <div><div style="color:var(--text3);">carbs</div><div id="tpl-tot-carbs" style="font-weight:700;color:var(--mc);">0g</div></div>
+        <div><div style="color:var(--text3);">fiber</div><div id="tpl-tot-fiber" style="font-weight:700;color:var(--mfi);">0g</div></div>
+      </div>
+      <div class="form-acts">
+        <button class="btn-cancel" onclick="closeTplModal()">Cancel</button>
+        <button class="btn-save" onclick="saveTpl()">Save Template</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATE APPLY MODAL -->
+<div class="conf-overlay" id="tplApplyOverlay" style="z-index:1050;">
+  <div class="conf-box" style="max-width:420px;width:92%;">
+    <div class="conf-title" id="tplApplyTitle">Apply Template</div>
+    <div class="conf-body" style="padding-bottom:0;">
+      <!-- Override options -->
+      <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;">Override (optional)</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <label style="font-size:11px;color:var(--text2);">Category:</label>
+          <select id="tpl-override-cat" style="flex:1;min-width:110px;background:var(--bg4);border:1px solid var(--border);color:var(--text);font-family:var(--fb);font-size:11px;border-radius:6px;padding:5px 8px;outline:none;">
+            <option value="">Keep template defaults</option>
+            <option value="breakfast">Breakfast</option>
+            <option value="lunch">Lunch</option>
+            <option value="dinner">Dinner</option>
+            <option value="snack">Snack</option>
+          </select>
+          <label style="font-size:11px;color:var(--text2);">Time:</label>
+          <input type="time" id="tpl-override-time" placeholder="Keep defaults"
+            style="background:var(--bg4);border:1px solid var(--border);color:var(--text);font-family:var(--fb);font-size:11px;border-radius:6px;padding:5px 8px;outline:none;width:90px;">
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-ghost" onclick="applyTplToday()" style="justify-content:flex-start;padding:0 14px;height:38px;">📅 Add to Today</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="tpl-apply-date" style="flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:12px;border-radius:8px;padding:7px 10px;outline:none;">
+          <button class="btn btn-ghost" onclick="applyTplSingleDate()" style="padding:0 12px;height:34px;white-space:nowrap;">Apply to Date</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="date" id="tpl-range-start" style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:12px;border-radius:8px;padding:7px 10px;outline:none;">
+          <span style="font-size:11px;color:var(--text3);">to</span>
+          <input type="date" id="tpl-range-end" style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--fm);font-size:12px;border-radius:8px;padding:7px 10px;outline:none;">
+          <button class="btn btn-ghost" onclick="applyTplRange()" style="padding:0 12px;height:34px;white-space:nowrap;">Apply Range</button>
+        </div>
+      </div>
+    </div>
+    <div class="conf-btns" style="margin-top:14px;">
+      <button class="btn-cc" onclick="closeTplApply()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATE ADD MEAL PICKER (from library) -->
+<div class="conf-overlay" id="tplMealPickOverlay" style="z-index:1200;">
+  <div class="conf-box" style="max-width:480px;width:94%;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="conf-title">Pick a meal from library</div>
+    <input type="text" id="tplMealPickSearch" placeholder="Search…" oninput="renderTplMealPicker()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;margin-bottom:10px;">
+    <div id="tplMealPickList" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;max-height:320px;"></div>
+    <div class="conf-btns" style="margin-top:12px;">
+      <button class="btn-cc" onclick="closeTplMealPick()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECIPE BUILDER MODAL -->
+<div class="overlay" id="recipeModal">
+  <div class="modal" style="max-width:580px;width:96%;">
+    <div class="modal-hdr">
+      <div class="modal-title">Recipe Builder</div>
+      <button class="modal-close" onclick="closeRecipeModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Recipe Name</label>
+          <input type="text" id="recipeName" placeholder="e.g. Chicken Rice Bowl" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box;">
+        </div>
+        <div style="width:110px;">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;">Batch Weight</label>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="number" id="recipeBatchWeight" placeholder="opt." min="0" step="1" oninput="updateRecipeTotals()" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 8px;border-radius:8px;font-size:13px;outline:none;text-align:center;box-sizing:border-box;">
+            <span style="font-size:11px;color:var(--text3);flex-shrink:0;">g</span>
+          </div>
+          <div id="recipeBatchHint" style="font-size:9px;color:var(--text3);margin-top:3px;line-height:1.3;">Total batch size<br>Leave blank = whole recipe</div>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text3);font-family:var(--fm);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:8px;">Ingredients</label>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-start;">
+          <div class="ac-wrap" style="flex:1;min-width:180px;">
+            <input type="text" id="recipeIngSearch" placeholder="Search food library…"
+              style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box;"
+              oninput="recipeAcSearch(this.value)"
+              onkeydown="recipeAcKey(event)"
+              onblur="setTimeout(recipeAcHide,200)">
+            <div id="recipeAcList" class="ac-list"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;">
+            <input type="number" id="recipeIngAmount" placeholder="Amount" min="0" step="any"
+              style="width:90px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-size:12px;outline:none;text-align:center;"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();addRecipeIngredientFromSearch();}">
+            <span id="recipeIngUnit" style="font-size:9px;color:var(--text3);font-family:var(--fm);letter-spacing:.2px;"></span>
+          </div>
+          <button class="btn btn-accent" onclick="addRecipeIngredientFromSearch()" style="height:34px;padding:0 14px;font-size:12px;flex-shrink:0;">Add</button>
+        </div>
+        <div id="recipeDraftIngredients"></div>
+      </div>
+      <div id="recipeTotals" style="font-size:12px;color:var(--text3);font-family:var(--fm);padding:8px;background:var(--bg3);border-radius:8px;"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closeRecipeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveRecipe()">Save Recipe</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- APPEARANCE PICKER POPUP (shared between top bar and sidebar triggers) -->
+<div id="appearPopup">
+  <h6>Appearance</h6>
+  <div class="appear-grid">
+    <!-- Aura -->
+    <button class="variant-swatch" data-v="default" onclick="applyVariant('default')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #2e2550;display:flex;height:40px;">
+        <div style="flex:1;background:#0d0b1a;padding:6px;"><div style="height:3px;background:#8b82ff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#2e2550;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#2e2550;"></div>
+        <div style="flex:1;background:#e6e3f8;padding:6px;"><div style="height:3px;background:#4f52e8;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#b8b0e0;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Aura</div>
+      <div style="font-size:9px;opacity:.55;">Indigo · default</div>
+    </button>
+    <!-- Onyx -->
+    <button class="variant-swatch" data-v="onyx" onclick="applyVariant('onyx')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #38383a;display:flex;height:40px;">
+        <div style="flex:1;background:#0f0f0f;padding:6px;"><div style="height:3px;background:#0a84ff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#38383a;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#38383a;"></div>
+        <div style="flex:1;background:#f5f5f7;padding:6px;"><div style="height:3px;background:#0071e3;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#d8d8dc;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Onyx</div>
+      <div style="font-size:9px;opacity:.55;">Black · Apple</div>
+    </button>
+    <!-- Linear -->
+    <button class="variant-swatch" data-v="linear" onclick="applyVariant('linear')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #25253a;display:flex;height:40px;">
+        <div style="flex:1;background:#0a0a0e;padding:6px;"><div style="height:3px;background:#5c6aff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#25253a;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#d0d4f0;"></div>
+        <div style="flex:1;background:#f5f7ff;padding:6px;"><div style="height:3px;background:#4c5bff;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#d4d8f4;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Linear</div>
+      <div style="font-size:9px;opacity:.55;">Indigo · tech</div>
+    </button>
+    <!-- Amber -->
+    <button class="variant-swatch" data-v="amber" onclick="applyVariant('amber')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #2a2530;display:flex;height:40px;">
+        <div style="flex:1;background:#08070a;padding:6px;"><div style="height:3px;background:#f0a030;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#2a2530;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#e8d8a8;"></div>
+        <div style="flex:1;background:#fdf8ee;padding:6px;"><div style="height:3px;background:#c17800;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#e8d8a8;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Amber</div>
+      <div style="font-size:9px;opacity:.55;">Gold · warm</div>
+    </button>
+    <!-- Rose -->
+    <button class="variant-swatch" data-v="rose" onclick="applyVariant('rose')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #4a2040;display:flex;height:40px;">
+        <div style="flex:1;background:#140a0f;padding:6px;"><div style="height:3px;background:#e879a8;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#4a2040;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#d8a0c4;"></div>
+        <div style="flex:1;background:#fce8f4;padding:6px;"><div style="height:3px;background:#c01870;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#d8a0c4;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Rose</div>
+      <div style="font-size:9px;opacity:.55;">Pink · dark</div>
+    </button>
+    <!-- Nord -->
+    <button class="variant-swatch" data-v="nord" onclick="applyVariant('nord')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #4c566a;display:flex;height:40px;">
+        <div style="flex:1;background:#232731;padding:6px;"><div style="height:3px;background:#88c0d0;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#4c566a;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#b0c4d8;"></div>
+        <div style="flex:1;background:#d8e4ef;padding:6px;"><div style="height:3px;background:#4a8cb4;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#b0c4d8;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Nord</div>
+      <div style="font-size:9px;opacity:.55;">Arctic · blue</div>
+    </button>
+    <!-- Forest -->
+    <button class="variant-swatch" data-v="forest" onclick="applyVariant('forest')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #244830;display:flex;height:40px;">
+        <div style="flex:1;background:#071209;padding:6px;"><div style="height:3px;background:#4ade80;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#244830;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#a0d4ac;"></div>
+        <div style="flex:1;background:#d4eeda;padding:6px;"><div style="height:3px;background:#16a34a;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#a0d4ac;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Forest</div>
+      <div style="font-size:9px;opacity:.55;">Green · dark</div>
+    </button>
+    <!-- Teal -->
+    <button class="variant-swatch" data-v="teal" onclick="applyVariant('teal')">
+      <div style="width:100%;border-radius:5px;overflow:hidden;border:1px solid #224c52;display:flex;height:40px;">
+        <div style="flex:1;background:#060f10;padding:6px;"><div style="height:3px;background:#2dd4bf;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#224c52;border-radius:1px;width:85%;"></div></div>
+        <div style="width:1px;background:#98d4d8;"></div>
+        <div style="flex:1;background:#cceef0;padding:6px;"><div style="height:3px;background:#0d9488;border-radius:2px;width:70%;margin-bottom:4px;"></div><div style="height:2px;background:#98d4d8;border-radius:1px;width:85%;"></div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;">Teal</div>
+      <div style="font-size:9px;opacity:.55;">Cyan · dark</div>
+    </button>
+  </div>
+</div>
+
+  <!-- Mobile bottom tab bar (phone-width browser only; hidden on Electron desktop) -->
+  <nav id="bottomNav" class="bottom-nav">
+    <div class="bnav-item active" data-page="today" onclick="showPage('today',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Today</span>
+    </div>
+    <div class="bnav-item" data-page="history" onclick="showPage('history',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>History</span>
+    </div>
+    <div class="bnav-fab" onclick="openAddModal()" title="Add Meal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+    <div class="bnav-item" data-page="projection" onclick="showPage('projection',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><polyline points="2 20 22 20"/></svg>
+      <span>Projection</span>
+    </div>
+    <div class="bnav-item" id="bnavMoreBtn" onclick="toggleBottomNavMore(event)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      <span>More</span>
+    </div>
+  </nav>
+  <div id="bnavMoreMenu" class="bnav-more-menu">
+    <div class="bnav-more-item" data-page="analysis" onclick="showPage('analysis',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analysis
+    </div>
+    <div class="bnav-more-item" data-page="foods" onclick="showPage('foods',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Food Database
+    </div>
+    <div class="bnav-more-item" data-page="references" onclick="showPage('references',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+      References
+    </div>
+    <div class="bnav-more-item" data-page="settings" onclick="showPage('settings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </div>
+  </div>
