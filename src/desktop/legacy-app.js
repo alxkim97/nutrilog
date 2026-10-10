@@ -6406,3 +6406,29 @@ async function eggSettingsAdd(){
   document.addEventListener('mouseup',()=>{_eggResizing=false;});
 })();
 
+
+
+/* Restored from commit edd0dfd — v2.12.0 still called these after fb5f500 removed them. */
+function dqDayLine(entries){
+  if(!entries.length)return'';
+  const D=dqTotals(entries);if(!D.n)return'';
+  const part=(lbl,d,cap)=>{
+    const st=dqCapState(d.v,cap,d.known,D.n);
+    if(st==='none')return`${lbl} <span class="dq-none">no data</span>`;
+    const col=st==='over'?'dq-t-over':st==='warn'?'dq-t-warn':'';
+    return`${lbl} <strong class="${col}">${d.known<D.n?'≥ ':''}${f1(d.v)}</strong> / ${cap} g${st==='over'?` <span class="dq-t-over">+${f1(d.v-cap)} over</span>`:''}`;
+  };
+  const unk=D.n-Math.min(D.addedSugar.known,D.satFat.known);
+  return`<div class="hist-dq">${part('Added sugar',D.addedSugar,DQ.addedSugarCap)}<span class="hist-dq-sep">·</span>${part('Sat fat',D.satFat,satFatCapG())}${unk>0?`<span class="hist-dq-sep">·</span><span class="dq-note">${unk} of ${D.n} items missing data</span>`:''}</div>`;
+}
+function dqAvgRows(days){
+  const rows=[];
+  [['Added sugar','addedSugar',DQ.addedSugarCap],['Sat fat','satFat',satFatCapG()]].forEach(([lbl,k,cap])=>{
+    let sum=0,withData=0;
+    days.forEach(d=>{const D=dqTotals(d.entries||[]);if(D[k].known>0){sum+=D[k].v;withData++;}});
+    if(!withData)return;
+    const avg=sum/withData,col=avg>cap?'var(--c-redline)':avg>=cap*0.8?'var(--c-warn)':'var(--green)';
+    rows.push({lbl,val:f1(avg),tgt:cap,unit:'g',col,note:withData<days.length?' · '+withData+'/'+days.length+' days':''});
+  });
+  return rows;
+}

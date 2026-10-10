@@ -4,6 +4,7 @@
 // Every replaced range is checked against its expected first/last line, so a
 // drifted source fails loudly instead of being cut in the wrong place.
 import { readFileSync, writeFileSync } from 'fs'
+import { execFileSync } from 'child_process'
 
 const src = readFileSync('legacy/app.js', 'utf8').replace(/^﻿/, '').split('\n')
 const edits = []
@@ -282,5 +283,22 @@ for (const e of edits) {
   if (e.replacement === null) continue
   src.splice(e.start - 1, e.end - e.start + 1, ...(e.replacement || []))
 }
+// v2.12.0 shipped calls to dqDayLine() (History day detail) and dqAvgRows()
+// (Analysis) after commit fb5f500 deleted both. Restore them verbatim from the
+// commit before (edd0dfd); function declarations hoist, so appending works.
+const prev = execFileSync('git', ['show', 'edd0dfd:src/app.js']).toString().replace(/^﻿/, '').split('\n')
+const extract = (name) => {
+  const i = prev.findIndex(l => l.startsWith(`function ${name}(`))
+  if (i < 0) throw new Error(`${name} not found in edd0dfd`)
+  let depth = 0, started = false
+  for (let j = i; j < prev.length; j++) {
+    for (const c of prev[j]) { if (c === '{') { depth++; started = true } else if (c === '}') depth-- }
+    if (started && depth === 0) return prev.slice(i, j + 1)
+  }
+  throw new Error(`${name}: unbalanced braces`)
+}
+if (src.some(l => l.startsWith('function dqDayLine(') || l.startsWith('function dqAvgRows('))) throw new Error('already defined — remove the restore step')
+src.push('', '/* Restored from commit edd0dfd — v2.12.0 still called these after fb5f500 removed them. */', ...extract('dqDayLine'), ...extract('dqAvgRows'), '')
+
 writeFileSync('src/desktop/legacy-app.js', src.join('\n'))
 console.log('wrote src/desktop/legacy-app.js —', src.length, 'lines')
