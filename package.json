@@ -1,33 +1,37 @@
 {
   "name": "nutrilog",
-  "version": "2.14.0",
-  "description": "NutriLog â€” personal macro tracker (phone PWA, desktop web, Windows app)",
-  "main": "main.js",
+  "version": "2.15.0",
+  "description": "NutriLog — personal macro tracker (phone PWA, desktop web, Windows app)",
+  "main": "main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "backup:cloud": "node scripts/backup-cloud.mjs",
-    "start": "electron .",
-    "start:dev": "electron . --dev",
-    "build:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win --x64",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
-    "publish": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win --x64 --publish always"
+    "electron": "electron .",
+    "electron:dev": "electron . --dev",
+    "electron:build": "vite build && set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win --x64",
+    "release": "npm run electron:build && node scripts/publish-release.mjs",
+    "backup:cloud": "node scripts/backup-cloud.mjs"
   },
   "devDependencies": {
-    "electron": "^31.7.7",
-    "electron-builder": "^24.13.3",
+    "@supabase/supabase-js": "^2.117.3",
+    "chart.js": "^4.5.1",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
     "vite": "^8.3.4"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "heic-convert": "^2.1.0"
   },
   "build": {
     "appId": "com.apm.nutrilog",
     "productName": "NutriLog",
-    "copyright": "Copyright Â© 2026 Alex Â· APm R&D",
+    "copyright": "Copyright © 2026 Alex · APm R&D",
     "files": [
-      "main.js",
-      "preload.js",
-      "legacy/**/*",
+      "main.cjs",
+      "preload.cjs",
+      "dist/**/*",
       "assets/**/*"
     ],
     "directories": {
@@ -45,15 +49,6 @@
       ],
       "icon": "assets/icon.ico"
     },
-    "mac": {
-      "target": "dmg",
-      "icon": "assets/icon.icns",
-      "category": "public.app-category.healthcare-fitness"
-    },
-    "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
-    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -68,11 +63,5 @@
       "owner": "alxkim97",
       "repo": "nutrilog"
     }
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.117.3",
-    "chart.js": "^4.5.1",
-    "electron-updater": "^6.8.9",
-    "heic-convert": "^2.1.0"
   }
 }
