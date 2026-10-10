@@ -12,6 +12,7 @@ import { applyTheme, applyThemeFromSettings, setTheme, setVariant } from './them
 import { cacheLoad, cacheGet, cacheClearAll } from './cache.js'
 import { setupPullToRefresh } from './pullToRefresh.js'
 import { isDesktopView, onDesktopViewChange } from './platform.js'
+import { initUpdateReload } from './swUpdate.js'
 
 applyTheme()
 
@@ -252,6 +253,12 @@ onDesktopViewChange(async () => {
     else location.reload()
   }
 })
+
+// Offline shell + instant deploys. Not under Electron (file://), which has no service workers.
+if ('serviceWorker' in navigator && location.protocol !== 'file:' && !import.meta.env.DEV) {
+  navigator.serviceWorker.register('./sw.js').catch(e => console.warn('Service worker not registered:', e))
+  initUpdateReload({ isBusy: () => layout === 'phone' && state.view === 'add' })
+}
 
 async function boot() {
   state.session = await getSession()

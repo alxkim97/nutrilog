@@ -4,8 +4,5 @@ release
 .git
 *.rar
 *.zip
-/index.html
-/src
-/public
-/scripts
-/vite.config.mjs
+legacy
+nutrilog-backups

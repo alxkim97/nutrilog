@@ -1,12 +1,5 @@
 {
-  "installCommand": "echo \"static site — no install needed\"",
-  "buildCommand": "echo \"static site — no build needed\"",
-  "outputDirectory": ".",
-  "rewrites": [
-    { "source": "/", "destination": "/legacy/index.html" },
-    { "source": "/app.js", "destination": "/legacy/app.js" },
-    { "source": "/styles.css", "destination": "/legacy/styles.css" },
-    { "source": "/vendor/:path*", "destination": "/legacy/vendor/:path*" },
-    { "source": "/fonts/:path*", "destination": "/legacy/fonts/:path*" }
-  ]
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }
