@@ -355,7 +355,7 @@ async function appendSyncLog(entry){
 /* ── Force Push: push ALL local data up to Supabase ── */
 // Every change already saves straight to the cloud; this just flushes anything still waiting.
 async function forcePushToCloud(){
-  if(autoSaveTimer){clearTimeout(autoSaveTimer);autoSaveTimer=null;await saveSession();}
+  if(autoSaveTimer||mealsUnsaved()){clearTimeout(autoSaveTimer);autoSaveTimer=null;await saveSession();}
   const ok=await window.NutriCloud.retryPending();
   toast(ok?'✅ Everything is saved to the cloud':'⚠️ Some changes are still waiting to save — check your connection',ok?'ok':'err');
 }
@@ -431,7 +431,8 @@ async function pullFromSupabase(){
   if(_pullInProgress)return;
   _pullInProgress=true;
   try{
-    if(autoSaveTimer){clearTimeout(autoSaveTimer);autoSaveTimer=null;await saveSession();}
+    if(_currentDateStr!==todayStr())return; // a new day: tick() rolls over first
+    if(autoSaveTimer||mealsUnsaved()){clearTimeout(autoSaveTimer);autoSaveTimer=null;await saveSession();}
     setSyncBadge('syncing','Syncing…');
     const before=JSON.stringify(meals);
     await window.NutriCloud.reload();
@@ -561,7 +562,7 @@ document.addEventListener('visibilitychange',()=>{
 // While visible, check today's row once a minute so a phone log shows up
 // without a refresh. Skipped while this window has an edit not yet saved.
 setInterval(async()=>{
-  if(document.hidden||!_supaUser||_pullInProgress||autoSaveTimer||_saveState==='saving'||window.NutriCloud.hasPending)return;
+  if(document.hidden||!_supaUser||_pullInProgress||autoSaveTimer||_saveState==='saving'||window.NutriCloud.hasPending||mealsUnsaved())return;
   try{
     const before=JSON.stringify(meals);
     const remote=await window.NutriCloud.peekToday();
@@ -805,7 +806,22 @@ let autoSaveTimer=null;
 let _saveState='saved'; // 'saved' | 'dirty' | 'saving'
 let _cloudDirty=false; // true when local meals are ahead of cloud
 
-// (The 30-second "safety-net" push is gone: every save goes straight to the cloud.)
+// v2.12 never saved some changes to today itself (adding a meal, quick log, paste,
+// templates, undo…) — its 30-second "safety-net" push did. That push union-merged
+// with the cloud, which brought deleted entries back, so it is replaced by this:
+// whenever today's meals differ from what was last saved, run a normal (merging)
+// save. A refresh never replaces today while this is true.
+const _mealsKey=list=>JSON.stringify((list||[]).map(({date,...m})=>m));
+function mealsUnsaved(){
+  const d=window.NutriCloud.get('nutrilog_v1');
+  return !!d&&_mealsKey(meals)!==_mealsKey(d.meals);
+}
+setInterval(()=>{
+  if(!_supaUser||autoSaveTimer||_saveState==='saving'||_pullInProgress||_rolloverInProgress)return;
+  if(_currentDateStr!==todayStr())return; // midnight: tick() files these under the right day first
+  if(mealsUnsaved())queueAutoSave();
+},2000);
+window.addEventListener('pagehide',()=>{if(_supaUser&&mealsUnsaved()&&_currentDateStr===todayStr())saveSession();});
 function setSavePill(state){
   _saveState=state;
   const pill=document.getElementById('savePill');
@@ -1031,7 +1047,7 @@ function tick(){
 async function handleDayRollover(prevDate){
   _rolloverInProgress=true;
   try{
-    if(autoSaveTimer){
+    if(autoSaveTimer||mealsUnsaved()){
       clearTimeout(autoSaveTimer);autoSaveTimer=null;
       const h=(await Store.get('nutrilog_history'))||{};
       h[prevDate]=meals.map(m=>({...m,date:prevDate}));
