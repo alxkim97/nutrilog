@@ -109,6 +109,8 @@ h2 { font-size: 16px; font-weight: 700; margin: 26px 0 10px; letter-spacing: -0.
   display: inline-flex; align-items: center; justify-content: center;
   border: none; background: var(--surface-2); color: var(--text2);
 }
+.icon-btn:active:not(:disabled) { transform: scale(.92); }
+.icon-btn:disabled { opacity: .35; }
 
 /* fields */
 input, select, textarea {
@@ -133,11 +135,16 @@ label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; 
 .segmented { display: flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; margin-bottom: 14px; }
 .segmented button {
   flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  border: none; background: none; color: var(--text2);
+  border: none; background: none; color: var(--text2); white-space: nowrap;
   border-radius: 999px; padding: 9px 10px; font-size: 14px; font-weight: 700;
   transition: background .15s ease, color .15s ease;
 }
 .segmented button.active { background: var(--accent); color: var(--on-accent); }
+.segmented.sm { padding: 3px; gap: 2px; margin-bottom: 0; }
+.segmented.sm button { padding: 6px 12px; font-size: 12.5px; }
+
+.section-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 26px 0 10px; }
+.section-row h2 { margin: 0; }
 
 /* bottom tab bar */
 .tabbar {
@@ -304,6 +311,9 @@ label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; 
 .save-btn { margin-top: 24px; }
 
 /* History */
+.month-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 18px 2px 4px; }
+.month-label { font-size: 16px; font-weight: 700; }
+
 .day { margin-top: 18px; }
 .day-head { display: flex; align-items: center; gap: 8px; margin: 0 2px; }
 .day-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--text3); }

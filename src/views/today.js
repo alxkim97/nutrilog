@@ -1,14 +1,25 @@
-import { MEAL_CATEGORIES, guessCategory } from '../categories.js'
+import { MEAL_CATEGORIES, MEAL_ICON, guessCategory } from '../categories.js'
 import { logEntry, deleteEntry } from '../mealOps.js'
 import { icon } from '../icons.js'
 import { todayStr, nowTime, addDays, longDateLabel, confirmDialog, toast, escapeHtml, fmtNum, round1, sumMacros } from '../helpers.js'
 import { MACROS, macroOrder, goalFor, macroStatus, ringSvg, dailyTotals, streak, frequentFoods } from '../nutrition.js'
+
+// "By meal" (grouped, current default) vs "By time" (flat, like desktop) —
+// a per-device preference, not per-profile, since it's just a viewing choice.
+const SORT_KEY = 'nutrilog_today_sort'
+function readSortMode() {
+  try { return localStorage.getItem(SORT_KEY) === 'time' ? 'time' : 'meal' } catch { return 'meal' }
+}
+function writeSortMode(mode) {
+  try { localStorage.setItem(SORT_KEY, mode) } catch { /* preference lost this session only */ }
+}
 
 export function renderToday(container, opts) {
   const { profile, profiles, settings, todayMeals, history, offline, onChanged, onAdd, onOpenSettings } = opts
   const totals = sumMacros(todayMeals)
   const frequent = frequentFoods(history)
   const byDate = dailyTotals(history, todayMeals)
+  const sortMode = readSortMode()
 
   container.innerHTML = `
     <header class="top-bar">
@@ -32,12 +43,26 @@ export function renderToday(container, opts) {
       </div>` : ''}
     <h2>This week</h2>
     ${weekHtml(byDate, settings)}
-    <h2>Logged today</h2>
-    ${mealsHtml(todayMeals)}
+    ${todayMeals.length ? `
+    <div class="section-row">
+      <h2>Logged today</h2>
+      <div class="segmented sm" id="sortToggle" role="tablist">
+        <button type="button" role="tab" data-sort="meal" aria-selected="${sortMode === 'meal'}" class="${sortMode === 'meal' ? 'active' : ''}">By meal</button>
+        <button type="button" role="tab" data-sort="time" aria-selected="${sortMode === 'time'}" class="${sortMode === 'time' ? 'active' : ''}">By time</button>
+      </div>
+    </div>` : '<h2>Logged today</h2>'}
+    ${mealsHtml(todayMeals, sortMode)}
   `
 
   container.querySelector('#profileChip')?.addEventListener('click', onOpenSettings)
   container.querySelector('#emptyAdd')?.addEventListener('click', onAdd)
+  container.querySelectorAll('#sortToggle button').forEach(btn => {
+    btn.onclick = () => {
+      if (btn.dataset.sort === sortMode) return
+      writeSortMode(btn.dataset.sort)
+      renderToday(container, opts)
+    }
+  })
 
   container.querySelectorAll('#quickChips .food-chip').forEach(chip => {
     chip.onclick = async () => {
@@ -156,13 +181,14 @@ function weekHtml(byDate, settings) {
     </section>`
 }
 
-function mealsHtml(meals) {
+function mealsHtml(meals, sortMode) {
   if (!meals.length) {
     return `<div class="card empty-card">
       <div class="empty-state">Nothing logged yet today.</div>
       <button class="btn" id="emptyAdd" type="button">${icon('plus', 18)} Log food</button>
     </div>`
   }
+  if (sortMode === 'time') return mealsByTimeHtml(meals)
   return MEAL_CATEGORIES.map(c => {
     const rows = meals.map((m, i) => ({ m, i })).filter(({ m }) => (m.cat || 'snack') === c.id)
     if (!rows.length) return ''
@@ -185,4 +211,27 @@ function mealsHtml(meals) {
         </div>
       </div>`
   }).join('')
+}
+
+// Flat, time-ordered list (like the desktop table) — one card, every entry in
+// the order it was eaten, with a small coloured icon standing in for the
+// group header. data-i still points at the entry's index in `meals` so the
+// shared delete handler in renderToday works unchanged.
+function mealsByTimeHtml(meals) {
+  const rows = meals.map((m, i) => ({ m, i })).sort((a, b) => (a.m.time || '').localeCompare(b.m.time || ''))
+  return `
+    <div class="card list">
+      ${rows.map(({ m, i }) => `
+        <button class="meal-row cat-${MEAL_ICON[m.cat] ? m.cat : 'snack'}" type="button" data-i="${i}" aria-label="${escapeHtml(m.name)} — tap to delete">
+          <span class="meal-ico">${icon(MEAL_ICON[m.cat] || 'snack', 15)}</span>
+          <div class="meal-main">
+            <div class="meal-name">${escapeHtml(m.name)}</div>
+            <div class="meal-sub">${escapeHtml(`${round1(m.serving)} ${m.unit || ''}`.trim())} · ${escapeHtml(m.time || '')}</div>
+          </div>
+          <div class="meal-right">
+            <div class="meal-kcal">${fmtNum(m.kcal)}</div>
+            <div class="meal-macros">P${Math.round(m.protein || 0)} · C${Math.round(m.carbs || 0)} · F${Math.round(m.fat || 0)}</div>
+          </div>
+        </button>`).join('')}
+    </div>`
 }

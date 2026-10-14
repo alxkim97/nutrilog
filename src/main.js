@@ -103,6 +103,18 @@ async function refresh() {
   render()
 }
 
+// Same data refresh as above, but no render() — used while the user keeps
+// logging on the Add screen (Save & add another) so todayMeals/history are
+// already current by the time they navigate back, without rebuilding the
+// in-progress form underneath them.
+async function refreshInBackground() {
+  try {
+    await loadProfileData()
+    state.offline = false
+    saveOfflineCopy()
+  } catch { /* next refresh() (or the tab switch itself) will retry */ }
+}
+
 // Drops everything tied to the account — in-memory data and the offline copy —
 // so a different sign-in on this device never sees the previous account's data.
 function signedOut() {
@@ -186,7 +198,11 @@ function renderImmediate() {
       onChanged: refresh, onAdd: () => setView('add'), onOpenSettings: () => setView('settings'),
     })
   } else if (state.view === 'add') {
-    renderQuickAdd(screen, { profile, foodLibrary: state.foodLibrary, onSaved: () => { state.view = 'today'; refresh() } })
+    renderQuickAdd(screen, {
+      profile, foodLibrary: state.foodLibrary,
+      onSaved: () => { state.view = 'today'; refresh() },
+      onLoggedStay: refreshInBackground,
+    })
   } else if (state.view === 'history') {
     renderHistory(screen, { history: state.history, settings })
   } else if (state.view === 'trends') {

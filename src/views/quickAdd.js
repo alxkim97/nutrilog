@@ -9,7 +9,7 @@ import { todayStr, nowTime, round1, toast, escapeHtml, fmtNum } from '../helpers
 const DQ_KEYS = ['sugar', 'addedSugar', 'satFat']
 const isNum = v => typeof v === 'number' && isFinite(v)
 
-export function renderQuickAdd(container, { profile, foodLibrary, onSaved }) {
+export function renderQuickAdd(container, { profile, foodLibrary, onSaved, onLoggedStay }) {
   let mode = 'search' // 'search' | 'custom'
   let query = ''
   let picked = null
@@ -46,6 +46,7 @@ export function renderQuickAdd(container, { profile, foodLibrary, onSaved }) {
       <label for="timeInput">Time</label>
       <input id="timeInput" type="time" value="${time}" />
       <button class="btn save-btn" id="saveBtn" type="button">${icon('check', 18)} Save entry</button>
+      <button class="btn secondary" id="saveStayBtn" type="button">${icon('plus', 18)} Save &amp; add another</button>
     `
     container.querySelectorAll('#modeToggle button').forEach(btn => {
       btn.onclick = () => { if (mode !== btn.dataset.mode) { mode = btn.dataset.mode; picked = null; draw() } }
@@ -57,7 +58,8 @@ export function renderQuickAdd(container, { profile, foodLibrary, onSaved }) {
       }
     })
     container.querySelector('#timeInput').oninput = e => { time = e.target.value }
-    container.querySelector('#saveBtn').onclick = save
+    container.querySelector('#saveBtn').onclick = () => save(false)
+    container.querySelector('#saveStayBtn').onclick = () => save(true)
     drawModeBody()
   }
 
@@ -154,7 +156,18 @@ export function renderQuickAdd(container, { profile, foodLibrary, onSaved }) {
     `
   }
 
-  async function save() {
+  // Clears the picked food / custom fields for the next entry but keeps the
+  // meal category and time — logging a few items for the same meal shouldn't
+  // mean re-picking the category or re-typing the time for each one.
+  function resetForAnother() {
+    picked = null
+    query = ''
+    amount = 1
+    custom.name = ''; custom.kcal = ''; custom.protein = ''; custom.carbs = ''; custom.fat = ''; custom.fiber = ''
+    draw()
+  }
+
+  async function save(stay) {
     const date = todayStr()
     let entry
     if (mode === 'search') {
@@ -181,8 +194,12 @@ export function renderQuickAdd(container, { profile, foodLibrary, onSaved }) {
       entry = { cat: category, date, time, name: custom.name.trim(), unit: 'serving', serving: 1, ...macros, notes: '', _base: { ...macros, serving: 1 } }
     }
 
-    const btn = container.querySelector('#saveBtn')
-    btn.disabled = true
+    const saveBtn = container.querySelector('#saveBtn')
+    const stayBtn = container.querySelector('#saveStayBtn')
+    const btn = stay ? stayBtn : saveBtn
+    const restoreLabel = btn.innerHTML
+    saveBtn.disabled = true
+    stayBtn.disabled = true
     btn.textContent = 'Saving…'
     try {
       await logEntry(profile.id, date, entry)
@@ -190,12 +207,19 @@ export function renderQuickAdd(container, { profile, foodLibrary, onSaved }) {
       if (mode === 'custom') {
         addToFoodLibrary({ name: entry.name, serving: 1, unit: 'serving', kcal: entry.kcal, protein: entry.protein, fat: entry.fat, carbs: entry.carbs, fiber: entry.fiber })
       }
-      toast(`Logged ${entry.name}`)
-      onSaved()
+      if (stay) {
+        toast(`Logged ${entry.name} — add another`)
+        onLoggedStay?.()
+        resetForAnother()
+      } else {
+        toast(`Logged ${entry.name}`)
+        onSaved()
+      }
     } catch (e) {
       toast(e.message || 'Failed to save')
-      btn.disabled = false
-      btn.innerHTML = `${icon('check', 18)} Save entry`
+      saveBtn.disabled = false
+      stayBtn.disabled = false
+      btn.innerHTML = restoreLabel
     }
   }
 
