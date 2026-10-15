@@ -1,8 +1,10 @@
 import { MEAL_CATEGORIES, MEAL_ICON, guessCategory } from '../categories.js'
-import { logEntry, deleteEntry } from '../mealOps.js'
+import { logEntry, deleteEntry, updateEntry } from '../mealOps.js'
 import { icon } from '../icons.js'
 import { todayStr, nowTime, addDays, longDateLabel, confirmDialog, toast, escapeHtml, fmtNum, round1, sumMacros } from '../helpers.js'
 import { MACROS, macroOrder, goalFor, macroStatus, ringSvg, dailyTotals, streak, frequentFoods } from '../nutrition.js'
+import { enableSwipeRows } from '../swipe.js'
+import { openEditSheet } from './editEntry.js'
 
 // "By meal" (grouped, current default) vs "By time" (flat, like desktop) —
 // a per-device preference, not per-profile, since it's just a viewing choice.
@@ -82,9 +84,19 @@ export function renderToday(container, opts) {
     }
   })
 
-  container.querySelectorAll('.meal-row').forEach(row => {
-    row.onclick = async () => {
-      const meal = todayMeals[Number(row.dataset.i)]
+  container.querySelectorAll('.swipe-action').forEach(btn => {
+    btn.onclick = async () => {
+      const meal = todayMeals[Number(btn.dataset.i)]
+      if (btn.dataset.act === 'edit') {
+        openEditSheet(meal, {
+          onSave: async (updated) => {
+            await updateEntry(profile.id, todayStr(), meal, updated)
+            toast('Updated')
+            onChanged()
+          },
+        })
+        return
+      }
       if (!(await confirmDialog(`Delete "${meal.name}"?`))) return
       try {
         await deleteEntry(profile.id, todayStr(), meal)
@@ -95,6 +107,7 @@ export function renderToday(container, opts) {
       }
     }
   })
+  enableSwipeRows(container)
 }
 
 function heroHtml(totals, settings, count) {
@@ -197,41 +210,45 @@ function mealsHtml(meals, sortMode) {
       <div class="meal-group cat-${c.id}">
         <div class="meal-group-head"><span class="meal-group-ico">${icon(c.icon, 15)}</span>${c.label}<span class="meal-group-kcal">${fmtNum(kcal)} kcal</span></div>
         <div class="card list">
-          ${rows.map(({ m, i }) => `
-            <button class="meal-row" type="button" data-i="${i}" aria-label="${escapeHtml(m.name)} — tap to delete">
-              <div class="meal-main">
-                <div class="meal-name">${escapeHtml(m.name)}</div>
-                <div class="meal-sub">${escapeHtml(`${round1(m.serving)} ${m.unit || ''}`.trim())} · ${escapeHtml(m.time || '')}</div>
-              </div>
-              <div class="meal-right">
-                <div class="meal-kcal">${fmtNum(m.kcal)}</div>
-                <div class="meal-macros">P${Math.round(m.protein || 0)} · C${Math.round(m.carbs || 0)} · F${Math.round(m.fat || 0)}</div>
-              </div>
-            </button>`).join('')}
+          ${rows.map(({ m, i }) => swipeRowHtml(m, i)).join('')}
         </div>
       </div>`
   }).join('')
 }
 
+// Front content shared by both layouts: swiping (or tapping) reveals the
+// Edit/Delete buttons behind it. data-i points at the entry's index in the
+// original `meals` array, which the handlers in renderToday read from —
+// stable regardless of how this row is grouped or sorted on screen.
+function swipeRowHtml(m, i, { showIco = false } = {}) {
+  const cat = MEAL_ICON[m.cat] ? m.cat : 'snack'
+  return `
+    <div class="swipe-row">
+      <div class="swipe-actions">
+        <button type="button" class="swipe-action edit" data-i="${i}" data-act="edit">${icon('pen', 16)}<span>Edit</span></button>
+        <button type="button" class="swipe-action delete" data-i="${i}" data-act="delete">${icon('x', 16)}<span>Delete</span></button>
+      </div>
+      <div class="swipe-front meal-row ${showIco ? `cat-${cat}` : ''}">
+        ${showIco ? `<span class="meal-ico">${icon(MEAL_ICON[m.cat] || 'snack', 15)}</span>` : ''}
+        <div class="meal-main">
+          <div class="meal-name">${escapeHtml(m.name)}</div>
+          <div class="meal-sub">${escapeHtml(`${round1(m.serving)} ${m.unit || ''}`.trim())} · ${escapeHtml(m.time || '')}</div>
+        </div>
+        <div class="meal-right">
+          <div class="meal-kcal">${fmtNum(m.kcal)}</div>
+          <div class="meal-macros">P${Math.round(m.protein || 0)} · C${Math.round(m.carbs || 0)} · F${Math.round(m.fat || 0)}</div>
+        </div>
+      </div>
+    </div>`
+}
+
 // Flat, time-ordered list (like the desktop table) — one card, every entry in
 // the order it was eaten, with a small coloured icon standing in for the
-// group header. data-i still points at the entry's index in `meals` so the
-// shared delete handler in renderToday works unchanged.
+// group header.
 function mealsByTimeHtml(meals) {
   const rows = meals.map((m, i) => ({ m, i })).sort((a, b) => (a.m.time || '').localeCompare(b.m.time || ''))
   return `
     <div class="card list">
-      ${rows.map(({ m, i }) => `
-        <button class="meal-row cat-${MEAL_ICON[m.cat] ? m.cat : 'snack'}" type="button" data-i="${i}" aria-label="${escapeHtml(m.name)} — tap to delete">
-          <span class="meal-ico">${icon(MEAL_ICON[m.cat] || 'snack', 15)}</span>
-          <div class="meal-main">
-            <div class="meal-name">${escapeHtml(m.name)}</div>
-            <div class="meal-sub">${escapeHtml(`${round1(m.serving)} ${m.unit || ''}`.trim())} · ${escapeHtml(m.time || '')}</div>
-          </div>
-          <div class="meal-right">
-            <div class="meal-kcal">${fmtNum(m.kcal)}</div>
-            <div class="meal-macros">P${Math.round(m.protein || 0)} · C${Math.round(m.carbs || 0)} · F${Math.round(m.fat || 0)}</div>
-          </div>
-        </button>`).join('')}
+      ${rows.map(({ m, i }) => swipeRowHtml(m, i, { showIco: true })).join('')}
     </div>`
 }

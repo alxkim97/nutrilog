@@ -39,9 +39,20 @@ html, body {
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  /* App-like, not a web page: no long-press "Copy/Share/Look Up" callout and
+     nothing to select — it was also competing with the swipe gesture on a
+     held row. Form fields opt back in below, since typing needs it. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 button, input, select, textarea { font-family: inherit; letter-spacing: inherit; color: inherit; }
 button { cursor: pointer; }
+input, textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
 .ico { display: inline-block; vertical-align: middle; flex-shrink: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -267,7 +278,8 @@ label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; 
   background: none; text-align: left;
 }
 .meal-row:last-child { border-bottom: none; }
-.meal-row:not(.static):active { opacity: .6; }
+/* Not on swipe rows: fading the front lets the Edit/Delete behind it show through. */
+.meal-row:not(.static):not(.swipe-front):active { opacity: .6; }
 .meal-ico { display: inline-flex; width: 26px; height: 26px; border-radius: 9px; align-items: center; justify-content: center; flex-shrink: 0; background: var(--cat-dim, var(--surface-2)); color: var(--cat, var(--text3)); }
 .meal-main { flex: 1; min-width: 0; }
 .meal-name { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -276,6 +288,36 @@ label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; 
 .meal-kcal { font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
 .meal-macros { font-size: 11px; color: var(--text3); font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .rank { width: 24px; height: 24px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--text2); font-size: 12px; font-weight: 700; flex-shrink: 0; }
+
+/* swipe-to-reveal (Edit / Delete) — wraps a .meal-row with hidden action
+   buttons behind it. The row divider moves to .swipe-row itself: .meal-row's
+   own :last-child rule would otherwise always fire, since the wrapped
+   .meal-row is trivially the last of its own 2-child .swipe-row. */
+.swipe-row { position: relative; overflow: hidden; border-bottom: 1px solid var(--border); }
+.swipe-row:last-child { border-bottom: none; }
+.swipe-row .meal-row { border-bottom: none; }
+.swipe-front {
+  position: relative; /* same stacking level as .swipe-actions below, but declared later in the
+                          markup, so normal (closed) it paints over the actions and hides them */
+  transition: transform .22s cubic-bezier(.22, .8, .3, 1);
+  will-change: transform;
+  /* Without this, iOS Safari's own gesture recognizer competes with ours for
+     any touch that isn't dead-straight horizontal (i.e. basically all of them)
+     — it can grab the gesture as a scroll and fire pointercancel instead of
+     pointermove/up, which on a real finger (never as steady as a mouse) was
+     swallowing the tap's click and leaving the row looking unresponsive. */
+  touch-action: pan-y;
+}
+.swipe-row.no-anim .swipe-front { transition: none; }
+.swipe-front.meal-row { background: var(--surface); } /* opaque — belt and braces on top of the stacking order */
+.swipe-actions { position: absolute; top: 0; right: 0; bottom: 0; width: 136px; display: flex; }
+.swipe-action {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  border: none; border-left: 1px solid var(--border); background: var(--surface-2); font-size: 11px; font-weight: 600;
+}
+.swipe-action.edit { color: var(--blue); }
+.swipe-action.delete { color: var(--red); }
+.swipe-action:active { opacity: .6; }
 
 /* Log */
 .search-field { position: relative; margin-bottom: 4px; }
@@ -418,6 +460,26 @@ label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; 
 .confirm-actions { display: flex; gap: 10px; }
 .confirm-actions .btn { flex: 1; margin-top: 0; }
 
+@keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-overlay {
+  position: fixed; inset: 0; z-index: 220;
+  background: rgba(0, 0, 0, .5);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: overlayFadeIn .15s ease;
+}
+.sheet-box {
+  background: var(--surface); border: 1px solid var(--border); border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  width: 100%; max-width: 480px; max-height: 86vh; overflow-y: auto;
+  box-shadow: var(--sh);
+  animation: sheetSlideUp .22s cubic-bezier(.22, .8, .3, 1);
+}
+.sheet-box h2 { margin-top: 0; }
+.sheet-actions { display: flex; gap: 10px; margin-top: 20px; }
+.sheet-actions .btn { margin-top: 0; }
+
 /* pull to refresh */
 .ptr {
   position: fixed; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; z-index: 160;
@@ -431,5 +493,5 @@ label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; 
 
 @media (hover: hover) {
   .food-chip:hover, .cat-chip:hover, .variant:hover { border-color: var(--border2); }
-  .meal-row:not(.static):hover, .result-row:hover, .option-row:hover { opacity: .8; }
+  .meal-row:not(.static):not(.swipe-front):hover, .result-row:hover, .option-row:hover { opacity: .8; }
 }

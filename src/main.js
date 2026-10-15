@@ -204,7 +204,7 @@ function renderImmediate() {
       onLoggedStay: refreshInBackground,
     })
   } else if (state.view === 'history') {
-    renderHistory(screen, { history: state.history, settings })
+    renderHistory(screen, { history: state.history, settings, profile, onChanged: refresh })
   } else if (state.view === 'trends') {
     renderTrends(screen, { history: state.history, todayMeals: state.todayMeals, settings })
   } else if (state.view === 'settings') {

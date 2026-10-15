@@ -1,6 +1,6 @@
 {
   "name": "nutrilog",
-  "version": "2.16.2",
+  "version": "2.16.3",
   "description": "NutriLog — personal macro tracker (phone PWA, desktop web, Windows app)",
   "main": "main.cjs",
   "scripts": {
