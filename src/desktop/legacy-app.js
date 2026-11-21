@@ -478,10 +478,11 @@ const Store = {
   async get(key){ return window.NutriCloud.get(key); },
   async set(key,value){
     if(DEVICE_ONLY_KEYS.has(key))return window.NutriCloud.set(key,value);
-    const sentMeals=key==='nutrilog_v1'?JSON.stringify(value?.meals||[]):null;
     setSyncBadge('syncing','Saving…');
     try{
-      const merged=await window.NutriCloud.set(key,value);
+      const saving=window.NutriCloud.set(key,value); // gives new entries their ids first
+      const sentMeals=key==='nutrilog_v1'?JSON.stringify(value?.meals||[]):null;
+      const merged=await saving;
       _lastSyncedAt=new Date();
       setSyncBadge('online',syncName());
       const el=document.getElementById('syncLastTime');
@@ -559,10 +560,11 @@ document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&_supaUser)pullFromSupabase().catch(e=>console.warn('Resume refresh failed',e));
 });
 
-// While visible, check today's row once a minute so a phone log shows up
-// without a refresh. Skipped while this window has an edit not yet saved.
-setInterval(async()=>{
-  if(document.hidden||!_supaUser||_pullInProgress||autoSaveTimer||_saveState==='saving'||window.NutriCloud.hasPending||mealsUnsaved())return;
+// Another device changed something: Supabase tells us which dates (and whether
+// the food library) changed. Today is taken only when this window has no edit
+// waiting to save; that edit's save then includes the other device's entries.
+async function takeTodayFromCloud(){
+  if(!_supaUser||_pullInProgress||autoSaveTimer||_saveState==='saving'||window.NutriCloud.hasPending||mealsUnsaved())return;
   try{
     const before=JSON.stringify(meals);
     const remote=await window.NutriCloud.peekToday();
@@ -572,7 +574,33 @@ setInterval(async()=>{
     histIdx[todayStr()]=meals.map(m=>({...m}));
     render();renderRecentMeals();
   }catch(e){console.warn('Today refresh failed',e);}
-},60*1000);
+}
+async function takeDayFromCloud(ds){
+  try{
+    const remote=await window.NutriCloud.peekDay(ds);
+    if(!remote)return;
+    window.NutriCloud.acceptDay(ds,remote);
+    if(remote.length)histIdx[ds]=remote.map(m=>({...m}));else delete histIdx[ds];
+    if(document.getElementById('page-history')?.classList.contains('active')){
+      renderCalendar();if(selDate===ds)renderHistDetail(ds);
+    }
+  }catch(e){console.warn('Day refresh failed',ds,e);}
+}
+async function takeFoodsFromCloud(){
+  if(!window.NutriCloud.foodsMatch(foodLib))return; // an edit here is still saving; its save picks these up
+  try{
+    foodLib=await window.NutriCloud.refreshFoods();
+    const b=document.getElementById('dbBadge');if(b)b.textContent=foodLib.length;
+    if(document.getElementById('page-foods')?.classList.contains('active')&&typeof renderFoodDb==='function')renderFoodDb();
+  }catch(e){console.warn('Food library refresh failed',e);}
+}
+window.NutriCloud.onRemoteChange(({dates,foods})=>{
+  const today=todayStr();
+  for(const ds of dates){if(ds===today)takeTodayFromCloud();else takeDayFromCloud(ds);}
+  if(foods)takeFoodsFromCloud();
+});
+// Fallback in case the live connection drops: check today every 5 minutes.
+setInterval(()=>{if(!document.hidden)takeTodayFromCloud();},5*60*1000);
 
 /* ═══ CONSTANTS ═══ */
 const MACROS=[
@@ -811,10 +839,8 @@ let _cloudDirty=false; // true when local meals are ahead of cloud
 // with the cloud, which brought deleted entries back, so it is replaced by this:
 // whenever today's meals differ from what was last saved, run a normal (merging)
 // save. A refresh never replaces today while this is true.
-const _mealsKey=list=>JSON.stringify((list||[]).map(({date,...m})=>m));
 function mealsUnsaved(){
-  const d=window.NutriCloud.get('nutrilog_v1');
-  return !!d&&_mealsKey(meals)!==_mealsKey(d.meals);
+  return !window.NutriCloud.dayMatches(meals,todayStr());
 }
 setInterval(()=>{
   if(!_supaUser||autoSaveTimer||_saveState==='saving'||_pullInProgress||_rolloverInProgress)return;
@@ -1169,6 +1195,7 @@ function totals(list){
 
 /* ═══ RENDER ═══ */
 function render(){
+  window.NutriCloud.ensureTodayIds(meals);
   // Always keep meals sorted by time ascending (earlier = top)
   meals.sort((a,b)=>{
     const ta=a.time||'00:00', tb=b.time||'00:00';

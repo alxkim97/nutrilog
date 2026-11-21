@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { entryToRow, foodToRow, rowToEntry, rowToFood } from './rowsShape.js'
 
 // Same Supabase project ("lifelog") the NutriLog desktop app has always used.
 // SUPA_KEY is the public anon key — intentionally client-visible; access is
@@ -93,62 +94,87 @@ export async function saveSettingsPatch(profileId, patch) {
   return next
 }
 
-/* ── Food library (one shared JSON array) ── */
+/* ── Food library: one row per food in nutrilog_foods, shared by every profile ── */
 
 export async function fetchFoodLibrary() {
   const uid = await userId()
-  const { data, error } = await supa.from('nutrilog_food_library').select('data').eq('user_id', uid).eq('profile_id', SHARED).maybeSingle()
-  if (error) throw error
-  return Array.isArray(data?.data) ? data.data : []
+  const rows = await readAll(() => supa.from('nutrilog_foods').select('*').eq('user_id', uid).order('created_at', { ascending: false }).order('name'))
+  return rows.map(rowToFood)
 }
 
-// Adds `item` unless an entry with the same name (case-insensitive) exists.
-// Re-reads the latest library first so another device's additions survive.
-// Non-fatal: the meal itself has already been saved by the time this runs.
+// Adds `item` unless a food with that name exists (the table refuses a second
+// one, ignoring case and spaces). Non-fatal: the meal is already saved by now.
 export async function addToFoodLibrary(item) {
   try {
-    const uid = await userId()
-    const latest = await fetchFoodLibrary()
-    const name = item.name.toLowerCase()
-    if (latest.some(f => (f.name || '').toLowerCase() === name)) return
-    const { error } = await supa.from('nutrilog_food_library')
-      .upsert({ user_id: uid, profile_id: SHARED, data: [{ ...item, _uses: 1 }, ...latest], updated_at: new Date().toISOString() }, { onConflict: 'user_id,profile_id' })
-    if (error) throw error
+    const { error } = await supa.from('nutrilog_foods').insert({ ...foodToRow({ ...item, _uses: 1 }) })
+    if (error && error.code !== DUPLICATE) throw error
   } catch (e) {
     console.warn('addToFoodLibrary failed (meal was still saved):', e)
   }
 }
 
-/* ── Meals: one row per profile per date ── */
+/* ── Meals: one row per logged entry in nutrilog_entries ── */
+
+const DUPLICATE = '23505' // unique-index violation
+const byTimeThenAdded = q => q.order('time', { ascending: true, nullsFirst: true }).order('created_at')
 
 export async function fetchDayMeals(profileId, date) {
   const uid = await userId()
-  const { data, error } = await supa.from('nutrilog_sessions').select('meals')
-    .eq('user_id', uid).eq('profile_id', profileId).eq('date', date).maybeSingle()
+  const { data, error } = await byTimeThenAdded(supa.from('nutrilog_entries').select('*')
+    .eq('user_id', uid).eq('profile_id', profileId).eq('date', date))
   if (error) throw error
-  return Array.isArray(data?.meals) ? data.meals : []
+  return data.map(rowToEntry)
 }
 
-// Writes `date` to both nutrilog_sessions and nutrilog_history, as the desktop
-// app does, so the day shows up in history on every device straight away.
-// Sessions first: if that fails nothing is written, rather than leaving
-// history holding an entry Today doesn't have.
-export async function saveDayMeals(profileId, date, meals) {
-  const uid = await userId()
-  const updated_at = new Date().toISOString()
-  const withDate = meals.map(m => ({ ...m, date }))
-  const { error: e1 } = await supa.from('nutrilog_sessions')
-    .upsert({ user_id: uid, profile_id: profileId, date, meals: withDate, updated_at }, { onConflict: 'user_id,profile_id,date' })
-  if (e1) throw e1
-  const { error: e2 } = await supa.from('nutrilog_history')
-    .upsert({ user_id: uid, profile_id: profileId, date, meals: withDate, updated_at }, { onConflict: 'user_id,profile_id,date' })
-  if (e2) throw e2
+export async function insertEntry(profileId, date, entry) {
+  const row = { ...entryToRow(entry, { profileId, date }) }
+  if (entry.id) row.id = entry.id
+  const { data, error } = await supa.from('nutrilog_entries').insert(row).select().single()
+  if (error) throw error
+  return rowToEntry(data)
 }
 
-// All past days, newest first, as [{ date, meals }].
+// Edits one entry in place. Throws if it no longer exists (deleted on another device).
+export async function updateEntryRow(id, profileId, date, entry) {
+  const { data, error } = await supa.from('nutrilog_entries')
+    .update(entryToRow(entry, { profileId, date })).eq('id', id).select()
+  if (error) throw error
+  if (!data.length) throw new Error('This entry was deleted on another device — refresh to see the latest')
+  return rowToEntry(data[0])
+}
+
+export async function deleteEntryRow(id) {
+  const { error } = await supa.from('nutrilog_entries').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Every day that has entries, newest first, as [{ date, meals }] (includes today).
 export async function fetchHistory(profileId) {
   const uid = await userId()
-  const rows = await readAll(() => supa.from('nutrilog_history').select('date,meals')
-    .eq('user_id', uid).eq('profile_id', profileId).order('date', { ascending: false }))
-  return rows.map(r => ({ date: r.date, meals: Array.isArray(r.meals) ? r.meals : [] }))
+  const rows = await readAll(() => byTimeThenAdded(supa.from('nutrilog_entries').select('*')
+    .eq('user_id', uid).eq('profile_id', profileId).order('date', { ascending: false })))
+  const days = new Map()
+  for (const r of rows) {
+    if (!days.has(r.date)) days.set(r.date, [])
+    days.get(r.date).push(rowToEntry(r))
+  }
+  return [...days].map(([date, meals]) => ({ date, meals }))
+}
+
+/* ── Live updates ── */
+
+// Calls onChange() whenever an entry of this profile, or any food, changes on
+// any device. Returns an unsubscribe function. Deletes can't be filtered by
+// profile on the server, so a delete in another profile also triggers a
+// (harmless) refresh.
+export function subscribeChanges(profileId, onChange) {
+  let timer = null
+  const fire = () => { clearTimeout(timer); timer = setTimeout(onChange, 400) }
+  const channel = supa.channel(`nutrilog-${profileId}-${Date.now()}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'nutrilog_entries', filter: `profile_id=eq.${profileId}` }, fire)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'nutrilog_entries', filter: `profile_id=eq.${profileId}` }, fire)
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'nutrilog_entries' }, fire)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'nutrilog_foods' }, fire)
+    .subscribe()
+  return () => { clearTimeout(timer); supa.removeChannel(channel) }
 }

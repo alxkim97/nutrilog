@@ -20,6 +20,126 @@ Run the sections below yourself in **Supabase Dashboard → SQL Editor**. Every 
 
 ---
 
+## 2026-11-21 — One row per entry and per food
+
+Adds two tables. Nothing reads or writes them until the app update that switches over (phase B), and
+the old tables above are not touched, so they stay as a full backup.
+
+| Table | Key | Contents |
+| --- | --- | --- |
+| `nutrilog_entries` | `id` | one logged food: profile, date, time, meal, name, serving, macros. Any other fields (sugar, `_base`, …) go in `extra` |
+| `nutrilog_foods` | `id` | one food library item, shared by all profiles. A name can exist only once (case and spaces ignored) |
+
+Why: the old tables hold a whole day (or the whole library) as one value, so every save had to
+re-read, merge and rewrite it, and two devices saving at once could undo each other. With one row per
+item, adding, editing or deleting touches only that row.
+
+**Step 1 — create the tables.** Safe to re-run.
+
+```sql
+create table if not exists public.nutrilog_entries (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  profile_id  text not null,
+  date        date not null,
+  time        text,
+  cat         text,
+  name        text not null,
+  serving     numeric,
+  unit        text,
+  kcal        numeric not null default 0,
+  protein     numeric not null default 0,
+  fat         numeric not null default 0,
+  carbs       numeric not null default 0,
+  fiber       numeric not null default 0,
+  notes       text not null default '',
+  extra       jsonb not null default '{}'::jsonb,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists nutrilog_entries_day on public.nutrilog_entries (user_id, profile_id, date);
+
+create table if not exists public.nutrilog_foods (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  name        text not null,
+  serving     numeric,
+  unit        text,
+  kcal        numeric not null default 0,
+  protein     numeric not null default 0,
+  fat         numeric not null default 0,
+  carbs       numeric not null default 0,
+  fiber       numeric not null default 0,
+  type        text,
+  uses        integer not null default 0,
+  extra       jsonb not null default '{}'::jsonb,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create unique index if not exists nutrilog_foods_name on public.nutrilog_foods (user_id, lower(btrim(name)));
+
+-- updated_at follows every edit
+create or replace function public.nutrilog_touch() returns trigger language plpgsql as $$
+begin new.updated_at = now(); return new; end $$;
+drop trigger if exists nutrilog_touch on public.nutrilog_entries;
+create trigger nutrilog_touch before update on public.nutrilog_entries for each row execute function public.nutrilog_touch();
+drop trigger if exists nutrilog_touch on public.nutrilog_foods;
+create trigger nutrilog_touch before update on public.nutrilog_foods for each row execute function public.nutrilog_touch();
+
+-- own rows only, same policy as every other NutriLog table
+alter table public.nutrilog_entries enable row level security;
+alter table public.nutrilog_foods enable row level security;
+drop policy if exists "own rows" on public.nutrilog_entries;
+create policy "own rows" on public.nutrilog_entries for all to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "own rows" on public.nutrilog_foods;
+create policy "own rows" on public.nutrilog_foods for all to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- live updates: a change on one device reaches the others without polling
+do $$
+declare t text;
+begin
+  foreach t in array array['nutrilog_entries', 'nutrilog_foods'] loop
+    if not exists (select 1 from pg_publication_tables
+                   where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
+```
+
+**Step 2 — check (read-only).** Expect two rows with `rowsecurity = true`, two `own rows` policies,
+and both tables listed under realtime.
+
+```sql
+select tablename, rowsecurity from pg_tables
+where schemaname = 'public' and tablename in ('nutrilog_entries', 'nutrilog_foods');
+
+select tablename, policyname, qual from pg_policies
+where schemaname = 'public' and tablename in ('nutrilog_entries', 'nutrilog_foods');
+
+select tablename from pg_publication_tables
+where pubname = 'supabase_realtime' and tablename in ('nutrilog_entries', 'nutrilog_foods');
+```
+
+**Step 3 — copy your data in.** From the project folder, in a terminal:
+
+```
+npm run migrate:rows            # dry run: reads everything, writes nothing, prints what it would copy
+npm run migrate:rows -- --apply # saves a backup file first, then copies
+```
+
+The dry run lists any day where `nutrilog_sessions` and `nutrilog_history` disagree and which copy it
+will use (today: sessions; any other day: history, which is what the desktop shows), and any foods
+whose names differ only by upper/lower case (it keeps one and adds their use counts together). Send
+Claude the dry-run output before running `--apply`.
+
+`--apply` refuses to run if the new tables already hold rows for your account, so it can't copy
+twice. To start the copy over, use `--apply --replace`, which empties only the two new tables first.
+
+---
+
 ## 2026-10-10 — Check current RLS state (read-only)
 
 Run this first and keep the output. It changes nothing.

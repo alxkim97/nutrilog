@@ -1,5 +1,5 @@
 import phoneCss from './style.css?inline'
-import { getSession, onAuthChange, fetchProfilesAndSettings, fetchFoodLibrary, fetchDayMeals, fetchHistory, saveSettingsPatch } from './supabase.js'
+import { getSession, onAuthChange, fetchProfilesAndSettings, fetchFoodLibrary, fetchDayMeals, fetchHistory, saveSettingsPatch, subscribeChanges } from './supabase.js'
 import { renderAuth } from './views/auth.js'
 import { renderToday } from './views/today.js'
 import { renderQuickAdd } from './views/quickAdd.js'
@@ -59,6 +59,22 @@ async function loadProfileData() {
   state.loadedDate = date
 }
 
+// Live updates: an entry logged or a food added on another device shows up here
+// within a second. Never rebuilds the screen under the Log form or an open sheet,
+// where a re-render would throw away what's being typed.
+let unwatch = null
+function watchProfile() {
+  unwatch?.()
+  unwatch = state.session && state.profileId ? subscribeChanges(state.profileId, onRemoteChange) : null
+}
+async function onRemoteChange() {
+  if (!state.session || state.loading) return
+  try { state.foodLibrary = await fetchFoodLibrary() } catch { /* keep the copy we have */ }
+  const busy = state.view === 'add' || document.querySelector('.confirm-overlay')
+  if (busy) refreshInBackground()
+  else refresh()
+}
+
 function saveOfflineCopy() {
   cacheLoad(state.profileId, {
     profiles: state.profiles, settingsByProfile: state.settingsByProfile, foodLibrary: state.foodLibrary,
@@ -79,6 +95,7 @@ async function loadEverything() {
     state.offline = false
     applyThemeFromSettings(currentSettings())
     saveOfflineCopy()
+    watchProfile()
   } catch (e) {
     const cached = cacheGet(preferred)
     if (!cached) { toast(e.message || 'Failed to load data'); return }
@@ -118,6 +135,8 @@ async function refreshInBackground() {
 // Drops everything tied to the account — in-memory data and the offline copy —
 // so a different sign-in on this device never sees the previous account's data.
 function signedOut() {
+  unwatch?.()
+  unwatch = null
   Object.assign(state, { session: null, view: 'today', profiles: [], profileId: null, settingsByProfile: {}, foodLibrary: [], todayMeals: [], history: [], offline: false })
   cacheClearAll()
 }
@@ -139,6 +158,7 @@ async function switchProfile(id) {
     state.offline = false
     applyThemeFromSettings(currentSettings())
     saveOfflineCopy()
+    watchProfile()
   } catch (e) {
     toast(e.message || 'Failed to load profile')
   }
