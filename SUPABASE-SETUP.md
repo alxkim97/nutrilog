@@ -285,3 +285,152 @@ where m.user_id = 'aeb93db9-5b0c-4cd9-aefd-1b8a4cc31248' and m.profile_id = 'mom
   and a.user_id = m.user_id and a.profile_id = 'alex'
   and not exists (select 1 from jsonb_each(m.data) e where a.data -> e.key is distinct from e.value);
 ```
+
+---
+
+## 2026-11-25 — Claude access (time-boxed editing, activity log)
+
+Lets Claude log and fix entries and foods **through its own helper account**, never your login.
+Same pattern as Coin (same Supabase project), so the helper account you made for Coin can be reused.
+Settings → Claude access connects the helper for **one profile** and controls it:
+
+- **Connected** — the helper can read that profile's entries and the food database. Nothing else
+  (no settings, targets, templates, recipes, check-ins, other profiles).
+- **Editing window** (1 hour / rest of today / 24 hours) — only then may it add, edit and delete
+  those entries and foods. When the window ends the database itself refuses its writes.
+- Every change the helper makes is logged automatically and listed in Settings with **Undo**.
+- **Disconnect** removes all access immediately.
+
+Paste only this block. Safe to re-run; nothing existing is changed or removed.
+
+```sql
+-- Who may act on whose NutriLog data, for which profile, until when.
+create table if not exists public.nutrilog_delegates (
+  owner_id       uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  delegate_id    uuid not null references auth.users(id) on delete cascade,
+  delegate_email text not null,
+  profile_id     text not null,
+  edit_until     timestamptz,   -- editing allowed until this moment; null/past = read only
+  edit_note      text,
+  created_at     timestamptz not null default now(),
+  primary key (owner_id, delegate_id)
+);
+alter table public.nutrilog_delegates enable row level security;
+drop policy if exists "owner manages" on public.nutrilog_delegates;
+create policy "owner manages" on public.nutrilog_delegates for all to authenticated
+  using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+drop policy if exists "delegate reads own grant" on public.nutrilog_delegates;
+create policy "delegate reads own grant" on public.nutrilog_delegates for select to authenticated
+  using (auth.uid() = delegate_id);
+
+-- profile = null means "the food database" (shared by all profiles).
+create or replace function public.nutrilog_can_read(owner uuid, profile text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from nutrilog_delegates where owner_id = owner and delegate_id = auth.uid()
+    and (profile is null or profile_id = profile))
+$$;
+create or replace function public.nutrilog_can_edit(owner uuid, profile text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from nutrilog_delegates where owner_id = owner and delegate_id = auth.uid()
+    and (profile is null or profile_id = profile) and edit_until > now())
+$$;
+
+-- Connect a helper account by email (it must already be signed up).
+create or replace function public.nutrilog_add_delegate(helper_email text, profile text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare d uuid;
+begin
+  if auth.uid() is null then raise exception 'Not signed in'; end if;
+  select id into d from auth.users where lower(email) = lower(trim(helper_email));
+  if d is null then raise exception 'No account with that email — create it first'; end if;
+  if d = auth.uid() then raise exception 'That is your own account — use a separate one for Claude'; end if;
+  insert into nutrilog_delegates (owner_id, delegate_id, delegate_email, profile_id)
+    values (auth.uid(), d, lower(trim(helper_email)), profile)
+    on conflict (owner_id, delegate_id) do update set profile_id = excluded.profile_id;
+  return d;
+end $$;
+revoke all on function public.nutrilog_add_delegate(text, text) from public, anon;
+grant execute on function public.nutrilog_add_delegate(text, text) to authenticated;
+
+-- Entries: that profile only. Foods: the whole food database. Read while
+-- connected; write only inside the window. (Your own "own rows" policy is unchanged.)
+drop policy if exists "delegate read" on public.nutrilog_entries;
+create policy "delegate read" on public.nutrilog_entries for select to authenticated
+  using (nutrilog_can_read(user_id, profile_id));
+drop policy if exists "delegate insert" on public.nutrilog_entries;
+create policy "delegate insert" on public.nutrilog_entries for insert to authenticated
+  with check (nutrilog_can_edit(user_id, profile_id));
+drop policy if exists "delegate update" on public.nutrilog_entries;
+create policy "delegate update" on public.nutrilog_entries for update to authenticated
+  using (nutrilog_can_edit(user_id, profile_id)) with check (nutrilog_can_edit(user_id, profile_id));
+drop policy if exists "delegate delete" on public.nutrilog_entries;
+create policy "delegate delete" on public.nutrilog_entries for delete to authenticated
+  using (nutrilog_can_edit(user_id, profile_id));
+
+drop policy if exists "delegate read" on public.nutrilog_foods;
+create policy "delegate read" on public.nutrilog_foods for select to authenticated
+  using (nutrilog_can_read(user_id, null));
+drop policy if exists "delegate insert" on public.nutrilog_foods;
+create policy "delegate insert" on public.nutrilog_foods for insert to authenticated
+  with check (nutrilog_can_edit(user_id, null));
+drop policy if exists "delegate update" on public.nutrilog_foods;
+create policy "delegate update" on public.nutrilog_foods for update to authenticated
+  using (nutrilog_can_edit(user_id, null)) with check (nutrilog_can_edit(user_id, null));
+drop policy if exists "delegate delete" on public.nutrilog_foods;
+create policy "delegate delete" on public.nutrilog_foods for delete to authenticated
+  using (nutrilog_can_edit(user_id, null));
+
+-- Every change a helper makes is logged, so it can be reviewed and undone.
+-- Helpers can't read or alter the log.
+create table if not exists public.nutrilog_delegate_log (
+  id         uuid primary key default gen_random_uuid(),
+  owner_id   uuid not null references auth.users(id) on delete cascade,
+  actor_id   uuid not null,
+  tbl        text not null,  -- nutrilog_entries | nutrilog_foods
+  action     text not null,  -- insert | update | delete
+  row_id     uuid not null,
+  before     jsonb,
+  after      jsonb,
+  undone_at  timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists nutrilog_delegate_log_owner on public.nutrilog_delegate_log (owner_id, created_at desc);
+alter table public.nutrilog_delegate_log enable row level security;
+drop policy if exists "owner reads" on public.nutrilog_delegate_log;
+create policy "owner reads" on public.nutrilog_delegate_log for select to authenticated
+  using (auth.uid() = owner_id);
+drop policy if exists "owner marks undone" on public.nutrilog_delegate_log;
+create policy "owner marks undone" on public.nutrilog_delegate_log for update to authenticated
+  using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+create or replace function public.nutrilog_log_delegate_change() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare owner uuid := coalesce(new.user_id, old.user_id);
+begin
+  if auth.uid() is null or auth.uid() = owner then return null; end if;
+  insert into nutrilog_delegate_log (owner_id, actor_id, tbl, action, row_id, before, after)
+  values (owner, auth.uid(), tg_table_name, lower(tg_op), coalesce(new.id, old.id),
+    case when tg_op <> 'INSERT' then to_jsonb(old) end,
+    case when tg_op <> 'DELETE' then to_jsonb(new) end);
+  return null;
+end $$;
+drop trigger if exists nutrilog_delegate_log on public.nutrilog_entries;
+create trigger nutrilog_delegate_log after insert or update or delete on public.nutrilog_entries
+  for each row execute function public.nutrilog_log_delegate_change();
+drop trigger if exists nutrilog_delegate_log on public.nutrilog_foods;
+create trigger nutrilog_delegate_log after insert or update or delete on public.nutrilog_foods
+  for each row execute function public.nutrilog_log_delegate_change();
+```
+
+**Check (read-only).** Expect `delegate delete / insert / read / update` plus `own rows` on each
+table, and the trigger listed twice.
+
+```sql
+select tablename, policyname from pg_policies
+where schemaname = 'public' and tablename in ('nutrilog_entries', 'nutrilog_foods') order by 1, 2;
+select tgname, tgrelid::regclass from pg_trigger where tgname = 'nutrilog_delegate_log';
+```
+
+**After the SQL:** in NutriLog, Settings → Claude access → enter the helper account's email (the Coin
+helper works). Then on your PC run `node scripts/save-session.mjs` **yourself** and sign in as the
+helper — the script refuses your main account. Claude then works through `scripts/nutrilog-claude.mjs`.

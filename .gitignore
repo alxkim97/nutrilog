@@ -8,3 +8,6 @@ Thumbs.db
 manual logs/
 .vercel
 .env*
+
+# Claude helper session (scripts/save-session.mjs)
+.nutrilog-session.json

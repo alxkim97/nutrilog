@@ -8,6 +8,7 @@ import shellHtml from './shell.html?raw'
 import legacyAppUrl from './legacy-app.js?url'
 import { NutriCloud } from './cloudStore.js'
 import { escapeHtml } from '../helpers.js'
+import { renderClaudeAccess } from '../claudeAccess.js'
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -50,4 +51,29 @@ export async function mountDesktop() {
     if (el) el.style.display = 'none'
   }
   await loadScript(legacyAppUrl)
+  mountClaudeAccess()
+}
+
+// Settings → Claude access (shared with the phone, see ../claudeAccess.js).
+// Re-rendered whenever Settings is opened so the activity log is current.
+function mountClaudeAccess() {
+  const anchor = document.getElementById('account-section')
+  if (!anchor) return
+  const section = document.createElement('div')
+  section.className = 'settings-section'
+  section.style.gridColumn = '1/-1'
+  section.innerHTML = '<div class="settings-title">Claude access</div><div id="claudeAccessBody" style="margin-top:12px"></div>'
+  anchor.parentNode.insertBefore(section, anchor)
+  const render = () => {
+    const pid = NutriCloud.profileId
+    renderClaudeAccess(section.querySelector('#claudeAccessBody'), {
+      profileId: pid,
+      profileName: NutriCloud.profiles.find(p => p.id === pid)?.name || pid,
+      toast: msg => window.toast?.(msg),
+      // the desktop's own dialog; Cancel just closes it (the promise is dropped)
+      confirm: (msg, label) => new Promise(resolve => window.showConf(label, msg, label, () => resolve(true))),
+    })
+  }
+  render()
+  document.addEventListener('click', e => { if (e.target.closest?.('[data-page="settings"]')) render() })
 }

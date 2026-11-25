@@ -16,6 +16,13 @@ Personal macro tracker: Electron 44 + Vite 8 + vanilla JS desktop app, plus a ph
 - Optional per-entry fields in grams: `sugar`, `addedSugar`, `satFat` (unknown = missing, never 0).
 - Never run SQL, `--apply`, or any write against the user's cloud data without them typing their own password. Do NOT accept passwords in chat. Scripts prompt for the password (hidden) and sign in themselves (see `scripts/migrate-to-rows.mjs`).
 
+## Claude access (v2.18.0, built 2026-11-25 — same pattern as Coin)
+- Claude acts through a separate **helper account** (the Coin helper can be reused: same Supabase project). Never the user's login.
+- Grant lives in `nutrilog_delegates` (one profile, chosen = the profile active when connecting; user chose `alex` only). Connected = read that profile's entries + the food database. Editing window (`edit_until`: 1 h / rest of today / 24 h) = add/edit/delete those. Enforced by RLS policies "delegate …"; settings, targets, templates, recipes, check-ins, other profiles are out of reach.
+- Every helper write is logged by a trigger in `nutrilog_delegate_log`; Settings → Claude access lists it with Undo (`src/claudeAccess.js`, shared by phone `views/settings.js` and desktop `desktop/mount.js`).
+- SQL: SUPABASE-SETUP.md "2026-11-25 — Claude access". The user runs it.
+- Session: the user runs `node scripts/save-session.mjs` (signs in as the helper, refuses accounts with their own NutriLog data) → `.nutrilog-session.json` (gitignored, per PC). Claude then uses `node scripts/nutrilog-claude.mjs status | day | days | foods | add-entry | edit-entry | delete-entry | add-food | edit-food | delete-food` (usage at the top of the file). If editing is off, ask the user to open a window.
+
 ## Release steps
 `npm test` -> commit + push (Vercel) -> `npm run release` (needs `gh` logged in; installed 2026-11-21 via winget, so open a new terminal). Version lives in `package.json`.
 
@@ -25,7 +32,7 @@ Personal macro tracker: Electron 44 + Vite 8 + vanilla JS desktop app, plus a ph
 3. **Food database filter + reorganise (like Vetted):** column sort, show/hide/reorder columns, per-column filters/chips, group by type, saved layout.
 4. **Recipes with yield:** build a food from ingredients + servings, show with the Thai/English "Nutrition information" label in the current Aura style. Re-add "Homemade Muesli Mix" (1 kg Aro muesli + 7 tbsp rice bran oil + 7 tbsp honey, 1 tbsp = 32 kcal ~ 8 g) — it never reached the cloud library.
 5. Undo/redo.
-6. **Claude access like Coin:** user taps "Give Claude access" -> temporary scoped key (e.g. 1 hour, revocable, own data only, with a change log). Wanted by the user; suggested to build before item 3.
+6. ~~Claude access like Coin~~ — built in v2.18.0 (see above). Not yet live until: SQL run, pushed + released, helper connected, `save-session.mjs` run. Then use it for the pending chicken-leg fix below.
 
 ## Pending data fixes (user to run, needs their password)
 - `node scripts/add-fish-chip.mjs`: adds "Aro Fish Chip (1 piece, est.)" (115 kcal, 4 P, 6.5 F, 9.5 C, sugar 2, satFat 3.5 per est. 50 g piece) and logs 3 pieces today. Check whether it was already run before running again (food is skipped if present, but the entry would be logged twice).

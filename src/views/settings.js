@@ -1,6 +1,7 @@
 import { signOut } from '../supabase.js'
 import { icon } from '../icons.js'
-import { confirmDialog, escapeHtml, fmtNum, round1 } from '../helpers.js'
+import { confirmDialog, escapeHtml, fmtNum, round1, toast } from '../helpers.js'
+import { renderClaudeAccess } from '../claudeAccess.js'
 import { VARIANTS, getTheme, getVariant } from '../theme.js'
 import { MACROS, macroOrder, goalFor } from '../nutrition.js'
 
@@ -50,6 +51,9 @@ export function renderSettings(container, opts) {
       <p class="hint">Targets are set in the desktop app's Settings.</p>
     </section>
 
+    <h2>Claude access</h2>
+    <section class="card" id="claudeAccess"></section>
+
     <h2>Account</h2>
     <section class="card">
       <button class="btn danger" id="signOutBtn" type="button">${icon('logOut', 18)} Sign out</button>
@@ -66,6 +70,10 @@ export function renderSettings(container, opts) {
   })
   container.querySelectorAll('#variantGrid .variant').forEach(btn => {
     btn.onclick = () => onThemeChange({ variant: btn.dataset.v })
+  })
+  renderClaudeAccess(container.querySelector('#claudeAccess'), {
+    profileId: profile.id, profileName: profile.name, toast,
+    confirm: (msg, label) => confirmDialog(msg, label, { danger: label === 'Disconnect' }),
   })
   container.querySelector('#signOutBtn').onclick = async () => {
     if (!(await confirmDialog('Sign out?', 'Sign out'))) return
