@@ -434,3 +434,102 @@ select tgname, tgrelid::regclass from pg_trigger where tgname = 'nutrilog_delega
 **After the SQL:** in NutriLog, Settings → Claude access → enter the helper account's email (the Coin
 helper works). Then on your PC run `node scripts/save-session.mjs` **yourself** and sign in as the
 helper — the script refuses your main account. Claude then works through `scripts/nutrilog-claude.mjs`.
+
+## 2026-11-28 — Photo inbox (v2.19.0)
+
+Quick food photos from the phone, kept **7 days** so Claude can estimate and log them later.
+Files go to a **private** Storage bucket `nutrilog-photos` (`<your user id>/<uuid>.jpg`, ~300 KB each,
+GPS stripped on the phone); one row each in `nutrilog_photos`.
+
+Claude's helper (Settings → Claude access, same profile):
+- **Connected** — may see that profile's photos that are not expired and not dismissed (row + file).
+- **Editing window** — may also set a photo's `status` (pending/logged) and `entry_ids`. Nothing else;
+  it can't add, delete, re-time or re-note photos.
+- Expired photos are invisible to the helper at once; the app deletes them (file + row) on open.
+
+Paste only this block. Safe to re-run. Needs the 2026-11-25 Claude access block first.
+
+```sql
+create table if not exists public.nutrilog_photos (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  profile_id  text not null,
+  taken_at    timestamptz not null,
+  time_source text not null check (time_source in ('exif', 'file', 'upload', 'manual')),
+  note        text,
+  path        text not null unique,
+  status      text not null default 'pending' check (status in ('pending', 'logged', 'dismissed')),
+  entry_ids   uuid[] not null default '{}',
+  created_at  timestamptz not null default now(),
+  expires_at  timestamptz not null default now() + interval '7 days'
+);
+create index if not exists nutrilog_photos_profile on public.nutrilog_photos (user_id, profile_id, taken_at desc);
+alter table public.nutrilog_photos enable row level security;
+
+drop policy if exists "own rows" on public.nutrilog_photos;
+create policy "own rows" on public.nutrilog_photos for all to authenticated
+  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "delegate read" on public.nutrilog_photos;
+create policy "delegate read" on public.nutrilog_photos for select to authenticated
+  using (expires_at > now() and status <> 'dismissed' and nutrilog_can_read(user_id, profile_id));
+drop policy if exists "delegate update" on public.nutrilog_photos;
+create policy "delegate update" on public.nutrilog_photos for update to authenticated
+  using (expires_at > now() and status <> 'dismissed' and nutrilog_can_edit(user_id, profile_id))
+  with check (nutrilog_can_edit(user_id, profile_id));
+
+-- A helper may only change status (pending/logged) and entry_ids.
+create or replace function public.nutrilog_photos_guard() returns trigger
+language plpgsql as $$
+begin
+  if auth.uid() is distinct from old.user_id then
+    if (new.id, new.user_id, new.profile_id, new.taken_at, new.time_source, new.note, new.path, new.created_at, new.expires_at)
+       is distinct from (old.id, old.user_id, old.profile_id, old.taken_at, old.time_source, old.note, old.path, old.created_at, old.expires_at) then
+      raise exception 'Only status and entry_ids can be changed';
+    end if;
+    if new.status not in ('pending', 'logged') then raise exception 'Status must be pending or logged'; end if;
+  end if;
+  return new;
+end $$;
+drop trigger if exists nutrilog_photos_guard on public.nutrilog_photos;
+create trigger nutrilog_photos_guard before update on public.nutrilog_photos
+  for each row execute function public.nutrilog_photos_guard();
+
+-- Live updates on the phone (e.g. Claude marking a photo logged).
+do $$ begin
+  if not exists (select 1 from pg_publication_tables
+                 where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'nutrilog_photos') then
+    alter publication supabase_realtime add table public.nutrilog_photos;
+  end if;
+end $$;
+
+-- Private bucket: JPEG only, max 2 MB per file.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('nutrilog-photos', 'nutrilog-photos', false, 2097152, array['image/jpeg'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Files: you manage your own folder; the helper may only download files whose
+-- photo row it can see (same rules as the table above).
+drop policy if exists "nutrilog photos own" on storage.objects;
+create policy "nutrilog photos own" on storage.objects for all to authenticated
+  using (bucket_id = 'nutrilog-photos' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'nutrilog-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "nutrilog photos delegate read" on storage.objects;
+create policy "nutrilog photos delegate read" on storage.objects for select to authenticated
+  using (bucket_id = 'nutrilog-photos' and exists (
+    select 1 from public.nutrilog_photos p
+    where p.path = storage.objects.name and p.expires_at > now() and p.status <> 'dismissed'
+      and public.nutrilog_can_read(p.user_id, p.profile_id)));
+```
+
+If the `storage.objects` policies fail with "must be owner of table objects", create the two
+policies in Dashboard → Storage → Policies instead (same conditions).
+
+**Check (read-only).** Expect `delegate read`, `delegate update`, `own rows`; the bucket with
+`public = false`; and both storage policies.
+
+```sql
+select policyname from pg_policies where schemaname = 'public' and tablename = 'nutrilog_photos' order by 1;
+select id, public, file_size_limit from storage.buckets where id = 'nutrilog-photos';
+select policyname from pg_policies where schemaname = 'storage' and policyname like 'nutrilog photos%';
+```

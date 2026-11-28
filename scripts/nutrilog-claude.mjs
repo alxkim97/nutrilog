@@ -15,12 +15,19 @@
 //   node scripts/nutrilog-claude.mjs add-food '<json>'
 //   node scripts/nutrilog-claude.mjs edit-food <id> '<json>'
 //   node scripts/nutrilog-claude.mjs delete-food <id>
+//   node scripts/nutrilog-claude.mjs photos [--all] [--out DIR]       photo inbox: downloads pending photos
+//   node scripts/nutrilog-claude.mjs mark-photo <id> logged <entryId…>  (or: mark-photo <id> pending)
+// Photo workflow: `photos` → look at each file → match foods (`foods <text>`) or
+// estimate → add-entry with date/time = the photo's "taken" time and
+// notes "from photo, est." → mark-photo <id> logged <new entry ids>. Ask the
+// user about anything you can't identify. The note on a photo ("ate half") counts.
 // Entry JSON: name, serving, unit, kcal, protein, fat, carbs, fiber, cat
 // (breakfast|lunch|dinner|snack…), time "HH:MM", date, notes, plus optional
 // sugar / addedSugar / satFat (grams; leave out if unknown — never 0).
 // Food JSON: name, serving, unit, kcal, protein, fat, carbs, fiber, type, sugar, satFat.
 import { createClient } from '@supabase/supabase-js'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { tmpdir } from 'os'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { entryToRow, foodToRow, rowToEntry, rowToFood } from '../src/rowsShape.js'
@@ -34,6 +41,8 @@ const parseJson = (s) => { if (!s) fail('Missing JSON argument'); try { return J
 const pad = n => String(n).padStart(2, '0')
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 const nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}` }
+const localDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const localTime = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`
 const r1 = n => Math.round((Number(n) || 0) * 10) / 10
 const opt = (args, name) => { const i = args.indexOf('--' + name); return i >= 0 ? args[i + 1] : undefined }
 
@@ -166,6 +175,38 @@ const commands = {
     const { error } = await ctx.supa.from('nutrilog_foods').delete().eq('id', id)
     if (error) fail(error.message)
     console.log(`Deleted food: ${fmtFood(before)}`)
+  },
+
+  async photos(ctx, args) {
+    let q = ctx.supa.from('nutrilog_photos').select('*').eq('user_id', ctx.owner).eq('profile_id', ctx.profile)
+      .gt('expires_at', new Date().toISOString()).order('taken_at')
+    if (!args.includes('--all')) q = q.eq('status', 'pending')
+    const { data, error } = await q
+    if (error) fail(error.code === '42P01' || error.code === 'PGRST205' ? 'Photo inbox not set up — the user runs the 2026-11-28 SQL.' : error.message)
+    if (!data.length) { console.log('No photos waiting.'); return }
+    const out = opt(args, 'out') || join(tmpdir(), 'nutrilog-photos')
+    mkdirSync(out, { recursive: true })
+    for (const p of data) {
+      const t = new Date(p.taken_at)
+      const file = join(out, `${p.id}.jpg`)
+      const { data: blob, error: dlErr } = await ctx.supa.storage.from('nutrilog-photos').download(p.path)
+      if (dlErr) { console.log(`${p.id}  download failed: ${dlErr.message}`); continue }
+      writeFileSync(file, Buffer.from(await blob.arrayBuffer()))
+      console.log(`[${p.id}] ${p.status}  taken ${localDate(t)} ${localTime(t)} (${p.time_source})${p.note ? `  note: "${p.note}"` : ''}${p.entry_ids?.length ? `  entries: ${p.entry_ids.join(' ')}` : ''}`)
+      console.log(`    ${file}`)
+    }
+    console.log(`${data.length} photo(s). Log at the taken date/time, notes "from photo, est.".`)
+  },
+
+  async 'mark-photo'(ctx, [id, status, ...entryIds]) {
+    requireEdit(ctx)
+    if (!id || !['logged', 'pending'].includes(status)) fail('Usage: mark-photo <id> logged <entryId…> | mark-photo <id> pending')
+    if (status === 'logged' && !entryIds.length) fail('Give the entry ids made from this photo')
+    const { data, error } = await ctx.supa.from('nutrilog_photos')
+      .update({ status, entry_ids: status === 'logged' ? entryIds : [] }).eq('id', id).select().maybeSingle()
+    if (error) fail(error.message)
+    if (!data) fail(`No photo ${id} visible to the helper (expired, dismissed, or wrong id).`)
+    console.log(`Photo ${id} → ${data.status}${data.entry_ids.length ? ` (${data.entry_ids.length} entr${data.entry_ids.length === 1 ? 'y' : 'ies'})` : ''}`)
   },
 }
 

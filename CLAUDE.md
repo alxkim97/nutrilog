@@ -1,4 +1,27 @@
-# NutriLog — handoff (updated 2026-11-22)
+# NutriLog — handoff (updated 2026-11-28)
+
+## Where things stand (read first)
+- **v2.18.0 (Claude access)**: live. Desktop release published 2026-11-28.
+- Helper not connected yet / no `.nutrilog-session.json` on this PC. User: Settings → Claude access (on `alex`) → helper email, then `node scripts/save-session.mjs`.
+- **v2.19.0 Photo inbox: built + committed 2026-11-28, NOT pushed, NOT released.** Next:
+  1. User runs SUPABASE-SETUP.md "2026-11-28 — Photo inbox" SQL (table, guard trigger, realtime, private bucket, storage policies).
+  2. Push (Vercel) → test on the real iPhone: camera + gallery, multiple photos, check the "Taken … · from photo" source (does Safari keep EXIF from the gallery?), dismiss/restore/delete, realtime when Claude marks logged.
+  3. `npm run release` only after that (desktop has no inbox UI yet; release is just to keep versions aligned).
+- Files: `src/exif.js` (EXIF time, tested in `test/exif.test.mjs`), `src/photos.js` (compress, upload, fetch w/ signed URLs, purge expired on open, realtime on its own channel), `src/views/photoInbox.js` (Today section + sheets). Helper: `photos` / `mark-photo` in `scripts/nutrilog-claude.mjs`.
+- Additions to the spec: `time_source` also `manual` (time edited by the user); helper can't see `dismissed` photos; a guard trigger lets the helper change only `status` (pending/logged) + `entry_ids`.
+
+## Photo inbox — spec (agreed 2026-11-28, built in v2.19.0)
+Goal: quick food photos (camera OR gallery) saved for max 7 days, so Claude can later estimate and log them instead of them rotting unlogged in the phone gallery.
+- **Phone only first** (no desktop drag-drop yet). Camera button on Today → camera or gallery, multiple photos, optional note ("ate half").
+- **Time taken**: read EXIF DateTimeOriginal on the phone before upload; fallback `file.lastModified`; fallback upload time. Store `taken_at` + `time_source` (exif|file|upload) and show it editable ("Taken 12:41 · from photo"). UNVERIFIED: whether iPhone Safari keeps EXIF date when picking from the gallery — test on the real phone; LINE-saved images/screenshots lack it.
+- Compress client-side to ~1600 px JPEG (~300 KB); re-encoding strips GPS (after reading the time).
+- Storage: private Supabase Storage bucket (e.g. `nutrilog-photos`, path `<user_id>/<uuid>.jpg`) + table `nutrilog_photos` (id, user_id, profile_id, taken_at, time_source, note, path, status pending|logged|dismissed, entry_ids, created_at, expires_at = created_at + 7 days).
+- **Keep after logging** until expiry (user chose this), showing the entries made from it. Expired: RLS hides from the helper (`expires_at > now()`); the app deletes expired files/rows on open (optionally pg_cron too).
+- **Permission: same editing window** as Claude access (user chose this). Helper may read pending/unexpired photos of the connected profile (`alex` only) while connected; mark status/entry_ids only inside the window. Storage policies on `storage.objects` for the delegate mirror that.
+- Phone UI: Photo inbox list (thumbnail, time, note, status, linked entries; dismiss/delete).
+- Claude side: extend `scripts/nutrilog-claude.mjs` with `photos` (download pending to a scratch folder) and `mark-photo <id> logged <entryIds…>`. Log entries at `taken_at` with note "from photo, est.", match foods in the database where possible, ask the user about anything unidentifiable.
+- Free-plan size fine (~20 MB/week at 10 photos/day vs 1 GB).
+
 
 Personal macro tracker: Electron 44 + Vite 8 + vanilla JS desktop app, plus a phone PWA on Vercel. Backend: Supabase project "lifelog" (`jpsisvaprkrcyvwnmasb`), anon key, RLS "own rows" policies. `HANDOFF.md` / `SESSION_SUMMARY*.md` are old (June, v2.6) — ignore them. Setup SQL history: `SUPABASE-SETUP.md`.
 
@@ -32,7 +55,8 @@ Personal macro tracker: Electron 44 + Vite 8 + vanilla JS desktop app, plus a ph
 3. **Food database filter + reorganise (like Vetted):** column sort, show/hide/reorder columns, per-column filters/chips, group by type, saved layout.
 4. **Recipes with yield:** build a food from ingredients + servings, show with the Thai/English "Nutrition information" label in the current Aura style. Re-add "Homemade Muesli Mix" (1 kg Aro muesli + 7 tbsp rice bran oil + 7 tbsp honey, 1 tbsp = 32 kcal ~ 8 g) — it never reached the cloud library.
 5. Undo/redo.
-6. ~~Claude access like Coin~~ — built in v2.18.0 (see above). Not yet live until: SQL run, pushed + released, helper connected, `save-session.mjs` run. Then use it for the pending chicken-leg fix below.
+6. ~~Claude access like Coin~~ — built in v2.18.0 (see above). Remaining: connect helper, `save-session.mjs`. Then use it for the pending chicken-leg fix below.
+7. ~~Photo inbox~~ — built in v2.19.0 (see top). Later: desktop drag-drop.
 
 ## Pending data fixes (user to run, needs their password)
 - `node scripts/add-fish-chip.mjs`: adds "Aro Fish Chip (1 piece, est.)" (115 kcal, 4 P, 6.5 F, 9.5 C, sugar 2, satFat 3.5 per est. 50 g piece) and logs 3 pieces today. Check whether it was already run before running again (food is skipped if present, but the entry would be logged twice).

@@ -11,6 +11,7 @@ import { toast, todayStr } from './helpers.js'
 import { applyTheme, applyThemeFromSettings, setTheme, setVariant } from './theme.js'
 import { cacheLoad, cacheGet, cacheClearAll } from './cache.js'
 import { setupPullToRefresh } from './pullToRefresh.js'
+import { fetchPhotos, purgeExpiredPhotos, subscribePhotos } from './photos.js'
 import { isDesktopView, onDesktopViewChange } from './platform.js'
 import { initUpdateReload } from './swUpdate.js'
 
@@ -35,6 +36,7 @@ const state = {
   foodLibrary: [],
   todayMeals: [],
   history: [],
+  photos: [],
   offline: false,
   loadedAt: 0,
   loadedDate: null,
@@ -52,9 +54,14 @@ function writeActiveProfile(id) {
 
 async function loadProfileData() {
   const date = todayStr()
-  const [todayMeals, history] = await Promise.all([fetchDayMeals(state.profileId, date), fetchHistory(state.profileId)])
+  const [todayMeals, history, photos] = await Promise.all([
+    fetchDayMeals(state.profileId, date), fetchHistory(state.profileId),
+    // the inbox is extra: if it can't load, the day still shows
+    fetchPhotos(state.profileId).catch(e => { console.warn('Photo inbox not loaded:', e); return state.photos }),
+  ])
   state.todayMeals = todayMeals
   state.history = history
+  state.photos = photos
   state.loadedAt = Date.now()
   state.loadedDate = date
 }
@@ -65,7 +72,10 @@ async function loadProfileData() {
 let unwatch = null
 function watchProfile() {
   unwatch?.()
-  unwatch = state.session && state.profileId ? subscribeChanges(state.profileId, onRemoteChange) : null
+  if (!state.session || !state.profileId) { unwatch = null; return }
+  const offEntries = subscribeChanges(state.profileId, onRemoteChange)
+  const offPhotos = subscribePhotos(state.profileId, onRemoteChange) // own channel: can't break entry updates
+  unwatch = () => { offEntries(); offPhotos() }
 }
 async function onRemoteChange() {
   if (!state.session || state.loading) return
@@ -96,6 +106,7 @@ async function loadEverything() {
     applyThemeFromSettings(currentSettings())
     saveOfflineCopy()
     watchProfile()
+    purgeExpiredPhotos() // photos older than 7 days: file + row, in the background
   } catch (e) {
     const cached = cacheGet(preferred)
     if (!cached) { toast(e.message || 'Failed to load data'); return }
@@ -137,7 +148,7 @@ async function refreshInBackground() {
 function signedOut() {
   unwatch?.()
   unwatch = null
-  Object.assign(state, { session: null, view: 'today', profiles: [], profileId: null, settingsByProfile: {}, foodLibrary: [], todayMeals: [], history: [], offline: false })
+  Object.assign(state, { session: null, view: 'today', profiles: [], profileId: null, settingsByProfile: {}, foodLibrary: [], todayMeals: [], history: [], photos: [], offline: false })
   cacheClearAll()
 }
 
@@ -151,6 +162,7 @@ function setView(view) {
 async function switchProfile(id) {
   writeActiveProfile(id)
   state.profileId = id
+  state.photos = []
   state.loading = true
   render()
   try {
@@ -214,7 +226,7 @@ function renderImmediate() {
 
   if (state.view === 'today') {
     renderToday(screen, {
-      profile, profiles: state.profiles, settings, todayMeals: state.todayMeals, history: state.history, offline: state.offline,
+      profile, profiles: state.profiles, settings, todayMeals: state.todayMeals, history: state.history, photos: state.photos, offline: state.offline,
       onChanged: refresh, onAdd: () => setView('add'), onOpenSettings: () => setView('settings'),
     })
   } else if (state.view === 'add') {

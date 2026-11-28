@@ -5,6 +5,7 @@ import { todayStr, nowTime, addDays, longDateLabel, confirmDialog, toast, escape
 import { MACROS, macroOrder, goalFor, macroStatus, ringSvg, dailyTotals, streak, frequentFoods } from '../nutrition.js'
 import { enableSwipeRows } from '../swipe.js'
 import { openEditSheet } from './editEntry.js'
+import { photoInboxHtml, bindPhotoInbox } from './photoInbox.js'
 
 // "By meal" (grouped, current default) vs "By time" (flat, like desktop) —
 // a per-device preference, not per-profile, since it's just a viewing choice.
@@ -17,7 +18,7 @@ function writeSortMode(mode) {
 }
 
 export function renderToday(container, opts) {
-  const { profile, profiles, settings, todayMeals, history, offline, onChanged, onAdd, onOpenSettings } = opts
+  const { profile, profiles, settings, todayMeals, history, photos = [], offline, onChanged, onAdd, onOpenSettings } = opts
   const totals = sumMacros(todayMeals)
   const frequent = frequentFoods(history)
   const byDate = dailyTotals(history, todayMeals)
@@ -34,6 +35,7 @@ export function renderToday(container, opts) {
     ${offline ? `<div class="offline-banner">${icon('cloudOff', 16)}<span>Offline — showing your last synced data</span></div>` : ''}
     ${heroHtml(totals, settings, todayMeals.length)}
     <div class="macro-grid">${macroOrder(settings).map(k => macroTileHtml(k, totals[k], settings)).join('')}</div>
+    ${photoInboxHtml(photos, { offline })}
     ${frequent.length ? `
       <h2>Quick log</h2>
       <div class="chip-scroll" id="quickChips">
@@ -58,6 +60,8 @@ export function renderToday(container, opts) {
 
   container.querySelector('#profileChip')?.addEventListener('click', onOpenSettings)
   container.querySelector('#emptyAdd')?.addEventListener('click', onAdd)
+  const entriesById = new Map([...todayMeals, ...history.flatMap(d => d.meals)].map(e => [e.id, e]))
+  bindPhotoInbox(container, { profile, photos, entriesById, onChanged })
   container.querySelectorAll('#sortToggle button').forEach(btn => {
     btn.onclick = () => {
       if (btn.dataset.sort === sortMode) return

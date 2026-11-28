@@ -135,7 +135,7 @@ input, select, textarea {
   transition: border-color .15s ease;
 }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-input[type="time"] { -webkit-appearance: none; appearance: none; min-height: 48px; display: block; }
+input[type="time"], input[type="datetime-local"] { -webkit-appearance: none; appearance: none; min-height: 48px; display: block; }
 input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
 label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; margin: 16px 0 7px; }
 .opt { font-weight: 500; color: var(--text3); margin-left: 4px; }
@@ -495,3 +495,32 @@ label { font-size: 13px; color: var(--text2); font-weight: 600; display: block; 
   .food-chip:hover, .cat-chip:hover, .variant:hover { border-color: var(--border2); }
   .meal-row:not(.static):not(.swipe-front):hover, .result-row:hover, .option-row:hover { opacity: .8; }
 }
+
+/* photo inbox (Today) */
+.pill-btn { width: auto; padding: 8px 14px; font-size: 13.5px; }
+.count-pill { display: inline-flex; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; align-items: center; justify-content: center; background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 800; vertical-align: 2px; margin-left: 4px; }
+.photo-hint { margin: -2px 2px 0; }
+.photo-strip { gap: 10px; }
+.photo-tile {
+  flex: 0 0 auto; width: 112px; padding: 0; overflow: hidden; scroll-snap-align: start;
+  border-radius: 14px; border: 1px solid var(--border); background: var(--surface);
+  display: flex; flex-direction: column; text-align: left;
+}
+.photo-tile:active { transform: scale(.97); }
+.photo-tile img, .photo-missing { width: 112px; height: 112px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--text3); background: var(--surface-2); }
+.photo-tile.dismissed img { opacity: .45; }
+.photo-tile-meta { display: flex; flex-direction: column; gap: 3px; padding: 7px 8px 8px; }
+.photo-tile-time { font-size: 11.5px; font-weight: 700; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.photo-status { align-self: flex-start; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text2); }
+.photo-status.pending { background: var(--accent-dim); color: var(--accent); }
+.photo-status.logged { background: var(--green-dim); color: var(--green); }
+.photo-up { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.photo-up img { width: 84px; height: 84px; object-fit: cover; border-radius: 12px; flex-shrink: 0; }
+.photo-up-fields { flex: 1; min-width: 0; }
+.photo-up-fields label:first-child { margin-top: 0; }
+.photo-full { width: 100%; max-height: 46vh; object-fit: contain; border-radius: 14px; background: var(--surface-2); display: block; }
+.photo-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.photo-head .hint { margin: 0; }
+.sheet-actions .btn.secondary { flex: 0 1 auto; }
+/* a confirm opened from a sheet must sit above it */
+.sheet-overlay ~ .confirm-overlay { z-index: 230; }
